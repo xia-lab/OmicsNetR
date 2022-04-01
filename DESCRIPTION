@@ -10,10 +10,10 @@ Authors@R: c(
            )
 Description: Underlying R functions for OmicsNet web server.
 License: GPL (>= 2)
-Depends: R (>= 4.0.0)
-Imports: Rcpp (>= 1.0.8), BiocManager, XiaLabCppLib, data.table, igraph, metap, qs,
-    rjson, tidyr, Cairo, RColorBrewer, RJSONIO, RSQLite, RandomWalkRestartMH,
-    dplyr, ggforce, ggplot2, graphlayouts, httr, igraph, lc8,
+Depends: R (>= 4.0.3), igraph, RColorBrewer, qs, rjson, RSQLite
+Imports: Rcpp (>= 1.0.8), BiocManager, XiaLabCppLib, data.table, metap,
+    tidyr, Cairo, RJSONIO, RSQLite, RandomWalkRestartMH,
+    dplyr, ggforce, ggplot2, graphlayouts, httr, lc8,
     lpsymphony, plyr, pryr, stringr, tidyr
 Suggests: 
 LinkingTo: Rcpp
