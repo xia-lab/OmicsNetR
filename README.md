@@ -64,10 +64,10 @@ dataSet<-PrepareInputList(dataSet,"#Entrez  logFC
 6354  21.04
 6369  19.76", "hsa", "gene", "entrez", "direct");
 
-# Step 3. Build a PPI interaction network
+# Step 3. Identify interacting partners
 dataSet<-QueryNet(dataSet, "gene", "innate")
 
-# Step 4. Build a PPI interaction network
+# Step 4. Build interaction subnetwork
 CreateGraph();
 
 # Step 5. Prepare the network file, the output will be in JSON format.
