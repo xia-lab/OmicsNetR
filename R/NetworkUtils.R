@@ -535,7 +535,7 @@ SearchNetDBX <- function(inputType, netw.type, db.type, require.exp=TRUE,
       if(dataSet$phesc.opt=="eqtl"){
 
         res <- phenoscanner(snpquery= protein.vec,catalogue="eQTL")
-        fast.write.csv(res$results, file="phenoEq.result.csv",row.names=FALSE);
+        fast.write.csv(res$results, file="phenoscanner.eQtl.csv",row.names=FALSE);
 
         res <- res$results[,c("rsid","exp_gene")]
         res <- unique(res[which(!(is.na(res$exp_gene)) &res$exp_gene !=""&res$exp_gene !="-" ),])
@@ -546,7 +546,7 @@ SearchNetDBX <- function(inputType, netw.type, db.type, require.exp=TRUE,
         res <- phenoscanner(snpquery= protein.vec)
 
         res <- res$snps
-        fast.write.csv(res$results, file="phenoscanner.nearest.csv",row.names=FALSE);
+        fast.write.csv(res, file="phenoscanner.nearest.csv",row.names=FALSE);
         colnames(res)[which(colnames(res)=="hgnc")] = "symbol"
 
 
