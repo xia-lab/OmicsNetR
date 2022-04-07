@@ -128,32 +128,6 @@ dataSet<-PrepareInputList(dataSet,"#Entrez  logFC
 # Step 3. Identify interacting partners
 dataSet<-QueryNet(dataSet, "gene", "innate")
 
-# Step 4. Build interaction subnetwork
-CreateGraph();
-
-# Step 5. Save the JSON file, this file can be uploaded again to restore network analysis session
-SaveNetworkJson("omicsnet_graph_file_1.json")
-```
-
-## Save OmicsNet JSON file for saving current analysis.
-
-```
-library(OmicsNetR)
-
-# Step 1. Initiate the dataSet object
-dataSet<-Init.Data()
-
-# Step 2. Map list of genes to the application
-dataSet<-PrepareInputList(dataSet,"#Entrez  logFC
-4495  61.12
-4496  51.06
-4499  23.79
-6354  21.04
-6369  19.76", "hsa", "gene", "entrez", "direct");
-
-# Step 3. Identify interacting partners
-dataSet<-QueryNet(dataSet, "gene", "innate")
-
 # Step 4. Decompose network into interconnected subnetworks
 CreateGraph();
 
