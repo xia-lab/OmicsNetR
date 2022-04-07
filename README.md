@@ -70,6 +70,110 @@ dataSet<-QueryNet(dataSet, "gene", "innate")
 # Step 4. Build interaction subnetwork
 CreateGraph();
 
-# Step 5. Prepare the network file, the output will be in JSON format.
-dataSet<-PrepareNetwork(dataSet, "subnetwork1", "omicsnet_0.json")
+# Step 5. Prepare the network file to be used for visualization, the output will be in JSON format.
+dataSet<-PrepareNetwork(dataSet, "subnetwork1", "omicsnet_1.json")
 ```
+
+## Starting from list of genes and miRNA
+
+```
+# Step 1. Initiate the dataSet object
+dataSet<-Init.Data()
+
+# Step 2. Map list of genes to the application
+dataSet<-PrepareInputList(dataSet,"#Entrez  logFC
+4495  61.12
+4496  51.06
+4499  23.79
+6354  21.04
+6369  19.76, "hsa", "gene", "entrez");
+
+# Step 2. Map list of miRNA to the application
+dataSet<-PrepareInputList(dataSet,"hsa-mir-101-3p
+hsa-mir-133b
+hsa-mir-147a
+hsa-mir-3140-3p
+hsa-mir-361-5p
+hsa-mir-510-5p", "hsa", "mir", "mir_id");
+
+# Step 3. Build PPI network from uploaded list of genes
+dataSet<-QueryNetMulti(dataSet, "gene", "innate", "gene" )
+
+# Step 4. Build miRNA-gene network from uploaded list of miRNA
+dataSet<-QueryNetMulti(dataSet, "mir", "mirtarbase", "mir" )
+
+# Step 5. Merge networks together through shared nodes and decompose into interconnected subnetworks
+CreateGraph();
+
+# Step 6. Prepare the network file to be used for visualization, the output will be in JSON format.
+dataSet<-PrepareNetwork(dataSet, "subnetwork1", "omicsnet_1.json")
+```
+
+## Save OmicsNet JSON file for saving current analysis.
+
+```
+library(OmicsNetR)
+
+# Step 1. Initiate the dataSet object
+dataSet<-Init.Data()
+
+# Step 2. Map list of genes to the application
+dataSet<-PrepareInputList(dataSet,"#Entrez  logFC
+4495  61.12
+4496  51.06
+4499  23.79
+6354  21.04
+6369  19.76", "hsa", "gene", "entrez", "direct");
+
+# Step 3. Identify interacting partners
+dataSet<-QueryNet(dataSet, "gene", "innate")
+
+# Step 4. Build interaction subnetwork
+CreateGraph();
+
+# Step 5. Save the JSON file, this file can be uploaded again to restore network analysis session
+SaveNetworkJson("omicsnet_graph_file_1.json")
+```
+
+## Save OmicsNet JSON file for saving current analysis.
+
+```
+library(OmicsNetR)
+
+# Step 1. Initiate the dataSet object
+dataSet<-Init.Data()
+
+# Step 2. Map list of genes to the application
+dataSet<-PrepareInputList(dataSet,"#Entrez  logFC
+4495  61.12
+4496  51.06
+4499  23.79
+6354  21.04
+6369  19.76", "hsa", "gene", "entrez", "direct");
+
+# Step 3. Identify interacting partners
+dataSet<-QueryNet(dataSet, "gene", "innate")
+
+# Step 4. Decompose network into interconnected subnetworks
+CreateGraph();
+
+# Step 5. Save the JSON file, this file can be uploaded again to restore analysis session
+SaveNetworkJson("omicsnet_graph_file_1.json")
+```
+
+
+## Load OmicsNet JSON file to restore analysis session
+
+```
+library(OmicsNetR)
+
+# Step 1. Initiate the dataSet object
+dataSet<-Init.Data()
+
+# Step 2. Read graph file, specify correct file format
+dataSet<-ReadGraphFile(dataSet, "Your file path", "jsonOmicsnet");
+
+# Step 3. Prepare the network file to be used for visualization, the output will be in JSON format.
+dataSet<-PrepareNetwork(dataSet, "subnetwork1", "omicsnet_1.json")
+```
+

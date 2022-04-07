@@ -21,11 +21,13 @@ Init.Data<-function(){
   net.info <-list()
   net.info$gene.ids <- vector();
   net.info$protein.ids <- vector();
-  net.info$int.ids <- vector();
+  #net.info$int.ids <- vector();
   net.info <<- net.info;
   partialToBeSaved <<- c("Rload.RData", "Rhistory.R")
   dataSet <- list();
+  dataSet$viewTable <- list();
   dataSet$require.exp <- T;
+  dataSet$ppiZero <- F;
   dataSet$min.score <- 900;
   dataSet <<- dataSet;
   clearNetwork(dataSet);
@@ -126,8 +128,8 @@ CheckQueryTypeMatch <- function(qvec, type){
 #' @param dataSetObj Input the name of the created dataSetObj (see Init.Data)
 #' @param inputList Tab-delimited String of input omics list
 #' @param org organism code: hsa, mmu, microbiome, rno, cel, dme, dre, sce, bta, gga
-#' @param type Omics type: gene, met, tf, peak, mir, protein, mic, snp
-#' @param queryType ID type i.e entrez, symbol
+#' @param type
+#' @param queryType
 #'
 #' @export
 PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
@@ -215,7 +217,7 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     dataSet$exp.mat[[type]] <- prot.mat;
     dataSet$seed[[type]] <- prot.mat;
     dataSet$inv[[type]] <- netInvType;
-  }else if(type %in% c("gene", "geneonly", "protein")){
+  }else if(type %in% c("gene", "geneonly", "protein1")){
     if(length(dataSet$mat[["gene"]]) == 0){
       dataSet$mat[["gene"]] <- gene.mat;
       dataSet$exp.mat[["gene"]] <- prot.mat;
@@ -326,7 +328,6 @@ SetMirBo <- function(mirBo){
   requireMirExp <<- mirBo
 }
 
-
 GetInputTypes <- function(dataSetObj=NA){
   dataSet <- .get.nSet(dataSetObj);
   types.vec <- c(names(dataSet$exp.mat));
@@ -366,12 +367,14 @@ GetInputNames <- function(dataSetObj=NA){
 }
 
 convertInputTypes2Names <- function(types){
-  typesCol <- c("gene","protein", "tf", "mir", "met", "peakRaw", "mic", "snp", "ko");
-  namesCol <- c("Gene","Protein", "Transcription factor", "miRNA", "Metabolite", "LC-MS peak", "Microbial taxa", "SNP", "ko");
+  typesCol <- c("gene","protein", "tf", "mir", "met", "peak", "mic", "snp", "ko");
+  namesCol <- c("Gene","Protein", "Transcription factor", "miRNA", "Metabolite", "LC-MS peak", "Microbial taxa", "SNP", "KO");
   db.map <- data.frame(type=typesCol, name=namesCol);
   hit.inx <- match(types, db.map[, "type"]);
   names <- db.map[hit.inx, "name"];
   mode(names) <- "character";
+  na.inx <- is.na(names);
+  names[na.inx] <- types[na.inx];
   return(names);
 }
 
@@ -380,7 +383,7 @@ convertInteraction2Names <- function(types){
   namesCol <- c("PPI", "TF-gene", "miRNA-gene", "Metabolite-protein", "Peak-metabolite", "Taxon-metabolite", "SNP Annotation", "ko", "Metabolite-metabolite");
   db.map <- data.frame(type=typesCol, name=namesCol);
   hit.inx <- match(types, db.map[, "type"]);
-  print(hit.inx);
+  #print(hit.inx);
   names <- db.map[hit.inx, "name"];
   mode(names) <- "character";
   return(names);
@@ -400,7 +403,7 @@ GetInputListStat <- function(listNm){
   tfList <- rownames(dataSet$exp.mat[["tf"]]);
   mirList <- rownames(dataSet$exp.mat[["mir"]]);
   metList <- rownames(dataSet$exp.mat[["met"]]);
-  peakList <- rownames(dataSet$exp.mat[["peakRaw"]]);
+  peakList <- rownames(dataSet$exp.mat[["peak"]]);
   micList <- rownames(dataSet$exp.mat[["mic"]]);
   snpList <- rownames(dataSet$seed[["snp"]]);
   koList <- rownames(dataSet$exp.mat[["ko"]]);
@@ -447,4 +450,89 @@ SaveRCommands <- function(dataSetObj=NA){
   pid.info <- paste0("# PID of current job: ", Sys.getpid());
   cmds <- c(pid.info, cmds);
   write(cmds, file = "Rhistory.R", append = FALSE);
+}
+
+RemoveEdgeEntry <- function(tblnm, row.id) {
+    inx <- which(rownames(dataSet$viewTable[tblnm][[1]]) == row.id);
+    if(length(inx) > 0){
+        dataSet$viewTable[tblnm][[1]] <- dataSet$viewTable[tblnm][[1]][-inx,];
+        edgeu.res.list[[tblnm]] <- edgeu.res.list[[tblnm]][-inx,];
+    }
+    edgeu.res.list <<- edgeu.res.list;
+    dataSet<<-dataSet
+    return(1)
+}
+
+GetEdgeResRowNames <- function(netType){
+   resTable <- dataSet$viewTable[[netType]]
+  if(nrow(resTable) > 1000){
+    resTable <- resTable[1:1000, ];
+    current.msg <<- "Due to computational constraints, only top 1000 rows will be displayed.";
+  }
+  rownames(resTable);
+}
+
+GetEdgeResCol <- function(netType, colInx){
+    res <- dataSet$viewTable[[netType]][, colInx];
+    hit.inx <- is.na(res) | res == ""; # note, must use | for element-wise operation
+    res[hit.inx] <- "N/A";
+    return(res);
+}
+
+
+# batch remove based on
+UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, action) {
+
+    col <- dataSet$viewTable[[table.nm]][,col.id];
+
+    if(method == "contain"){
+        hits <- grepl(value, col, ignore.case = TRUE);
+    }else if(method == "match"){
+        hits <- tolower(col) %in% tolower(value);
+    }
+    #else{ # at least
+    #    if(dataSet$org %in% c("sma","gga","bta","ssc") || col.id != "evidence"){
+    #        col.val <- as.numeric(gsub("Predicted miRanda Score:", "", col));
+    #        # note NA will be introduced for non-predicted ones
+    #        na.inx <- is.na(col.val);
+    #        col.val[na.inx] <- max(col.val[!na.inx]);
+    #        hits <- col.val > as.numeric(value);
+    #    } else {
+    #        print("This is only for Prediction Score at this moment");
+    #        return("NA");
+    #    }
+    #}
+
+    if(action == "keep"){
+        hits = !hits;
+    }
+
+    if(sum(hits) > 0){
+        row.ids <- rownames(dataSet$viewTable[[table.nm]])[hits];
+        dataSet$viewTable[[table.nm]] <<- dataSet$viewTable[[table.nm]][!hits,];
+        if(table.type == "ind"){
+        edgeu.res.list[[table.nm]] <- edgeu.res.list[[table.nm]][!hits,]
+        edgeu.res.list <<- edgeu.res.list;
+        }
+        fast.write.csv(dataSet$viewTable[[table.nm]], file="omicsnet_edgelist.csv", row.names=FALSE);
+        return(row.ids);
+    }else{
+        return("NA");
+    }
+}
+
+UpdateModifiedTable <- function(type) {
+  #if(type == "ind"){
+  edge.res <- data.frame();
+  if(length(edgeu.res.list) > 0){
+    for(i in 1:length(edgeu.res.list)){
+      edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
+    }
+  }
+  omics.net$edge.data <<- unique(edge.res);
+  return(1)
+}
+
+GetOrg <- function(){
+  return(data.org);
 }

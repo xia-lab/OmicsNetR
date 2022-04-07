@@ -203,7 +203,7 @@ SearchReg <- function(file.nm, fun.type, IDs, count){
 
 regEnrichment <- function(file.nm, fun.type, IDs, netInv){
   regBool <<- "false";
-  res <- PerformNetEnrichment(file.nm, fun.type, IDs, netInv);
+  res <- PerformNetEnrichment(file.nm, fun.type, IDs);
 }
 
 #' Perform gene enrichment analysis or identify gene regulatory targets
@@ -1357,13 +1357,6 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
 
   # remove dupliated edges
   # ppi.res <- ppi.res[!duplicated(ppi.res$row_id),]
-  if(!data.org %in% c("mmu", "hsa") && net.type =="string" ){
-    id1 <- doPpiIDMapping(as.vector(ppi.res$id1), "accession");
-    id2 <- doPpiIDMapping(as.vector(ppi.res$id2), "accession");
-    ppi.res$id1 <- id1;
-    ppi.res$id2 <- id2;
-    ppi.res <- ppi.res[!is.na(ppi.res),]
-  }
   return(ppi.res);
 }
 
@@ -1400,9 +1393,7 @@ QueryDrugSQLite <- function(q.vec, regsearch){
 }
 
 QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, uniExclude=T, orphExclude = T){
-  print(orphExclude)
-  print(uniExclude)
-  print(currExclude)
+
   require('RSQLite');
   path <- paste0(sqlite.path, sql.nm)
   mir.db <- dbConnect(SQLite(), path);
@@ -1660,7 +1651,7 @@ QueryVEP <- function(q.vec,vepDis,content_type="application/json" ){
     r=list()
     resvep = list()
     vepDis = as.numeric(vepDis)*1000
-    print(vepDis)
+
     for(i in 1:length(q.vec)){
       r[[i]] <- GET(paste(server, ext, q.vec[i],"?distance=",vepDis,sep = ""),  accept(content_type))
       stop_for_status(r[[i]])
@@ -1689,3 +1680,25 @@ QueryVEP <- function(q.vec,vepDis,content_type="application/json" ){
     row.names(resvep3)=NULL
     return(resvep3)
   }
+
+QueryMicM2mSQLiteNet <- function(table.nm, q.vec){
+
+  require('RSQLite');
+  path <- paste0(sqlite.path, "omicsnet_met.sqlite")
+
+  lnc.db <- dbConnect(SQLite(), path);
+  query <- paste (shQuote(q.vec),collapse=",");
+  
+     statement1 <- paste("SELECT * FROM ", table.nm, " WHERE productID IN (",query,")", sep="");
+
+    statement2 <- paste("SELECT * FROM ", table.nm, " WHERE sourceID IN (",query,")", sep="");
+ 
+
+  my.dic1 <- .query.sqlite(lnc.db, statement1);
+  lnc.db <- dbConnect(SQLite(), path);
+
+  my.dic2 <- .query.sqlite(lnc.db, statement2);
+
+  my.dic <- unique(rbind(my.dic1,my.dic2))
+  return(my.dic);
+}

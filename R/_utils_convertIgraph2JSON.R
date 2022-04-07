@@ -11,115 +11,10 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     g <- ppi.comps[[net.nm]];
   }
   
-  if(length(V(g)$name)>100){
-    #modules = FindCommunities("infomap", FALSE);
-    modules = "NA"
-  }else{
-    modules = "NA"
-  }
-  
-  if(met.type == "keggp" && !("mic" %in% dataSet$type)){
-    netData = list()
-    netData[["ids"]] = c(rownames(dataSet$seed[["ko"]]),rownames(dataSet$seed[["gene"]]), rownames(dataSet$seed[["met"]]));
-    netData[["expr"]] = c(as.character(dataSet$seed[["ko"]]),as.character(dataSet$seed[["gene"]]), as.character(dataSet$seed[["met"]]));
-    if(sum(dataSet$seed[["ko"]])!=0){
-      ko.colsb.exp <- ComputeColorGradient(as.vector(dataSet$seed[["ko"]]), "black", centered); 
-    }else{
-      ko.colsb.exp <- rep("#ffff00", length(as.vector(dataSet$seed[["ko"]])));
-    }
-    if(sum(dataSet$seed[["gene"]])!=0){
-      gene.colsb.exp <- ComputeColorGradient(as.vector(dataSet$seed[["gene"]]), "black", centered); 
-    }else{
-      gene.colsb.exp <- rep("#ffff00", length(as.vector(dataSet$seed[["gene"]])));
-    }
-    if(sum(dataSet$met.seed)!=0){
-      met.colsb.exp <- ComputeColorGradient(as.vector(dataSet$met.seed), "black", centered); 
-    }else{
-      met.colsb.exp <- rep("#ffff00", length(as.vector(dataSet$met.seed)));
-    }
-    netData[["col"]] = c(ko.colsb.exp,gene.colsb.exp, met.colsb.exp);
-    ord.inx<-order(-abs(as.numeric(netData[["expr"]])));
-    netData[["expr"]] = netData[["expr"]][ord.inx]
-    netData[["ids"]] = netData[["ids"]][ord.inx]
-    keggp.allfeatures <<- netData[["ids"]][ord.inx]
-    #netData[["ids"]] = doEntrez2KoMapping(netData[["ids"]])
-    containsKo = length(rownames(dataSet$seed[["ko"]]))>0
-    containsGene = length(rownames(dataSet$seed[["gene"]]))>0
-    containsMet = length(rownames(dataSet$met.seed))>0
-    
-    enrType = "keggm";
-    if(length(dataSet$seed[["ko"]])>0 && length(dataSet$met.seed)>0 ){
-      enrType = "integ";
-    }else if(length(dataSet$seed[["ko"]])>0){
-      enrType = "ko";
-    }else{
-      enrType = "keggm";
-    }
-    ora.vec = netData[["ids"]]
-    names(ora.vec) <- ora.vec;
-    PerformMetEnrichment(dataSet, "omicsnet_enrichment_0", "keggm", ora.vec);
-    
-    #Create met/gene pairs table Gene Name, ID, p value, FC, Metabolite Name, ID, p value, FC
-    
-    lengthMet=length(rownames(dataSet$met.seed))
-    gDat = vector()
-    metDat = vector()
-    if(containsKo){
-      dataSet$seed[["ko"]] = dataSet$seed[["ko"]][order(-dataSet$seed[["ko"]]),] 
-      gDat = dataSet$seed[["ko"]]
-    }else if(containsGene){
-      gDat = dataSet$seed[["gene"]][order(-abs(dataSet$seed[["gene"]])),]
-    }
-    if(containsMet){
-      metDat= dataSet$seed[["met"]][order(-abs(dataSet$seed[["met"]])),]
-    }
-    lengthgDat = length(gDat)
-    replacingMet = c(1:lengthMet)
-    replacinggDat = c(1:lengthgDat)
-    
-    if(containsMet && (containsGene || containsKo)){
-      combinedTable = matrix(NA, nrow=max(c(lengthgDat, lengthMet)), ncol=6);
-      combinedTable[replacinggDat,1]=names(gDat)
-      combinedTable[replacinggDat,2]=doEntrez2SymbolMapping(names(gDat))
-      combinedTable[replacinggDat,3]=unname(gDat)
-      combinedTable[replacingMet,4]=names(metDat)
-      combinedTable[replacingMet,5]=doKegg2NameMapping(names(metDat))
-      combinedTable[replacingMet,6]=unname(metDat)
-      colnames(combinedTable) = c("Gene ID", "Gene Symbol", "Gene Expr.", "KEGG ID", "Name", "Met Expr.")
-      netData[["containsBoth"]] = 1
-    }else if(containsMet){
-      combinedTable = matrix(NA, nrow=lengthMet, ncol=3);
-      combinedTable[,1]=names(metDat)
-      combinedTable[,2]=doKegg2NameMapping(names(metDat))
-      combinedTable[,3]=unname(metDat)
-      colnames(combinedTable) = c("ID", "Name", "Expr.")
-      netData[["containsBoth"]] = 0
-    }else{
-      combinedTable = matrix(NA, nrow=lengthgDat, ncol=3);
-      combinedTable[,1]=names(gDat)
-      combinedTable[,2]=doEntrez2SymbolMapping(names(gDat))
-      combinedTable[,3]=unname(gDat)
-      colnames(combinedTable) = c("ID", "Name", "Expr.")
-      netData[["containsBoth"]] = 0
-    }
-    fast.write.csv(combinedTable, file="feature_table.csv", row.names=FALSE);
-    sink(filenm);
-    cat(toJSON(netData));
-    sink();
-    
-    return(1)
-  } else {
-    netData = list()
-    netData[["ids"]] = c(rownames(dataSet$seed[["ko"]]),rownames(dataSet$seed[["gene"]]), rownames(dataSet$seed[["met"]]), rownames(dataSet$seed[["tf"]]));
-    netData[["expr"]] = c(as.character(dataSet$seed[["ko"]]),as.character(dataSet$seed[["gene"]]), as.character(dataSet$seed[["met"]]), as.character(dataSet$seed[["tf"]]));
-    ord.inx<-order(-abs(as.numeric(netData[["expr"]])));
-    netData[["expr"]] = netData[["expr"]][ord.inx]
-    netData[["ids"]] = netData[["ids"]][ord.inx]
-    keggp.allfeatures <<- netData[["ids"]][ord.inx]
-  }
-  
+  modules = "NA"
+
   nms <- V(g)$name;
-save(omics.net,g, file = "omics.net___checking.rda")
+  #save(omics.net,g, file = "omics.net___checking.rda")
   hit.inx <- match(nms, omics.net$node.data[,1]);
   lbls <- omics.net$node.data[hit.inx, 2];
   
@@ -148,16 +43,8 @@ save(omics.net,g, file = "omics.net___checking.rda")
   node.clo <- as.numeric(closeness(g));
   node.eig <- eigen_centrality(g);
   node.eig = as.numeric(node.eig$vector);
-  
-  #if("mic" %in% dataSet$type){
-  #  node.dgr <- degree(g);
-  #  mic.dgrs <- dataSet$mic.dgrs
-  #  mic.dgrs <- mic.dgrs[names(mic.dgrs) %in% names(node.dgr)]
-  #  node.dgr[names(mic.dgrs)] <- mic.dgrs
-  #  node.dgr <- as.numeric(node.dgr);
-  #}else{
-    node.dgr <- as.numeric(degree(g));
-  #}
+
+  node.dgr <- as.numeric(degree(g));
   node.exp <- as.numeric(get.vertex.attribute(g, name="abundance", index = V(g)));
   
   # node size to degree values
@@ -192,9 +79,9 @@ save(omics.net,g, file = "omics.net___checking.rda")
     node.colsw.exp <- rep("#C6C6C6",length(node.dgr)); 
   }
   
-  gene.nms <- rownames(dataSet$exp.mat[["gene"]] )[dataSet$gene_type_vec %in% c(1,2)];
-  prot.nms <- rownames(dataSet$exp.mat[["gene"]] )[dataSet$gene_type_vec %in% c(2,3)]; 
-  snp.nms <- rownames(dataSet$exp.mat[["snp"]] ) 
+  gene.nms <- rownames(dataSet$seed[["gene"]] )
+  prot.nms <- rownames(dataSet$seed[["protein"]] )
+  snp.nms <- rownames(dataSet$seed[["snp"]] ) 
   snp.nms <- snp.nms[!is.na(snp.nms)]
   
   # now update for bipartite network
@@ -202,14 +89,12 @@ save(omics.net,g, file = "omics.net___checking.rda")
   #edge.mat1 <<- edge.mat
   gene.inx <- nms %in% c(net.info$gene.ids, net.info$ko.ids);
   
-  #predicted.inx <- !(nms %in% c(net.info$gene.ids, net.info$tf.ids, net.info$mir.ids, net.info$met.ids, net.info$ko.ids, net.info$protein.ids));
   if(length(net.info$gene.ids) == 0 && length(net.info$protein.ids) == 0 ){
     #gene.inx = predicted.inx;
     #predicted.inx = rep(FALSE,length(node.dgr));
   }
 
   kncmpd.inx <- nms %in% net.info$kncmpd.ids
-  #predicted.inx <- nms %in% net.info$int.ids;
   prot.inx <- nms %in% net.info$protein.ids;
   tf.inx <- nms %in% net.info$tf.ids;
   mir.inx <- nms %in% net.info$mir.ids;
@@ -242,8 +127,9 @@ save(omics.net,g, file = "omics.net___checking.rda")
   topo.colsb <- topo.colsw;
 
   if(containsGP){
-    topo.colsb[genes.inx] <- "#D3D3D3";
-    topo.colsw[genes.inx] <- "#D3D3D3";
+    inx <- nms %in% gene.nms
+    topo.colsb[inx] <- "#D3D3D3";
+    topo.colsw[inx] <- "#D3D3D3";
     color.vec <- c("#D3D3D3", "#FF8484", "#39FF14","#00f6ff", "#D3D3D3", "#00ffff", "#ffff00", "#ff9900", "#39FF14");
   }else{
     color.vec <- c("#FF8484", "#FF8484", "#39FF14","#00f6ff", "#D3D3D3", "#00ffff", "#ffff00", "#ff9900", "#39FF14");
@@ -294,8 +180,8 @@ save(omics.net,g, file = "omics.net___checking.rda")
       eigen = node.eig[i]
     )
   }
-  
-  seed.inx <- nms %in% unique(dataSet$seeds.proteins);
+
+  seed.inx <- nms %in% names(expr.vec);
   
   seed_arr <- rep("notSeed",length(node.dgr));
   seed_arr[seed.inx] <- "seed";
