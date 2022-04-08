@@ -77,6 +77,8 @@ dataSet<-PrepareNetwork(dataSet, "subnetwork1", "omicsnet_1.json")
 ## Starting from list of genes and miRNA
 
 ```
+library(OmicsNetR)
+
 # Step 1. Initiate the dataSet object
 dataSet<-Init.Data()
 
