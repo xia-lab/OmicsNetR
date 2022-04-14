@@ -88,7 +88,7 @@ dataSet<-PrepareInputList(dataSet,"#Entrez  logFC
 4496  51.06
 4499  23.79
 6354  21.04
-6369  19.76, "hsa", "gene", "entrez");
+6369  19.76", "hsa", "gene", "entrez");
 
 # Step 2. Map list of miRNA to the application
 dataSet<-PrepareInputList(dataSet,"hsa-mir-101-3p
