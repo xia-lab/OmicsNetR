@@ -29,3 +29,20 @@ propagate_heterodimer_core <- function(df_heterodimer, sf, propagation_category,
     .Call('_OmicsNetR_propagate_heterodimer_core', PACKAGE = 'OmicsNetR', df_heterodimer, sf, propagation_category, node_mass, ppm_threshold)
 }
 
+#' Internal function \code{call_sr}
+#'
+#' This function is internally used to solve the PCST.
+#'
+#' @keywords internal
+#'
+#' @param from  A \code{CharacterVector} that corresponds to \code{head} nodes of the edges.
+#' @param to A \code{CharacterVector} that corresponds the \code{tail} nodes of the edges.
+#' @param cost A \code{NumericVector} which represents the edge weights.
+#' @param node_names A \code{CharacterVector} demonstrates the names of the nodes.
+#' @param node_prizes A \code{NumericVector} which corresponds to the node prizes.
+#' @author Murodzhon Akhmedov
+#'
+call_sr <- function(from, to, cost, node_names, node_prizes) {
+    .Call('_OmicsNetR_call_sr', PACKAGE = 'OmicsNetR', from, to, cost, node_names, node_prizes)
+}
+

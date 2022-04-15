@@ -106,6 +106,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// call_sr
+List call_sr(CharacterVector from, CharacterVector to, NumericVector cost, CharacterVector node_names, NumericVector node_prizes);
+RcppExport SEXP _OmicsNetR_call_sr(SEXP fromSEXP, SEXP toSEXP, SEXP costSEXP, SEXP node_namesSEXP, SEXP node_prizesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type from(fromSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type to(toSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type cost(costSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type node_names(node_namesSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type node_prizes(node_prizesSEXP);
+    rcpp_result_gen = Rcpp::wrap(call_sr(from, to, cost, node_names, node_prizes));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_OmicsNetR_path_annotate", (DL_FUNC) &_OmicsNetR_path_annotate, 9},
@@ -115,6 +130,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_OmicsNetR_Heterodimer_connection_core", (DL_FUNC) &_OmicsNetR_Heterodimer_connection_core, 2},
     {"_OmicsNetR_fast_calculate_formula", (DL_FUNC) &_OmicsNetR_fast_calculate_formula, 3},
     {"_OmicsNetR_propagate_heterodimer_core", (DL_FUNC) &_OmicsNetR_propagate_heterodimer_core, 5},
+    {"_OmicsNetR_call_sr", (DL_FUNC) &_OmicsNetR_call_sr, 5},
     {NULL, NULL, 0}
 };
 
