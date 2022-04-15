@@ -60,7 +60,8 @@ ImportMSPeaks <- function(PeakFile = NA) {
 
   PeakSet[["raw_data"]] <- raw_data;
   dataSet$exp.mat[["peak"]] <- data.frame(rep(0, nrow(raw_data)));
-  rownames(dataSet$exp.mat[["peak"]]) <- raw_data$id;
+  rownames(dataSet$exp.mat[["peak"]]) <- paste0(raw_data$id, "_", raw_data$medMz);
+
   PeakSet$ParamSet$RTTol <- (max(raw_data[,3]) - 
                                min(raw_data[,3]))*0.005; #0.5% of whole rt range as rt tol
 
@@ -95,7 +96,11 @@ UpdateCmpdDB <- function(dbNM){
 PerformDataProcessing <- function() {
 
   cat("Running into PerformDataProcessing! \n");
-  require(lc8)
+  if(.on.public.web){
+    ## This package is no longer required for local R package, because the source code has been included
+    require(lc8)
+  }
+
   require(stringr)
 
   t0 <- Sys.time();
@@ -592,8 +597,7 @@ extendMetPeakNetwork <- function(table.nm) {
       net.info$kncmpd.ids <- c(net.info$kncmpd.ids, unique(protein.vec))
     }
   }
-  net.info$meti.ids <- unique(node.ids);
-  
+
   return(list(edge.res = edge.res, net.info = net.info))
 }
 

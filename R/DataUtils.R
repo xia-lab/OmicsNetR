@@ -6,31 +6,23 @@
 
 .on.public.web <<- TRUE;
 
-
 #' Initialize dataSet object for downstream functions
 #'
 #' @export
 Init.Data<-function(){
 
-  .on.public.web <<- TRUE;
   if(exists("dataSet")){
     return(1)
   }
 
-
-  net.info <-list()
-  net.info$gene.ids <- vector();
-  net.info$protein.ids <- vector();
-  #net.info$int.ids <- vector();
-  net.info <<- net.info;
-  partialToBeSaved <<- c("Rload.RData", "Rhistory.R")
   dataSet <- list();
   dataSet$viewTable <- list();
   dataSet$require.exp <- T;
   dataSet$ppiZero <- F;
   dataSet$min.score <- 900;
-  dataSet <<- dataSet;
-  clearNetwork(dataSet);
+  dataSet$seeds.proteins <- vector();
+  dataSet$mat <- dataSet$exp.mat <- dataSet$seed <- dataSet$inv <- list();
+  dataSet$mic.thresh <- 0.8;
   dataSet$toremove <- c("Metabolic pathways",
                  "Biosynthesis of secondary metabolites",
                  "Microbial metabolism in diverse environments",
@@ -40,19 +32,21 @@ Init.Data<-function(){
                  "Fatty acid metabolism",
                  "Biosynthesis of amino acids",
                  "Degradation of aromatic compounds");
+  dataSet <<- dataSet;
+
+  # set up other global vars
+  net.info <<- list(gene.ids=vector(),protein.ids=vector());
+  initNetwork();
   uploadedGraph <<- FALSE;
   netbuild.opt <<- "first"
-  isKo <<- FALSE
-
-  options(stringsAsFactors = FALSE)
+  isKo <<- FALSE;
   graph_name <<- NULL;
-  lib.path <<- "../../data/";
   data.org <<- NULL;
   module.count <<- 0;
-  dataSet$seeds.proteins <- vector();
-  dataSet$mat <- dataSet$exp.mat <- dataSet$seed <- dataSet$inv <- list();
-  dataSet$mic.thresh <- 0.8;
+  max.row <<- 2000; # maximal rows to display interaction table in web page
   current.msg <<- "";
+  partialToBeSaved <<- c("Rload.RData", "Rhistory.R")
+  lib.path <<- "../../data/";
   if(file.exists("/home/glassfish/sqlite/")){
     sqlite.path <<- "/home/glassfish/sqlite/";  #public server + qiang local
   }else if(file.exists("/Users/xia/Dropbox/sqlite/")){
@@ -62,7 +56,6 @@ Init.Data<-function(){
   }else if(file.exists("/home/zgy/sqlite/")){
     sqlite.path <<- "/home/zgy/sqlite/"; #zgy local
   }else if(file.exists("/home/ly/sqlite/")){
-
     sqlite.path <<- "/home/ly/sqlite/"; #ly local
   }else if(file.exists("/Users/jessicaewald/sqlite")){
     sqlite.path <<- "/Users/jessicaewald/sqlite/"; #ewald local
@@ -71,7 +64,7 @@ Init.Data<-function(){
   }else{
     sqlite.path <<-"/media/zzggyy/disk/sqlite/"; #zgy local
   }
-  return(.set.nSet(dataSet));
+  return(1)
 }
 
 SetUploadedGraph<- function(bool){
@@ -264,13 +257,13 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     }
   }
   dataSet$seeds.proteins <- unique(dataSet$seeds.proteins)
-  dataSet$seeds.expr = as.matrix(dataSet$prot.mat);
+  dataSet$seeds.expr <- as.matrix(dataSet$prot.mat);
 
   if(.on.public.web){
-  .set.nSet(dataSet);
-  return (seed.proteins);
+    .set.nSet(dataSet);
+    return (seed.proteins);
   }else{
-  return (.set.nSet(dataSet));
+    return (.set.nSet(dataSet));
   }
 }
 
@@ -311,11 +304,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   return(gene.mat);
 }
 
-
-SetNetInv <- function(netInv){
-  net.inv <<- netInv;
-}
-
 SetDbType <- function(dbType){
   dbu.type <<- dbType;
 }
@@ -345,12 +333,12 @@ GetInputNames <- function(dataSetObj=NA){
 
   containsProtein <- F;
   if(length(rownames(dataSet$exp.mat[["gene"]])[dataSet$gene_type_vec == 3]) > 0){
-  containsProtein <- T;
+    containsProtein <- T;
   }
 
   containsGene <- F;
   if(length(rownames(dataSet$exp.mat[["gene"]])[dataSet$gene_type_vec == 1]) > 0){
-  containsGene <- T;
+    containsGene <- T;
   }
   for(i in 1:length(names.vec)){
     nm <- names.vec[i]
@@ -464,16 +452,21 @@ RemoveEdgeEntry <- function(tblnm, row.id) {
 }
 
 GetEdgeResRowNames <- function(netType){
-   resTable <- dataSet$viewTable[[netType]]
-  if(nrow(resTable) > 1000){
-    resTable <- resTable[1:1000, ];
-    current.msg <<- "Due to computational constraints, only top 1000 rows will be displayed.";
-  }
-  rownames(resTable);
+    resTable <- dataSet$viewTable[[netType]]
+    if(nrow(resTable) > max.row){
+        resTable <- resTable[1:max.row, ];
+        current.msg <<- "Due to computational constraints, only top 2000 rows will be displayed.";
+    }
+    rownames(resTable);
 }
 
 GetEdgeResCol <- function(netType, colInx){
-    res <- dataSet$viewTable[[netType]][, colInx];
+    resTable <- dataSet$viewTable[[netType]]
+    if(nrow(resTable) > max.row){
+        resTable <- resTable[1:max.row, ];
+        #current.msg <<- "Due to computational constraints, only top 1000 rows will be displayed.";
+    }
+    res <- resTable[, colInx];
     hit.inx <- is.na(res) | res == ""; # note, must use | for element-wise operation
     res[hit.inx] <- "N/A";
     return(res);
@@ -490,18 +483,6 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
     }else if(method == "match"){
         hits <- tolower(col) %in% tolower(value);
     }
-    #else{ # at least
-    #    if(dataSet$org %in% c("sma","gga","bta","ssc") || col.id != "evidence"){
-    #        col.val <- as.numeric(gsub("Predicted miRanda Score:", "", col));
-    #        # note NA will be introduced for non-predicted ones
-    #        na.inx <- is.na(col.val);
-    #        col.val[na.inx] <- max(col.val[!na.inx]);
-    #        hits <- col.val > as.numeric(value);
-    #    } else {
-    #        print("This is only for Prediction Score at this moment");
-    #        return("NA");
-    #    }
-    #}
 
     if(action == "keep"){
         hits = !hits;
