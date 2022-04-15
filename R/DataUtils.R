@@ -175,7 +175,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     if(is.null(dim(prot.mat))){
       prot.mat <- matrix(prot.mat);
     }
-
     rownames(prot.mat) <- GeneAnotDB[,"gene_id"][hit.inx];
     na.inx1 <- is.na(rownames(prot.mat));
     prot.mat = as.matrix(prot.mat[!na.inx1,])
@@ -184,7 +183,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     if(is.null(dim(prot.mat))){
       prot.mat <- matrix(prot.mat);
     }
-
     rownames(prot.mat)[!is.na(hit.inx)] <- as.character(GeneAnotDB[,2][!is.na(hit.inx)]);
   } else{
     rownames(prot.mat) <- GeneAnotDB[,"gene_id"];

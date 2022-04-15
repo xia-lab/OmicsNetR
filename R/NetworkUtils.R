@@ -2004,7 +2004,7 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   rownames(dataSet$exp.mat[["peak"]]) <- paste0(PeakSet$NetID_output$peak_id,"_", PeakSet$NetID_output$medMz);
     saveRDS(PeakSet, "peakset.rds");
 
-  cmp.nms <- PrepareInputList(dataSet, dataSet$seed[["peak"]], data.org, "peak", "kegg");
+  cmp.nms <- PrepareInputList(dataSet, rownames(dataSet$seed[["peak"]]), data.org, "peak", "kegg");
   
   PeakSet$nodes.df <- data.frame(Id=met.ids, Label=lbls)
   edges.df0 <- data.frame(from=edges[,1], to=edges[,2])

@@ -496,7 +496,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
     fun.padj = fun.padj,
     hit.num = hit.num
   );
-  json.mat <- toJSON(json.res, .na='null');
+  json.mat <- toJSON(json.res);
   json.nm <- paste(file.nm, ".json", sep="");
   sink(json.nm)
   cat(json.mat);
@@ -1212,7 +1212,7 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat){
     fun.padj = fun.padj,
     hit.num = hit.num
   );
-  json.mat <- toJSON(json.res, .na='null');
+  json.mat <- toJSON(json.res);
   json.nm <- paste(file.nm, ".json", sep="");
 
   sink(json.nm)
@@ -1279,7 +1279,7 @@ SaveIntegEnr <- function(file.nm,res.mat){
     hit.num1 = hit.num1,
     hit.num2 = hit.num2
   );
-  json.mat <- toJSON(json.res, .na='null');
+  json.mat <- toJSON(json.res);
   json.nm <- paste(file.nm, ".json", sep="");
   integ.query <<-integ.query
   sink(json.nm)
