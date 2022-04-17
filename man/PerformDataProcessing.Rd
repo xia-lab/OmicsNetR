@@ -2,16 +2,10 @@
 % Please edit documentation in R/MSPeakNet.R
 \name{PerformDataProcessing}
 \alias{PerformDataProcessing}
-\title{Peak processing}
+\title{PerformDataProcessing}
 \usage{
 PerformDataProcessing()
 }
-\arguments{
-\item{PeakFile}{Name of input peak file}
-}
-\value{
-
-}
 \description{
-Peak processing
+PerformDataProcessing
 }

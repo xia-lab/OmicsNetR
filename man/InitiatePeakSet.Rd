@@ -2,22 +2,19 @@
 % Please edit documentation in R/MSPeakNet.R
 \name{InitiatePeakSet}
 \alias{InitiatePeakSet}
-\title{Title}
+\title{InitiatePeakSet}
 \usage{
 InitiatePeakSet(ionMode = -1, ppm = 10, database = "KEGG", p_cutoff = 0.1)
 }
 \arguments{
-\item{ionMode}{Positive or negative 1 is pos, -1 is neg}
+\item{ionMode}{ion mode, postive is 1 and negative is -1}
 
-\item{ppm}{PPM value}
+\item{ppm}{ppm value of mass}
 
-\item{database}{Name of database (kegg, pubchem, hmdb)}
+\item{database}{database, can be "KEGG", "HMDB" or "Pubchem"}
 
-\item{p_cutoff}{P-value cutoff}
-}
-\value{
-
+\item{p_cutoff}{p value cutoff for filtration, default is 0.1}
 }
 \description{
-Title
+InitiatePeakSet
 }

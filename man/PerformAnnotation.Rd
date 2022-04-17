@@ -2,13 +2,10 @@
 % Please edit documentation in R/MSPeakNet.R
 \name{PerformAnnotation}
 \alias{PerformAnnotation}
-\title{Perform feature annotation}
+\title{PerformAnnotation}
 \usage{
 PerformAnnotation()
 }
-\value{
-
-}
 \description{
-Perform feature annotation
+PerformAnnotation
 }

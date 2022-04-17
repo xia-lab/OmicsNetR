@@ -80,15 +80,10 @@ SetNetType <- function(netType){
 }
 
 SetCurrentDataMulti <- function(){
-  dataSet$type = nms.vec;
-  .set.nSet(dataSet);
+  dataSet$type <- nms.vec;
+  rm('nms.vec', envir = .GlobalEnv);
+  return(.set.nSet(dataSet));
 }
-
-SetCurrentInteractionMulti <- function(){
-  dataSet$interaction.type = interaction.vec;
-  .set.nSet(dataSet);
-}
-
 
 SetFileType <- function(fileType){
   file.type <<- fileType;
@@ -121,11 +116,14 @@ CheckQueryTypeMatch <- function(qvec, type){
 #' @param dataSetObj Input the name of the created dataSetObj (see Init.Data)
 #' @param inputList Tab-delimited String of input omics list
 #' @param org organism code: hsa, mmu, microbiome, rno, cel, dme, dre, sce, bta, gga
-#' @param type
-#' @param queryType
+#' @param type character, type
+#' @param queryType character, queryType
 #'
 #' @export
 PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
+
+print(queryType)
+
   if(!exists("dataSet")){
     Init.Data();
   }
@@ -162,6 +160,13 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   if(type == "ko"){
     dataSet$ko <- GeneAnotDB;
   }
+
+  if(queryType == "region"){
+
+   dataSet$snpInputType <- "region"
+
+}
+
   if(sum(!na.inx) < 2){
     current.msg <<- "Less than two hits found in uniprot database. ";
     print(current.msg);
@@ -270,6 +275,8 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
 # parse out return the a matrix containing the logFc, with rows named by gene ID
 # if no 2nd col (logFC), the value will be padded by 0s
 .parseListInput <- function(geneIDs, IDtype){
+
+
   lines <- unlist(strsplit(geneIDs, "\r|\n|\r\n")[1]);
   if(substring(lines[1],1,1)=="#"){
     lines <- lines[-1];
@@ -459,7 +466,9 @@ GetEdgeResRowNames <- function(netType){
 }
 
 GetEdgeResCol <- function(netType, colInx){
+
     resTable <- dataSet$viewTable[[netType]]
+
     if(nrow(resTable) > max.row){
         resTable <- resTable[1:max.row, ];
         #current.msg <<- "Due to computational constraints, only top 1000 rows will be displayed.";

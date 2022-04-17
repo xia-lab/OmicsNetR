@@ -2,15 +2,17 @@
 % Please edit documentation in R/GraphFileUtils.R
 \name{ReadGraphFile}
 \alias{ReadGraphFile}
-\title{Title}
+\title{ReadGraphFile}
 \usage{
 ReadGraphFile(dataSetObj = NA, fileName, fileType)
 }
 \arguments{
-\item{fileName}{Input name of graph file}
+\item{dataSetObj}{dataSetObj}
 
-\item{fileType}{File type of graph file (".json", ".graphml", ".txt", ".sif")}
+\item{fileName}{fileName, Input name of graph file}
+
+\item{fileType}{fileType, File type of graph file (".json", ".graphml", ".txt", ".sif")}
 }
 \description{
-Title
+ReadGraphFile
 }

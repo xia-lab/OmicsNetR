@@ -2,13 +2,10 @@
 % Please edit documentation in R/MSPeakNet.R
 \name{PerformGlobalOptimization}
 \alias{PerformGlobalOptimization}
-\title{Perform global network optiomization}
+\title{PerformGlobalOptimization}
 \usage{
 PerformGlobalOptimization()
 }
-\value{
-
-}
 \description{
-Perform global network optiomization
+PerformGlobalOptimization
 }

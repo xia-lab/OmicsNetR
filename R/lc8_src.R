@@ -1,20 +1,10 @@
-#' LC8 package source
-#' source: https://github.com/LiChenPU/Formula_manipulation/
-#' Reference: https://www.nature.com/articles/s41592-021-01303-3
-#'
+## LC8 package source
+## source: https://github.com/LiChenPU/Formula_manipulation/
+## Reference: https://www.nature.com/articles/s41592-021-01303-3
+##
 
 
 
-#' my_calculate_formula
-#'
-#' @param Formula1 formula1 (could be a vector)
-#' @param Formula2 formula2 (could be a vector)
-#' @param sign 1 for merge two formula, -1 for subtract second from first formula
-#' @param valid_mat if set True, only return formula if the element count is > 0
-#' @noRd
-#'
-#' @return the merge or subtract formula in vector or matrix; and if valid_mati is true, a validation of whether negative element presents
-#' @examples my_calculate_formula(Formula1 = "C2H4O1S2P1",Formula2 = "N1H1O-1",sign = 1,Valid_formula = FALSE)
 my_calculate_formula = function(Formula1,Formula2,sign = 1, Valid_formula = FALSE){
   formula2_ls = list()
   for(i in 1:length(Formula2)){
@@ -182,16 +172,8 @@ my_calculate_formula = function(Formula1,Formula2,sign = 1, Valid_formula = FALS
 }
 
 
-#' formula_mz
-#'
-#' @param formula e.g. "C2H4O1"
-#' @param charge 0: neutral, 1: positive charge, -1: negative charge
-#' @param elem_table a table can be imported
-#' @noRd
-#' @return the exact mass of the input formula
-#'
-#' @examples formula_mz(formula = "C2H4O1", charge = 0)
-formula_mz = function(formula = "C2H4O1", charge = 0,elem_table = lc8::elem_table){
+
+formula_mz <- function(formula = "C2H4O1", charge = 0,elem_table = lc8::elem_table){
 
   mz = numeric()
   for(i in 1:length(formula)){

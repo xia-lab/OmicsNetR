@@ -2,13 +2,10 @@
 % Please edit documentation in R/MSPeakNet.R
 \name{PerformPropagation}
 \alias{PerformPropagation}
-\title{Perform network propagation}
+\title{PerformPropagation}
 \usage{
 PerformPropagation()
 }
-\value{
-
-}
 \description{
-Perform network propagation
+PerformPropagation
 }

@@ -130,7 +130,7 @@ LoadOtherLib<-function(onto){
     }
     current.link <- drug_enr$link;
     current.term <- drug_enr$term
-    current.mset = drug_enr$sets
+    current.mset <- drug_enr$sets
     set.ids<- names(current.mset);
     names(set.ids) <- names(current.mset) <- current.term;
   }else if(tolower(onto) == "jaspar"){
@@ -349,7 +349,7 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
   current.msg <<- "Regulatory element enrichment analysis was completed";
 
   if(regBool == "true"){
-    resTable1 = resTable1[which(resTable1$Hits == regCount),]
+    resTable1 <- resTable1[which(resTable1$Hits == regCount),]
   }
   # write json
   require(RJSONIO);
@@ -362,7 +362,7 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
     fun.hits = fun.hits,
     fun.genes = hits.gene
   );
-  json.mat <- toJSON(json1.res, .na='null');
+  json.mat <- toJSON(json1.res);
   json.nm <- paste(file.nm, ".json", sep="");
   sink(json.nm)
   cat(json.mat);
@@ -514,6 +514,11 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
 doProteinIDMapping <- function(q.vec, type){
   if(type %in% c("rsid")){
     hit.inx <- startsWith(q.vec, "rs");
+    q.vec <- q.vec[hit.inx]
+    res <- data.frame(gene_id=q.vec, accession=q.vec);
+    entrezs <- res;
+  }else if(type %in% c("region")){
+    hit.inx <- startsWith(q.vec, "chr");
     q.vec <- q.vec[hit.inx]
     res <- data.frame(gene_id=q.vec, accession=q.vec);
     entrezs <- res;
@@ -669,7 +674,6 @@ doGeneIDMapping <- function(q.vec, type){
     db.map <-  readRDS(db.path);
     q.vec <- db.map[, "gene_id"];
     type = "entrez";
-
   }
 
   if(type == "symbol"){
@@ -992,7 +996,6 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids){
     subres2 = as.data.frame(res2[inx,])
     inx = which(rownames(res3) %in% rownames(subres2))
     subres3 = as.data.frame(res3[inx,])
-
 
     ord = order(rownames(subres1));
     subres1 = subres1[ord,]
@@ -1412,21 +1415,15 @@ QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, un
   met.ids <- mir.dic$metID
 
   if(orphExclude ==  "TRUE"){
-
     met.path <- paste(lib.path, "microbiome", "/met4path.rds", sep="");
-
   }else{
     met.path <- paste(lib.path, "microbiome", "/metInfo.rds", sep="");
   }
 
   met.info <- readRDS(met.path);
-
   conv <- data.frame(metID=met.info$metID, KEGG=met.info$KEGG)
   mir.dic <- merge(mir.dic, conv, by="metID");
-
-
   mir.dic$KEGG[is.na(mir.dic$KEGG)] <- mir.dic$metID[is.na(mir.dic$KEGG)]
-
 
   return(mir.dic);
 }
@@ -1522,7 +1519,7 @@ Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
 }
 
 
-phenoscanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalogue="GWAS", pvalue=1E-5, proxies="None", r2=0.8, build=37){
+Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalogue="GWAS", pvalue=1E-5, proxies="None", r2=0.8, build=37){
   cat("PhenoScanner V2\n")
   if(is.null(snpquery) & is.null(regionquery) & is.null(genequery)) stop("no query has been requested")
   if((length(snpquery[1])+length(regionquery[1])+length(genequery[1]))>1) stop("only one query type allowed")
@@ -1610,7 +1607,13 @@ phenoscanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalo
     regions <- data.frame()
     n_queries <- length(regionquery)
     for(i in 1:n_queries){
-      json_file <- paste0("http://www.phenoscanner.medschl.cam.ac.uk/api/?regionquery=",regionquery[i],"&catalogue=",catalogue,"&p=",pvalue,"&proxies=None&r2=1&build=",build)
+     if(length(gregexpr(pattern =':',regionquery[i])[[1]])>1){
+       rp <-  gregexpr(pattern =':',regionquery[i])[[1]][2]-1
+       regionquery[i] = substr(regionquery[i], 1,rp)
+      }
+    
+   print(regionquery[i])
+      json_file <- paste0("http://www.phenoscanner.medschl.cam.ac.uk/api/?regionquery=", regionquery[i],"&catalogue=",catalogue,"&p=",pvalue,"&proxies=None&r2=1&build=",build)
       json_data <- rjson::fromJSON(file=json_file)
       if(length(json_data$results)==0 & length(json_data$locations)==0){
         print(paste0("Error: ",json_data$error))
@@ -1642,17 +1645,24 @@ phenoscanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalo
 }
 
 
-QueryVEP <- function(q.vec,vepDis,content_type="application/json" ){
+QueryVEP <- function(q.vec,vepDis,queryType,snpRegion,content_type="application/json" ){
+
     library(httr)
     #library(jsonlite)
     #library(xml2)
     server <- "http://rest.ensembl.org"
+
+  if(snpRegion==T){   
+    ext <- "/vep/human/region/"   
+  }else{    
     ext <- "/vep/human/id/"
+  }
     r=list()
     resvep = list()
     vepDis = as.numeric(vepDis)*1000
 
     for(i in 1:length(q.vec)){
+      q.vec[i] <- gsub("^chr","",q.vec[i])
       r[[i]] <- GET(paste(server, ext, q.vec[i],"?distance=",vepDis,sep = ""),  accept(content_type))
       stop_for_status(r[[i]])
       resvep[[i]] = content(r[[i]])[[1]][["transcript_consequences"]]

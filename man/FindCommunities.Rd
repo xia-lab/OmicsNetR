@@ -11,9 +11,6 @@ FindCommunities(method = "infomap", use.weight = FALSE)
 
 \item{use.weight}{Boolean consider edge weight: FALSE}
 }
-\value{
-
-}
 \description{
 Detect graph communities using function from igraph
 }

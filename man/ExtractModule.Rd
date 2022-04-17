@@ -13,9 +13,6 @@ ExtractModule(dataSetObj = NA, nodeids, dim = "3")
 
 \item{dim}{dimension of network results to be exported}
 }
-\value{
-
-}
 \description{
 Compute minimum connected subnetwork from input nodes using shortest path based approach
 }

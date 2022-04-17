@@ -2,16 +2,13 @@
 % Please edit documentation in R/MSPeakNet.R
 \name{ImportMSPeaks}
 \alias{ImportMSPeaks}
-\title{Importing peak file}
+\title{ImportMSPeaks}
 \usage{
 ImportMSPeaks(PeakFile = NA)
 }
 \arguments{
-\item{PeakFile}{Name of input peak file}
-}
-\value{
-
+\item{PeakFile}{PeakFile path}
 }
 \description{
-Importing peak file
+ImportMSPeaks
 }

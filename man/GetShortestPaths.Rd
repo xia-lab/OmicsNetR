@@ -13,9 +13,6 @@ GetShortestPaths(from, to, intermediate = "false")
 
 \item{intermediate}{if true check whether from and target node connects to each other}
 }
-\value{
-
-}
 \description{
 Compute the shortest path between two nodes
 }

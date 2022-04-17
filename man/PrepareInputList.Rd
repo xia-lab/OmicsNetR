@@ -13,7 +13,9 @@ PrepareInputList(dataSetObj = "NA", inputList, org, type, queryType)
 
 \item{org}{organism code: hsa, mmu, microbiome, rno, cel, dme, dre, sce, bta, gga}
 
-\item{queryType}{}
+\item{type}{character, type}
+
+\item{queryType}{character, queryType}
 }
 \description{
 Process input list
