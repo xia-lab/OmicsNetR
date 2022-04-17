@@ -558,7 +558,7 @@ extendMetPeakNetwork <- function(table.nm) {
   ## Now, construct a graph
   requireNamespace("igraph")
   requireNamespace("dplyr")
-  requireNamespace("magrittr")
+
   df <- data.frame(from = res$sourceID,
                    to = res$productID, weight = 0.2) #TODO: the weight can be optimized
   cmpd <- data.frame(ID = c(res[,1],res[,3]), NM = c(res[,2],res[,4])) %>% distinct()
@@ -598,7 +598,7 @@ extendMetPeakNetwork <- function(table.nm) {
 
   ## enhance annotateion by matching formula to KEGG
   node.ids_enhanced <- enhanceKBAnnot(table.nm);
-  
+
   edgeu.res <<- rbind(edgeu.res, edge.res) %>% distinct();
   nodeu.ids <<- c(nodeu.ids, node.ids, node.ids_enhanced$node.id);
   nodeu.nms <<- c(nodeu.nms, node.nms, node.ids_enhanced$node.nm);
