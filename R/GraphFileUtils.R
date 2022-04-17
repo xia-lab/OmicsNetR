@@ -5,7 +5,7 @@
 ###################################################
 
 ProcessOmicsNetJson <- function(dataSet, fileName) {
-  library(RJSONIO);
+  requireNamespace("RJSONIO");
   obj <- fromJSON(fileName)
   seed <- obj$dataSet$seed
   for(i in 1:length(seed)){
@@ -48,7 +48,7 @@ ProcessOmicsNetJson <- function(dataSet, fileName) {
 #' @export
 ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
   dataSet <- .get.nSet(dataSetObj);
-  require("igraph");
+  requireNamespace("igraph");
   types_arr <<- "";
 
   fileTypeu <<- fileType;
@@ -56,7 +56,7 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
 
 
   if(grepl("scatter", fileName)){
-    library(RJSONIO)
+    requireNamespace("RJSONIO")
     j = fromJSON(fileName)
     nm = "scatter3D.json"
     sink(nm);
@@ -106,7 +106,7 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
 
     })
   }else if(fileType == "json"){
-    require("RJSONIO");
+    requireNamespace("RJSONIO");
     dat <- fromJSON(fileName);
     if(!is.null(dat$data[["__Org"]])){
       data.org <<- dat$data[["__Org"]]
@@ -133,7 +133,7 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
 
     })
   }else if(fileType == "jsonOmics"){
-    require("RJSONIO");
+    requireNamespace("RJSONIO");
     dat <- fromJSON(fileName);
     dfn <- unlist(dat$elements$nodes);
     conv <- data.frame(id1=dfn[which(names(dfn)=='data.id')], name1=dfn[which(names(dfn)=='data.name')]);
@@ -346,7 +346,7 @@ convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
   centered = T;
   notcentered = F;
   # update node color based on betweenness
-  require("RColorBrewer");
+  requireNamespace("RColorBrewer");
   topo.val <- log(node.btw+1);
   topo.colsb <- ComputeColorGradient(topo.val, "black", notcentered);
   topo.colsw <-  ComputeColorGradient(topo.val, "white", notcentered);
@@ -399,7 +399,7 @@ convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
   # now create the json object
   nodes <- vector(mode="list");
 
-  library(stringr)
+  requireNamespace("stringr")
   displayedLabel<-lbls;
   long.inx <- which(str_length(lbls) > 32);
   displayedLabel[long.inx] <- paste0(strtrim(lbls[long.inx],  rep(32, length(lbls[long.inx]))), "..." )
@@ -442,7 +442,7 @@ convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
   nd.tbl <- nd.tbl[ord.inx, ];
   fast.write.csv(nd.tbl, file="node_table.csv", row.names=FALSE);
   # covert to json
-  require(RJSONIO);
+  requireNamespace(RJSONIO);
   dg <- decompose.graph(g)
   if(length(dg)>1){
     modules <- "NA"

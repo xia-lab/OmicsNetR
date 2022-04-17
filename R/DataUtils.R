@@ -39,7 +39,6 @@ Init.Data<-function(){
   initNetwork();
   uploadedGraph <<- FALSE;
   netbuild.opt <<- "first"
-  isKo <<- FALSE;
   graph_name <<- NULL;
   data.org <<- NULL;
   module.count <<- 0;
@@ -89,7 +88,7 @@ SetFileType <- function(fileType){
   file.type <<- fileType;
 }
 
-CheckQueryTypeMatch <- function(qvec, type){
+CheckQueryTypeMatch <- function(qvec, type, dbType){
   if(type == "snp"){
     queryType <- "rsid";
   }else if(type %in% c("gene","tf")){
@@ -102,7 +101,7 @@ CheckQueryTypeMatch <- function(qvec, type){
     queryType <- "mir_acc";
   }
 
-  GeneAnotDB <-doProteinIDMapping(qvec, queryType);
+  GeneAnotDB <-doProteinIDMapping(qvec, queryType, dbType);
   if(is.null(nrow(GeneAnotDB)) && GeneAnotDB == 0){
     return(FALSE);
   }else{
@@ -130,9 +129,7 @@ print(queryType)
   dataSet <- .get.nSet(dataSetObj);
   dataSet$name <- type;
   dataSet$orig <- inputList;
-  if(type == "ko"){
-    isKo <<- TRUE;
-  }
+
 
   netInvType <- "direct"
   current.msg <<- NULL;
@@ -524,3 +521,7 @@ UpdateModifiedTable <- function(type) {
 GetOrg <- function(){
   return(data.org);
 }
+
+#importFrom("grDevices", "col2rgb", "colorRampPalette", "dev.off","hsv", "rainbow")
+#importFrom("stats", "aggregate", "complete.cases", "dnorm", "filter","formula", "lm", "median", "na.omit", "p.adjust", "phyper","quantile", "wilcox.test")
+#importFrom("utils", "capture.output", "install.packages","installed.packages", "object.size", "read.csv","read.table", "sessionInfo", "write.csv")

@@ -11,10 +11,9 @@ Authors@R: c(
 Description: Underlying R functions for OmicsNet web server.
 License: GPL-3 + file LICENSE
 Depends: R (>= 4.0)
-Imports: Rcpp, BiocManager, data.table, metap, Cairo, RJSONIO, RSQLite, RandomWalkRestartMH,
-         dplyr, ggforce, ggplot2, graphlayouts, httr, lpsymphony, plyr, pryr, stringr, tidyr, knitr, 
-         igraph, RColorBrewer, qs, rjson
-Suggests: 
+Imports: Rcpp, Cairo, igraph, RJSONIO, ggplot2
+Suggests: data.table, metap, RSQLite, RandomWalkRestartMH, fitdistrplus, slam,
+          dplyr, ggforce, graphlayouts, httr, lpsymphony, plyr, pryr, stringr, tidyr, knitr, RColorBrewer, qs, rjson
 LinkingTo: Rcpp
 VignetteBuilder: knitr
 BugReports: https://github.com/xia-lab/OmicsNetR/issues/new
@@ -22,3 +21,4 @@ URL: https://github.com/xia-lab/OmicsNetR
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
+LazyData: true

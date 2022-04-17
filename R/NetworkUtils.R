@@ -106,7 +106,7 @@ BuildSeedProteinNet <- function(dataSetObj=NA){
 #' @export
 #'
 CreateGraph <- function(){
-  require('igraph');
+  requireNamespace('igraph');
   node.list <- omics.net$node.data;
   edge.list <- omics.net$edge.data;
   seed.proteins <- omics.net$node.data[,1];
@@ -397,8 +397,8 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   }
 }
 
-SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegion=FALSE,
-                         min.score = 900, netInv, zero=FALSE){
+SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
+                         min.score = 900, netInv, zero=FALSE,snpRegion=FALSE){
 
   if(inputType == "peak"){
     netInv = "direct";
@@ -409,7 +409,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
   protein.vec <- result.list$protein.vec;
   cat(netw.type, netInv,inputType, "\n")
 
-  require(RJSONIO);
+  requireNamespace("RJSONIO");
 
   # now do the database search
   if(netw.type == "ppi" || netw.type == "gene" || netw.type == "protein"){
@@ -441,11 +441,11 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
       net.info$snp.ids <- c(net.info$snp.ids, unique(node.ids));
     }
   } else if(netw.type == "snp"){
-    require('RSQLite');
+    requireNamespace('RSQLite');
 
     if(db.type == "PhenoScanner"){
 
-      require(tidyr);
+      requireNamespace("tidyr");
       if(dataSet$phesc.opt=="eqtl"){
         if(snpRegion==FALSE){
         res <- Query.PhenoScanner(snpquery= protein.vec,catalogue="eQTL")
@@ -485,7 +485,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
         fast.write.csv(res, file="vep.map.csv",row.names=FALSE);
         res <-  unique(res[which(res$gene_symbol !="NA"),c("rsid","gene_symbol")])
       }else{
-        require(dplyr)
+        requireNamespace("dplyr")
         res<- QueryVEP(protein.vec, vepDis=50,snpRegion = snpRegion)
         fast.write.csv(res, file="vep.map.csv",row.names=FALSE);
         res$distance[which(res$distance=="NA")] = 0
@@ -607,7 +607,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
 
   } else if(netw.type == "mir") { # in miRNA, table name is org code, colname is id type
 
-    if(mir.type =="targetscan"){
+    if(db.type =="targetscan"){
       table.nm <- data.org
     }else{
       table.nm <- data.org
@@ -678,7 +678,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
     # no hits
     if(nrow(res)==0){ return(c(0,0)); }
 
-    if(met.type =="keggp"){ # project to kegg
+    if(db.type =="keggp"){ # project to kegg
       res1 = res[which(res$entrez %in% c(dataSet$seeds.proteins)),];
       res2 = res[which(res$kegg %in% c(dataSet$seeds.proteins)),];
       res = rbind(res1, res2);
@@ -713,9 +713,9 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
                                   unique( prot.ids))
       }
     }else{
-      net.info$met.ids <- c(net.info$met.ids, node.ids[!node.ids %in% protein.vec])
+      net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"]))
       if(!zero){
-        net.info$protein.ids <- c(net.info$protein.ids, unique(protein.vec))
+        net.info$protein.ids <- c(net.info$protein.ids, unique(prot.ids))
       }
     }
 
@@ -731,7 +731,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
 
   } else if(netw.type == "mic") { # in mic
     # in mic
-    sql.name <-paste0("omicsnet_", dataSet$mic.type, ".sqlite");
+    sql.name <-paste0("omicsnet_", db.type, ".sqlite");
     table.nm <- mic.taxa;
 
     res <- QueryMicSQLite(protein.vec, table.nm, sql.name, dataSet$mic.thresh, dataSet$currExclude,dataSet$uniExclude,dataSet$orphExclude);
@@ -749,19 +749,20 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
     node.nms <- c(res[,"taxa"], res[,"metabolite"]);
 
     if(netInv == "direct"){
-      net.info$met.ids <- unique(c(net.info$met.ids, node.ids[!node.ids %in% protein.vec]))
+      net.info$met.ids <- unique(c(net.info$met.ids, res[,"KEGG"]))
       net.info$mic.ids <- unique(protein.vec)
     }else{
       net.info$mic.ids <- node.ids[!node.ids %in% protein.vec]
       if(!zero){
-        net.info$met.ids <- c(net.info$met.ids, unique(protein.vec))
+        net.info$met.ids <- c(net.info$met.ids, res[,"KEGG"])
       }
     }
-
-    library(igraph);
+    print(netInv);
+    print(net.info$met.ids);
+    requireNamespace("igraph");
     g <- simplify(graph.data.frame(edge.res, directed=FALSE)) #, vertices=node.list));
 
-    met.ids <- net.info$met.ids
+    met.ids <- unique(net.info$met.ids)
     met.microbe.list <- list()
     met.microbe.score.list <- list()
     mic.table <- list()
@@ -871,7 +872,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
   }
 
   if(length(edge.res)>0){
-    netw_input_type <- paste0(netw.type,"_", inputType);
+    netw_input_type <- paste0(netw.type,"_", inputType,"_", data.org);
     edgeu.res.list[[netw_input_type]] <<- unique(edge.res[,c(1,2)]);
     nodeu.ids <<- c(nodeu.ids, node.ids)
     nodeu.nms <<- c(nodeu.nms, node.nms)
@@ -880,21 +881,6 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,snpRegio
   return(1);
 }
 
-SetTfType <- function(tfType){
-  tf.type <<- tfType;
-}
-
-SetMetType <- function(metType){
-  met.type <<- metType;
-}
-
-SetM2mType <- function(metType){
-  m2m.type <<- metType;
-}
-
-SetMirType <- function(mirType){
-  mir.type <<- mirType;
-}
 
 SetNetOrder <- function(netOrder){
   net.order <<- netOrder;
@@ -989,9 +975,6 @@ FilterBipartiNet <- function(nd.type, min.dgr, min.btw){
   }
 }
 
-SetAnchorType <- function(type){
-  anchor_type <<- type;
-}
 
 #' Compute minimum connected network composed of seed nodes using shortest path based approach
 #'
@@ -1131,7 +1114,7 @@ DecomposeGraph <- function(gObj, minNodeNum = 2){
   if(uploadedGraph == "false"){
     comps <-decompose.graph(gObj, min.vertices=minNodeNum);
   }else{
-    if(gsize(gObj)>0 || met.type != "keggp"){ # do not decompose if select kegg projection
+    if(gsize(gObj)>0){
       comps <-decompose.graph(gObj, min.vertices=minNodeNum);
 
     }else{
@@ -1346,7 +1329,7 @@ UpdateNetworkLayout3D <- function(algo, filenm){
     );
   }
   # now only save the node pos to json
-  library(RJSONIO);
+  requireNamespace("RJSONIO");
   netData <- list(nodes=nodes);
   sink(filenm);
   cat(toJSON(netData));
@@ -1369,7 +1352,7 @@ UpdateNetworkLayout <- function(algo, filenm, focus){
     );
   }
   # now only save the node pos to json
-  library(RJSONIO);
+  requireNamespace("RJSONIO");
   netData <- list(nodes=nodes);
   sink(filenm);
   cat(toJSON(netData));
@@ -1378,7 +1361,7 @@ UpdateNetworkLayout <- function(algo, filenm, focus){
 }
 
 PerformLayOut <- function(net.nm, algo, focus){
-  require(igraph)
+  requireNamespace("igraph")
 
   g <- ppi.comps[[net.nm]];
   vc <- vcount(g);
@@ -1426,7 +1409,7 @@ PerformLayOut <- function(net.nm, algo, focus){
     l <- layout_with_sugiyama(g, vgap=vc/4)
     pos.xy <- -l$layout
   }else if(algo == "circular_tripartite"){
-    library(ggforce)
+    requireNamespace("ggforce")
     l <- layout_with_sugiyama(g, layers = as.numeric(V(g)$layers)*(vc/3) +30)
     layout <- l$layout
 
@@ -1443,7 +1426,7 @@ PerformLayOut <- function(net.nm, algo, focus){
     l <- layout_with_sugiyama(g, layers = as.numeric(V(g)$layers)*(vc/4))
     pos.xy <- -l$layout[,2:1]
   }else if(algo == "concentric"){
-    library(graphlayouts)
+    requireNamespace("graphlayouts")
     # the fist element in the list for concentric is the central node.
     if(focus==""){
       inx=1;
@@ -1453,7 +1436,7 @@ PerformLayOut <- function(net.nm, algo, focus){
     coords <- layout_with_focus(g,inx)
     pos.xy <- coords$xy
   }else if(algo == "backbone"){
-    library(graphlayouts)
+    requireNamespace("graphlayouts")
     if(length(V(g)$name)<2000){
       coords <- layout_with_stress(g)
       pos.xy <- coords
@@ -1518,7 +1501,8 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
 
   ## Feed the input into the PCSF algorithm
   if(.on.public.web){
-    output <- XiaLabCppLib::call_sr(from,to,cost,node_names,node_prizes)
+    #XiaLabCppLib is required here, but load before
+    output <- call_sr(from,to,cost,node_names,node_prizes)
   } else {
     #For R package, this function has already been included internally
     output <- call_sr(from,to,cost,node_names,node_prizes)
@@ -1629,15 +1613,9 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   }
 
   old.edges <- edge.res;
-  if(inputType == "gene1"){
-    query.mat <- dataSet$exp.mat[["gene"]][dataSet$gene_type_vec == 1];
 
-  }else if(inputType == "protein1"){
-    query.mat <- dataSet$exp.mat[["gene"]][dataSet$gene_type_vec == 3];
+  query.mat <- dataSet$exp.mat[[inputType]];
 
-  }else{
-    query.mat <- dataSet$exp.mat[[inputType]];
-  }
 
   query.vec <- rownames(dataSet$exp.mat[[inputType]]);
   if(inputType != type){
@@ -1651,7 +1629,7 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   result.listu$type <- type;
   result.listu <<- result.listu;
 
-  if(!CheckQueryTypeMatch(result.listu$protein.vec, type)){
+  if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
     current.msg<<- paste("Please make sure correct interaction type is selected!")
     containMsg <- 1;
     print("Please make sure correct interaction type is selected!");
@@ -1665,7 +1643,8 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   }
 
   cat(inputType, type, dbType, require.exp, min.score, inv, FALSE, "\n")
-  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE);
+
+  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE, F);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
 
@@ -1823,7 +1802,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   result.listu$type <- type;
   result.listu <<- result.listu;
 
-  if(!CheckQueryTypeMatch(result.listu$protein.vec, type)){
+  if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
     current.msg<<- paste("Please make sure correct interaction type is selected!")
     containMsg <- 1;
     print("Please make sure correct interaction type is selected!");
@@ -1844,16 +1823,10 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     inv = "direct";
   }
   cat(orig.inputType, type, "\n");
-  print("querynet--------------------")
-  print(inv)
-
- if(length(dataSet$snpInputType) >0){
-  snpRegion <- TRUE
-}else{
-snpRegion <- FALSE
-}
-
-  SearchNetDB(inputType, type, dbType, require.exp, snpRegion,min.score, inv, FALSE);
+  if(inputType == type){
+    inv = "direct";
+  }
+  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE,F);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
 
@@ -1921,12 +1894,20 @@ GetNetworkTopology <- function(netnm){
   return(propertiesVector);
 }
 
+#' PlotDegreeHistogram
+#'
+#' @param imgNm image name
+#' @param netNm network name
+#' @param dpi dpi value
+#' @param format format
+#' @export
+#'
 PlotDegreeHistogram <- function(imgNm, netNm = "NA", dpi=72, format="png"){
-  library(Cairo)
+  requireNamespace("Cairo")
   dpi<-as.numeric(dpi)
   imgNm <- paste(imgNm, "dpi", dpi, ".", format, sep="");
   Cairo(file=imgNm, width=400, height=400, type="png", bg="white");
-  library(ggplot2)
+  requireNamespace("ggplot2")
   if(netNm != "NA"){
     overall.graph <- ppi.comps[[netNm]];
   }
@@ -1949,12 +1930,20 @@ PlotDegreeHistogram <- function(imgNm, netNm = "NA", dpi=72, format="png"){
   dev.off();
 }
 
+#' PlotBetweennessHistogram
+#'
+#' @param imgNm image name
+#' @param netNm network name
+#' @param dpi dpi value
+#' @param format format
+#' @export
+#' @import Cairo
 PlotBetweennessHistogram <- function(imgNm, netNm = "NA",dpi=72, format="png"){
-  library(Cairo)
+  requireNamespace("Cairo")
   dpi<-as.numeric(dpi)
   imgNm <- paste(imgNm, "dpi", dpi, ".", format, sep="");
   Cairo(file=imgNm, width=400, height=400, type="png", bg="white");
-  library(ggplot2)
+  requireNamespace("ggplot2")
   if(netNm != "NA"){
     overall.graph <- ppi.comps[[netNm]];
   }
@@ -2033,8 +2022,6 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   edges.df2 <- merge(edges.df1, conv2, by = "to");
   PeakSet$edges.df <- data.frame(Source=edges.df2$Source, Target=edges.df2$Target);
   PeakSet <<- PeakSet;
-  anchor_type <<- "peak";
-  met.type <<- "kegg";
 
   dataSet <<- dataSet;
   if(.on.public.web){
@@ -2043,10 +2030,6 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   }else{
     return(.set.nSet(dataSet))
   }
-}
-
-SetMicType <- function(name){
-  dataSet$mic.type <<- name;
 }
 
 SetMicExcludeOpt <- function(opt){
@@ -2066,8 +2049,8 @@ SetMicThresh <- function(thresh){
 #' @export
 
 DoGba <- function(fileNm="NA", method="rwr", nodeids){
-  library(RandomWalkRestartMH)
-  library(igraph)
+  requireNamespace("RandomWalkRestartMH")
+  requireNamespace("igraph")
 
   nodes <- strsplit(nodeids, ",")[[1]];
   g <- ppi.comps[[current.net.nm]];
@@ -2083,7 +2066,7 @@ DoGba <- function(fileNm="NA", method="rwr", nodeids){
   if(nrow(resObj) > 100){
     resObj <- resObj[c(1:100),]
   }
-  require(RJSONIO);
+  requireNamespace("RJSONIO");
   sink(fileNm);
   cat(toJSON(resObj));
   sink();
@@ -2098,9 +2081,10 @@ DoGba <- function(fileNm="NA", method="rwr", nodeids){
 
 }
 
-#' Filter gene/protein by tissue
+#' FilterByTissue
+#' @description Filter gene/protein by tissue
 #'
-#' @param fileNm Input file name for exporting result table as .csv
+#' @param dataSetObj dataSetObj
 #' @param type Input database name
 #' @param tissue Input the tissue name
 #'
@@ -2205,7 +2189,7 @@ FilterByPvalue <- function(pvaluecutoff){
 }
 
 queryFilterDB <- function(type, org){
-  require('RSQLite');
+  requireNamespace('RSQLite');
   conv.db <- dbConnect(SQLite(), paste(sqlite.path, "tissue_filter.sqlite", sep=""));
   db.map <- dbReadTable(conv.db, paste0(data.org,"_",type));
   dbDisconnect(conv.db); cleanMem();
@@ -2305,7 +2289,7 @@ DeleteIndNet <- function(netNm){
 
 #type: subnetwork (networkbuilder page) or ind (database selection page)
 PrepareGraph <- function(net.nm, type="", export=T){
-  library(igraph);
+  requireNamespace("igraph");
   if(type == "subnetwork"){
     g <- ppi.comps[[net.nm]];
   }else{
@@ -2380,7 +2364,7 @@ SaveNetworkJson <- function(fileNm){
   obj$omics.net <- omics.net
   obj$data.org <- data.org
 
-  library(rjson);
+  requireNamespace("rjson");
   sink(fileNm);
   cat(toJSON(obj));
   sink();

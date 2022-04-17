@@ -2,16 +2,16 @@
 % Please edit documentation in R/NetworkUtils.R
 \name{FilterByTissue}
 \alias{FilterByTissue}
-\title{Filter gene/protein by tissue}
+\title{FilterByTissue}
 \usage{
 FilterByTissue(dataSetObj = NA, type, tissue)
 }
 \arguments{
+\item{dataSetObj}{dataSetObj}
+
 \item{type}{Input database name}
 
 \item{tissue}{Input the tissue name}
-
-\item{fileNm}{Input file name for exporting result table as .csv}
 }
 \description{
 Filter gene/protein by tissue

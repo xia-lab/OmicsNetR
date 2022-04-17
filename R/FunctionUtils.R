@@ -219,42 +219,8 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs){
   # prepare query
   ora.vec <- NULL;
   idtype <- "entrez"
-  if(omics.net$netw.type == 'ppi'){
-    if(data.org == "ath"){
-      idtype <- "embltranscript"
-    }else if(data.org %in% c("bsu", "tbr", "cel", "dme", "eco", "pfa") & net.type == "string"){
-      idtype <- "string"
-    }else if(data.org %in% c("bta","dre","rno","gga","hsa","mmu") & net.type == "string"){
-      idtype <- "emblprotein"
-    }else if(data.org %in% c("hsa","mmu", "cel", "dme","sce") & net.type %in% c("innate", "irefinx", "rolland")){
-      idtype <- "entrez"
-    }else if(data.org == "sce" & net.type == "string"){ # only for yeast
-      idtype <- "emblgene";
-    }
-    if(idtype=="uniprot"){
-      uniprot.vec <- unlist(strsplit(IDs, "; "));
-      ora.vec <- doUniprot2EntrezMapping(uniprot.vec);
-      names(ora.vec) <- uniprot.vec;
-    }else if(idtype=="emblprotein"){
-      emblprotein.vec <- unlist(strsplit(IDs, "; "))
-      ora.vec <- doEmblProtein2EntrezMapping(emblprotein.vec);
-      names(ora.vec) <- emblprotein.vec;
-    }else if(idtype=="string"){
-      string.vec <- unlist(strsplit(IDs, "; "))
-      ora.vec <- doString2EntrezMapping(string.vec);
-      names(ora.vec) <- string.vec;
-    }else if(idtype=="emblgene"){
-      emblgene.vec <- unlist(strsplit(IDs, "; "))
-      ora.vec <- doEmblGene2EntrezMapping(emblgene.vec);
-      names(ora.vec) <- emblgene.vec;
-    }else{
-      ora.vec <- unlist(strsplit(IDs, "; "));
-      names(ora.vec) <- ora.vec;
-    }
-  }else{
-    ora.vec <- unlist(strsplit(IDs, "; "));
-    names(ora.vec) <- ora.vec;
-  }
+  ora.vec <- unlist(strsplit(IDs, "; "));
+  names(ora.vec) <- ora.vec;
   ora.vec <- unlist(strsplit(IDs, "; "));
   names(ora.vec) <- ora.vec;
   if(fun.type %in% c("trrust", "encode", "jaspar", "mirnet", "met", "drugbank")){
@@ -267,7 +233,7 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs){
 }
 
 PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType){
-  require(plyr)
+  requireNamespace("plyr")
   ora.nms <- names(ora.vec);
   # prepare for the result table
   set.size<-100;
@@ -289,7 +255,7 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
     node.ids <- c(res[,"entrez"], res[,"mir_acc"])
     node.nms <- c(res[,"symbol"], res[,"mir_id"]);
 
-  }else if(fun.type == "met"){ # in miRNA, table name is org code, colname is id type
+  }else if(fun.type == "met"){
     table.nm <- paste(data.org, "kegg", sep="_");
     res <- QueryMetSQLiteNet(table.nm, ora.vec, "inverse");
     if(nrow(res)==0){ return(c(0,0)); }
@@ -352,7 +318,7 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
     resTable1 <- resTable1[which(resTable1$Hits == regCount),]
   }
   # write json
-  require(RJSONIO);
+  requireNamespace("RJSONIO");
   fun.ids <- resTable1[,1];
   fun.nms <- resTable1[,2];
   fun.hits <- resTable1[,3];
@@ -481,7 +447,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
-  require(RJSONIO);
+  requireNamespace("RJSONIO");
   fun.anot <- hits.query;
   fun.padj <- resTable[,6]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj) };
   fun.pval <- resTable[,5]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
@@ -511,7 +477,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
   return(1);
 }
 
-doProteinIDMapping <- function(q.vec, type){
+doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
   if(type %in% c("rsid")){
     hit.inx <- startsWith(q.vec, "rs");
     q.vec <- q.vec[hit.inx]
@@ -523,7 +489,7 @@ doProteinIDMapping <- function(q.vec, type){
     res <- data.frame(gene_id=q.vec, accession=q.vec);
     entrezs <- res;
   }else if(type %in% c("class", "family","order" ,"genus","species","strain", "phylum")){
-    require('RSQLite');
+    requireNamespace('RSQLite');
     mic.taxa <<- type;
     db.path <- paste(lib.path, "microbiome", "/taxaInfo.rds", sep="");
     taxlist <- readRDS(db.path);
@@ -559,7 +525,7 @@ doProteinIDMapping <- function(q.vec, type){
     entrezs <- entrezs[c(1,2)]
     colnames(entrezs) = c("gene_id", "accession");
   }else if(type %in% c("mir_acc", "mir_id", "mirnet")){
-    require('RSQLite');
+    requireNamespace('RSQLite');
     path <- paste0(sqlite.path, "mir2gene.sqlite")
     mir.db <- dbConnect(SQLite(), path);
     query <- paste (shQuote(q.vec),collapse=",");
@@ -617,7 +583,7 @@ doProteinIDMapping <- function(q.vec, type){
     colnames(res_entrez) <- c("gene_id", "accession")
     entrezs <- res_entrez
   }else if(type == "tf"){
-    table.nm <- paste(data.org, tf.type, sep="_");
+    table.nm <- paste(data.org, dbType, sep="_");
     mir.dic <- QueryTfSQLite(table.nm, q.vec, "inverse");
     res <- mir.dic[ , c("tfid", "tfid")];
     res = res[!duplicated(res),]
@@ -881,47 +847,6 @@ doEntrez2EmblProteinMapping <- function(entrez.vec){
   return(entrezs);
 }
 
-doPpiIDMapping <- function(q.vec, direction = "id") {
-  if (data.org == "ath") {
-    db.path <-paste(lib.path, data.org, "/entrez_embl_transcript.rds", sep = "")
-  } else if (data.org == "sce") {
-    if (net.type == "string") {
-      # only for yeast
-      db.path <-
-        paste(lib.path, data.org, "/entrez_embl_gene.rds", sep = "")
-    } else{
-      db.path <- paste(lib.path, data.org, "/entrez_uniprot.rds", sep = "")
-    }
-  } else if (net.type %in% c("innate", "irefinx", "rolland")) {
-    db.path <- paste(lib.path, data.org, "/entrez_uniprot.rds", sep = "")
-  } else{
-    if (data.org %in% c("bsu", "tbr", "cel", "dme", "eco", "pfa")) {
-      db.path <- paste(lib.path, data.org, "/entrez_string.rds", sep = "")
-    } else if (data.org %in% c("mmu", "hsa") && net.type == "string") {
-      db.path <- paste(lib.path, data.org, "/entrez.rds", sep = "")
-    } else {
-      db.path <- paste(lib.path, data.org, "/entrez_embl_protein.rds", sep = "")
-    }
-  }
-  db.map <-  readRDS(db.path);
-  if (direction == "id") {
-    hit.inx <- match(q.vec, db.map[, "gene_id"]);
-    ppi.mat <- db.map[hit.inx,];
-    # fix the factor col related to library issue
-    i <- sapply(ppi.mat, is.factor)
-    ppi.mat[i] <- lapply(ppi.mat[i], as.character)
-    ppi.mat = as.vector(ppi.mat$accession)
-  } else{
-    hit.inx <- match(q.vec, db.map[, "accession"])
-    ppi.mat <- db.map[hit.inx,]
-    # fix the factor col related to library issue
-    i <- sapply(ppi.mat, is.factor)
-    ppi.mat[i] <- lapply(ppi.mat[i], as.character)
-    ppi.mat = as.vector(ppi.mat$gene_id)
-  }
-  return(ppi.mat)
-}
-
 .readDataTable <- function(fileName){
   dat <- try(data.table::fread(fileName, header=TRUE, check.names=FALSE, blank.lines.skip=TRUE, data.table=FALSE));
   if(class(dat) == "try-error" || any(dim(dat) == 0)){
@@ -1034,50 +959,7 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids){
     }
   }
 
-  #compute gene/met pair, hide for now
-  if(1 == 2){
-    containsKo = length(rownames(dataSet$seed[["ko"]]))>0
-    containsGene = length(rownames(dataSet$seed[["gene"]]))>0
-    containsMet = length(rownames(dataSet$seed[["met"]]))>0
-    if(containsMet && (containsGene || containsKo)){
-      met.vec <- dataSet$seed[["met"]]
-      if(isKo){
-        gene.vec <- dataSet$seed[["ko"]]
-      }else{
-        gene.vec <- dataSet$seed[["gene"]]
-      }
-      res <- .pathwayMetGenePair(met.vec, gene.vec)
-      nohits.vec = vector()
-
-      for(i in 1:length(hits.query)){
-        query.vec = hits.query[[i]]
-        table.name = names(hits.query)[i]
-        res1 = res[which(res[,2] %in% query.vec),]
-        res2 = res[which(res[,5] %in% query.vec),]
-
-        combinedres = rbind(res1, res2)
-        combinedres = unique(combinedres)
-        if(length(rownames(combinedres)) >0){
-          combinedres$pathway = table.name
-          if(i==1){
-            alltables = combinedres
-          }else{
-            alltables = rbind(alltables, combinedres)
-          }
-        }
-      }
-      fast.write.csv(alltables, paste0("pairs_", file.nm, ".csv"), row.names = F)
-    }
-  }
   return(.set.nSet(dataSet));
-}
-
-doEntrez2KoMapping <- function(entrez.vec){
-  db.path <- paste(lib.path,data.org,"/koConv.rds", sep="");
-  db.map <-  readRDS(db.path);
-  hit.inx <- match(entrez.vec, db.map[, "entrez"]);
-  entrez.vec[hit.inx] <- db.map[hit.inx, "ko"];
-  return(entrez.vec);
 }
 
 PerformEnrichAnalysisKegg <- function(dataSetObj=NA, file.nm, fun.type, ora.vec){
@@ -1199,7 +1081,7 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat){
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
-  require(RJSONIO);
+  requireNamespace("RJSONIO");
   fun.anot <- hits.query;
   fun.padj <- resTable[,6]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj)};
   fun.pval <- resTable[,5]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval)};
@@ -1259,7 +1141,7 @@ SaveIntegEnr <- function(file.nm,res.mat){
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
-  require(RJSONIO);
+  requireNamespace("RJSONIO");
   integ.query <- integ.query[resTable$Pathway]
   fun.anot <- integ.query;
   fun.nms <- resTable[,"Pathway"];  if(length(fun.nms) ==1) { fun.nms <- matrix(fun.nmsl) };
@@ -1299,7 +1181,7 @@ SaveIntegEnr <- function(file.nm,res.mat){
 
 
 .pathwayMetGenePair <- function(met.vec, gene.vec){
-  if(isKo || data.org == "microbiome"){
+  if(data.org == "microbiome"){
     table.nm <- "ko_network"
     resMet <- QueryKoSQLiteNet(table.nm, rownames(met.vec), "inverse");
     resGene <- QueryKoSQLiteNet(table.nm, rownames(gene.vec), "direct");
@@ -1335,7 +1217,7 @@ SaveIntegEnr <- function(file.nm,res.mat){
 
 # note, last two par only for STRING database
 QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
-  require('RSQLite')
+  requireNamespace('RSQLite')
   path <- paste0(sqlite.path, "ppi.sqlite")
   ppi.db <- dbConnect(SQLite(), path);
   query <- paste(shQuote(q.vec),collapse=",");
@@ -1365,7 +1247,7 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
 
 # table name is org code, id.type is column name
 QueryMirSQLite <- function(table.nm, id.type, q.vec, inv, db.nm){
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, "mir2gene.sqlite")
   mir.db <- dbConnect(SQLite(), path);
   query <- paste (shQuote(q.vec),collapse=",");
@@ -1382,7 +1264,7 @@ QueryMirSQLite <- function(table.nm, id.type, q.vec, inv, db.nm){
 }
 
 QueryDrugSQLite <- function(q.vec, regsearch){
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, "drug.sqlite")
   mir.db <- dbConnect(SQLite(), path);
   table.nm = "human"
@@ -1397,7 +1279,7 @@ QueryDrugSQLite <- function(q.vec, regsearch){
 
 QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, uniExclude=T, orphExclude = T){
 
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, sql.nm)
   mir.db <- dbConnect(SQLite(), path);
 
@@ -1429,7 +1311,7 @@ QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, un
 }
 
 QueryMetSQLiteNet <- function(table.nm, q.vec, inv){
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, "omicsnet_met.sqlite")
   lnc.db <- dbConnect(SQLite(), path);
   query <- paste (shQuote(q.vec),collapse=",");
@@ -1446,7 +1328,7 @@ QueryMetSQLiteNet <- function(table.nm, q.vec, inv){
 
 QueryM2mSQLiteNet <- function(table.nm, q.vec, inv){
 
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, "omicsnet_met.sqlite")
   lnc.db <- dbConnect(SQLite(), path);
   query <- paste (shQuote(q.vec),collapse=",");
@@ -1461,7 +1343,7 @@ QueryM2mSQLiteNet <- function(table.nm, q.vec, inv){
 }
 
 QueryKoSQLiteNet <- function(table.nm, q.vec, inv){
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, "ko.sqlite")
   lnc.db <- dbConnect(SQLite(), path);
   table.nm = "ko"
@@ -1480,7 +1362,7 @@ QueryKoSQLiteNet <- function(table.nm, q.vec, inv){
 }
 
 QueryTFSQLite <- function(table.nm, q.vec, inv){
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, "tf2gene.sqlite")
   chem.db <- dbConnect(SQLite(), path);
 
@@ -1498,7 +1380,7 @@ QueryTFSQLite <- function(table.nm, q.vec, inv){
 
 Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
 
-  require('RSQLite');
+  requireNamespace('RSQLite');
   db.path <<- db.path;
 
   db.path <- paste0(db.path, ".sqlite");
@@ -1611,7 +1493,7 @@ Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, 
        rp <-  gregexpr(pattern =':',regionquery[i])[[1]][2]-1
        regionquery[i] = substr(regionquery[i], 1,rp)
       }
-    
+
    print(regionquery[i])
       json_file <- paste0("http://www.phenoscanner.medschl.cam.ac.uk/api/?regionquery=", regionquery[i],"&catalogue=",catalogue,"&p=",pvalue,"&proxies=None&r2=1&build=",build)
       json_data <- rjson::fromJSON(file=json_file)
@@ -1647,14 +1529,14 @@ Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, 
 
 QueryVEP <- function(q.vec,vepDis,queryType,snpRegion,content_type="application/json" ){
 
-    library(httr)
+    requireNamespace("httr")
     #library(jsonlite)
     #library(xml2)
     server <- "http://rest.ensembl.org"
 
-  if(snpRegion==T){   
-    ext <- "/vep/human/region/"   
-  }else{    
+  if(snpRegion==T){
+    ext <- "/vep/human/region/"
+  }else{
     ext <- "/vep/human/id/"
   }
     r=list()
@@ -1686,23 +1568,23 @@ QueryVEP <- function(q.vec,vepDis,queryType,snpRegion,content_type="application/
     } )
     )
     resvep3$rsid = gsub("\\.[0-9]*","",rownames(resvep3))
- 
+
     row.names(resvep3)=NULL
     return(resvep3)
   }
 
 QueryMicM2mSQLiteNet <- function(table.nm, q.vec){
 
-  require('RSQLite');
+  requireNamespace('RSQLite');
   path <- paste0(sqlite.path, "omicsnet_met.sqlite")
 
   lnc.db <- dbConnect(SQLite(), path);
   query <- paste (shQuote(q.vec),collapse=",");
-  
+
      statement1 <- paste("SELECT * FROM ", table.nm, " WHERE productID IN (",query,")", sep="");
 
     statement2 <- paste("SELECT * FROM ", table.nm, " WHERE sourceID IN (",query,")", sep="");
- 
+
 
   my.dic1 <- .query.sqlite(lnc.db, statement1);
   lnc.db <- dbConnect(SQLite(), path);

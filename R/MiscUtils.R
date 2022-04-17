@@ -1,5 +1,5 @@
 ##################################################
-## R scripts for OmicsNet 
+## R scripts for OmicsNet
 ## Various utility methods
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
@@ -24,7 +24,7 @@ rescale2NewRange <- function(qvec, a, b){
 
 # #FFFFFF to rgb(1, 0, 0)
 hex2rgba <- function(cols){
-  return(apply(sapply(cols, col2rgb), 2, function(x){paste("rgba(", x[1], ",", x[2], ",", x[3], ",0.8)", sep="")})); 
+  return(apply(sapply(cols, col2rgb), 2, function(x){paste("rgba(", x[1], ",", x[2], ",", x[3], ",0.8)", sep="")}));
 }
 
 # re-arrange one vector elements according to another vector values
@@ -39,7 +39,7 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
     dup.inx <- duplicated(all.nms);
     dim.orig  <- dim(data);
     data <- apply(data, 2, as.numeric); # force to be all numeric
-    dim(data) <- dim.orig; # keep dimension (will lost when only one item) 
+    dim(data) <- dim.orig; # keep dimension (will lost when only one item)
     rownames(data) <- all.nms;
     colnames(data) <- colnms;
     if(sum(dup.inx) > 0){
@@ -55,7 +55,7 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
             hit.inx.all <- which(all.nms == nm);
             hit.inx.uniq <- which(uniq.nms == nm);
 
-            # average the whole sub matrix 
+            # average the whole sub matrix
             if(lvlOpt == "mean"){
                 uniq.data[hit.inx.uniq, ]<- apply(data[hit.inx.all,,drop=F], 2, mean, na.rm=T);
             }else if(lvlOpt == "median"){
@@ -76,7 +76,7 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
         }
         return(data);
     }
-} 
+}
 
 generate_breaks = function(x, n, center = F){
     if(center){
@@ -90,7 +90,7 @@ generate_breaks = function(x, n, center = F){
 }
 
 ComputeColorGradient <- function(nd.vec, background="black", centered){
-    require("RColorBrewer");
+    requireNamespace("RColorBrewer");
     minval = min(nd.vec, na.rm=TRUE);
     maxval = max(nd.vec, na.rm=TRUE);
     res = maxval-minval;
@@ -99,7 +99,7 @@ ComputeColorGradient <- function(nd.vec, background="black", centered){
         return(rep("#0b6623", length(nd.vec)));
     }
 
-    #if(sum(nd.vec<0, na.rm=TRUE) > 0){ 
+    #if(sum(nd.vec<0, na.rm=TRUE) > 0){
     #    centered <- T;
     #}else{
     #    centered <- F;
@@ -164,7 +164,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 
 # shorthand
 ShowMemoryUse <- function(..., n=30) {
-    library(pryr);
+    requireNamespace("pryr");
     sink(); # make sure print to screen
     print(mem_used());
     print(sessionInfo());
@@ -173,7 +173,7 @@ ShowMemoryUse <- function(..., n=30) {
 }
 
 CleanMemory <- function(){
-    for (i in 1:10){ 
+    for (i in 1:10){
         gc(reset = T);
     }
 }
@@ -204,17 +204,17 @@ fast.write.csv <- function(dat, file, row.names=TRUE){
     tryCatch(
         {
            if(is.data.frame(dat)){
-                # there is a rare bug in data.table (R 3.6) which kill the R process in some cases 
+                # there is a rare bug in data.table (R 3.6) which kill the R process in some cases
                 data.table::fwrite(dat, file, row.names=row.names);
            }else{
-                write.csv(dat, file, row.names=row.names);  
+                write.csv(dat, file, row.names=row.names);
            }
         }, error=function(e){
             print(e);
-            write.csv(dat, file, row.names=row.names);   
+            write.csv(dat, file, row.names=row.names);
         }, warning=function(w){
             print(w);
-            write.csv(dat, file, row.names=row.names); 
+            write.csv(dat, file, row.names=row.names);
         });
 }
 
