@@ -259,7 +259,7 @@ GetIndNetsQueryNum <- function(){
 GetShortestPaths <- function(from, to, intermediate="false"){
   current.net <- ppi.comps[[current.net.nm]];
 
-  paths <- get.all.shortest.paths(current.net, from, to)$res;
+  paths <- igraph::get.all.shortest.paths(current.net, from, to)$res;
   if(length(paths) == 0){
     return (paste("No connection between the two nodes!"));
   }
@@ -353,7 +353,7 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
     paths.list <-list();
     sd.len <- length(nodes);
     for(pos in 1:sd.len){
-      paths.list[[pos]] <- get.shortest.paths(g, nodes[pos], nodes[-(1:pos)])$vpath;
+      paths.list[[pos]] <- igraph::get.shortest.paths(g, nodes[pos], nodes[-(1:pos)])$vpath;
     }
     nds.inxs <- unique(unlist(paths.list));
     nodes2rm <- V(g)$name[-nds.inxs];
@@ -908,7 +908,7 @@ SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
   tparam = 1
   while(tparam <= length(terminals))
   {
-    paths = get.all.shortest.paths(PPI_graph,subtree, nsubtree)
+    paths = igraph::get.all.shortest.paths(PPI_graph,subtree, nsubtree)
     if(length(paths$res)>1)
     {
       paths_length = sapply(paths$res, length)
@@ -1017,7 +1017,7 @@ BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
   # now calculate the shortest paths for
   # each seed vs. all other seeds (note, to remove pairs already calculated previously)
   for(pos in 1:sd.len){
-    paths.list[[pos]] <- get.shortest.paths(overall.graph, my.seeds[pos], seed.proteins[-(1:pos)])$vpath;
+    paths.list[[pos]] <- igraph::get.shortest.paths(overall.graph, my.seeds[pos], seed.proteins[-(1:pos)])$vpath;
   }
   nds.inxs <- unique(unlist(paths.list));
   nodes2rm <- V(overall.graph)$name[-nds.inxs];
@@ -1630,9 +1630,11 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   result.listu <<- result.listu;
 
   if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
-    current.msg<<- paste("Please make sure correct interaction type is selected!")
-    containMsg <- 1;
-    print("Please make sure correct interaction type is selected!");
+    if(type != "peak"){
+        current.msg<<- paste("Please make sure correct interaction type is selected!")
+        containMsg <- 1;
+        print("Please make sure correct interaction type is selected!");
+    }
   }
 
 
@@ -1803,9 +1805,11 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   result.listu <<- result.listu;
 
   if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
-    current.msg<<- paste("Please make sure correct interaction type is selected!")
-    containMsg <- 1;
-    print("Please make sure correct interaction type is selected!");
+    if(type != "peak"){
+        current.msg<<- paste("Please make sure correct interaction type is selected!")
+        containMsg <- 1;
+        print("Please make sure correct interaction type is selected!");
+    }
   }
 
 

@@ -261,9 +261,9 @@ PerformAnnotation <- function() {
                       value = convert2KEGG(mhdbvalues,
                                            PeakSet$HMDB_library))
 
-    nods <- as_data_frame(PeakSet[["NetworkSet"]][["cleanNetwork"]], what = "vertices");
+    nods <- igraph::as_data_frame(PeakSet[["NetworkSet"]][["cleanNetwork"]], what = "vertices");
     nods <- nods[,-c(12:16)]
-    egs <- as_data_frame(PeakSet[["NetworkSet"]][["cleanNetwork"]], what = "edges");
+    egs <- igraph::as_data_frame(PeakSet[["NetworkSet"]][["cleanNetwork"]], what = "edges");
     egs <- egs[,-c(13:23)]
     nods <- .filterCurrency(nods);
     PeakSet$nodes <- nods;
@@ -361,7 +361,7 @@ GetFastPeak <- function(){
     # both of them are running too slowly (>1h)
     # for huge constraints matrix
     types <- "C"
-    OptiSolution <- lpsymphony_solve_LP(obj,
+    OptiSolution <- lpsymphony::lpsymphony_solve_LP(obj,
                                         mat,
                                         dir,
                                         rhs,
@@ -558,11 +558,12 @@ extendMetPeakNetwork <- function(table.nm) {
   ## Now, construct a graph
   requireNamespace("igraph")
   requireNamespace("dplyr")
+  requireNamespace("magrittr")
   df <- data.frame(from = res$sourceID,
                    to = res$productID, weight = 0.2) #TODO: the weight can be optimized
   cmpd <- data.frame(ID = c(res[,1],res[,3]), NM = c(res[,2],res[,4])) %>% distinct()
 
-  ig.obj <- graph_from_data_frame(df, directed = FALSE, vertices = cmpd)
+  ig.obj <- igraph::graph_from_data_frame(df, directed = FALSE, vertices = cmpd)
   ppi <- simplify(ig.obj)
 
   ## Now, filter with PCSF
@@ -597,7 +598,7 @@ extendMetPeakNetwork <- function(table.nm) {
 
   ## enhance annotateion by matching formula to KEGG
   node.ids_enhanced <- enhanceKBAnnot(table.nm);
-
+  
   edgeu.res <<- rbind(edgeu.res, edge.res) %>% distinct();
   nodeu.ids <<- c(nodeu.ids, node.ids, node.ids_enhanced$node.id);
   nodeu.nms <<- c(nodeu.nms, node.nms, node.ids_enhanced$node.nm);

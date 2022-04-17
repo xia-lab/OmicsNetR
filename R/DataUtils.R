@@ -74,10 +74,6 @@ SetOrganism <- function(org){
   data.org <<- org;
 }
 
-SetNetType <- function(netType){
-  net.type <<- netType;
-}
-
 SetCurrentDataMulti <- function(){
   dataSet$type <- nms.vec;
   rm('nms.vec', envir = .GlobalEnv);
@@ -89,6 +85,7 @@ SetFileType <- function(fileType){
 }
 
 CheckQueryTypeMatch <- function(qvec, type, dbType){
+  
   if(type == "snp"){
     queryType <- "rsid";
   }else if(type %in% c("gene","tf")){
@@ -121,8 +118,6 @@ CheckQueryTypeMatch <- function(qvec, type, dbType){
 #' @export
 PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
 
-print(queryType)
-
   if(!exists("dataSet")){
     Init.Data();
   }
@@ -154,6 +149,8 @@ print(queryType)
   gene.mat <<- gene.mat
   GeneAnotDB <-doProteinIDMapping(rownames(gene.mat), queryType);
   na.inx <- is.na(GeneAnotDB[,1]) | is.na(GeneAnotDB[,2]);
+print(type)
+print("=====type")
   if(type == "ko"){
     dataSet$ko <- GeneAnotDB;
   }
@@ -205,12 +202,7 @@ print(queryType)
     prot.mat <- gene.mat
   }
 
-  if(type == "tf"){
-    dataSet$mat[[type]] <- gene.mat;
-    dataSet$exp.mat[[type]] <- prot.mat;
-    dataSet$seed[[type]] <- prot.mat;
-    dataSet$inv[[type]] <- netInvType;
-  }else if(type %in% c("gene", "geneonly", "protein1")){
+  if(type %in% c("gene", "geneonly", "protein1")){
     if(length(dataSet$mat[["gene"]]) == 0){
       dataSet$mat[["gene"]] <- gene.mat;
       dataSet$exp.mat[["gene"]] <- prot.mat;
@@ -507,7 +499,6 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
 }
 
 UpdateModifiedTable <- function(type) {
-  #if(type == "ind"){
   edge.res <- data.frame();
   if(length(edgeu.res.list) > 0){
     for(i in 1:length(edgeu.res.list)){

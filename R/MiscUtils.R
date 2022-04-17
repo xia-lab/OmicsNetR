@@ -166,7 +166,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 ShowMemoryUse <- function(..., n=30) {
     requireNamespace("pryr");
     sink(); # make sure print to screen
-    print(mem_used());
+    print(pryr::mem_used());
     print(sessionInfo());
     print(.ls.objects(..., order.by="Size", decreasing=TRUE, head=TRUE, n=n));
     print(warnings());

@@ -179,7 +179,6 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
   e <- get.edgelist(graphX)
   edge.data <- data.frame(Source=e[,1], Target=e[,2])
   seed.expr <<- rep(0, length(node.data));
-  net.type <<- "graph"
   dataSet$seed <- list();
   dataSet$seeds.proteins <- c();
   dataSet <<- dataSet;
