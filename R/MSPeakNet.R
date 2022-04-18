@@ -45,8 +45,8 @@ InitiatePeakSet <- function(ionMode = -1,
 #' @export
 #'
 ImportMSPeaks <- function(PeakFile = NA) {
-  requireNamespace("dplyr")
-  requireNamespace("tidyr")
+  require("dplyr")
+  require("tidyr")
   t0 <- Sys.time();
   #RequiredPackageCheck(); # dangerous on a production server!
   cat("Running into ImportMSPeaks! \n");
@@ -119,7 +119,7 @@ PerformDataProcessing <- function() {
     #requireNamespace("lc8")
   }
 
-  requireNamespace("stringr")
+  require("stringr")
 
   t0 <- Sys.time();
   if(exists("PeakSet",envir = .GlobalEnv)) {
@@ -346,7 +346,7 @@ GetFastPeak <- function(){
 }
 
 .networkConstruct <- function(PeakSet) {
-    requireNamespace("lpsymphony");
+    require("lpsymphony");
     CplexSet <- PeakSet$ILPSet;
     mat <- CplexSet$para$mat;
     max <- TRUE;
@@ -371,7 +371,7 @@ GetFastPeak <- function(){
 
     CplexSet <- add_SYM_solution(CplexSet, OptiSolution);
 
-    requireNamespace("igraph")
+    require("igraph")
     NetworkSet = list();
     NetworkSet = Initiate_networkset(CplexSet,
                                      PeakSet$StructureSet_df,
@@ -556,8 +556,8 @@ extendMetPeakNetwork <- function(table.nm) {
   }
 
   ## Now, construct a graph
-  requireNamespace("igraph")
-  requireNamespace("dplyr")
+  require("igraph")
+  require("dplyr")
 
   df <- data.frame(from = res$sourceID,
                    to = res$productID, weight = 0.2) #TODO: the weight can be optimized
@@ -679,7 +679,7 @@ redundancyClean <- function(node.res, edge.res) {
     return(0)
   }
 
-  requireNamespace("igraph")
+  require("igraph")
 
   kncmpd.ids <- net.info$kncmpd.ids;
   met.ids <- net.info$met.ids;

@@ -90,7 +90,7 @@ generate_breaks = function(x, n, center = F){
 }
 
 ComputeColorGradient <- function(nd.vec, background="black", centered){
-    requireNamespace("RColorBrewer");
+    require("RColorBrewer");
     minval = min(nd.vec, na.rm=TRUE);
     maxval = max(nd.vec, na.rm=TRUE);
     res = maxval-minval;
@@ -128,7 +128,7 @@ GetColorGradient <- function(background, center){
 
 scale_vec_colours = function(x, col = rainbow(10), breaks = NA){
     breaks <- sort(unique(breaks));
-    return(col[as.numeric(cut(x, breaks = breaks, include.lowest = T))])
+    return(col[as.numeric(cut(x, breaks = breaks, include.lowest = T))]);
 }
 
 scale_colours = function(mat, col = rainbow(10), breaks = NA){
@@ -164,7 +164,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 
 # shorthand
 ShowMemoryUse <- function(..., n=30) {
-    requireNamespace("pryr");
+    require("pryr");
     sink(); # make sure print to screen
     print(pryr::mem_used());
     print(sessionInfo());

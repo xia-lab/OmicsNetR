@@ -38,8 +38,6 @@ Init.Data<-function(){
   net.info <<- list(gene.ids=vector(),protein.ids=vector());
   initNetwork();
   uploadedGraph <<- FALSE;
-  netbuild.opt <<- "first"
-  graph_name <<- NULL;
   data.org <<- NULL;
   module.count <<- 0;
   max.row <<- 2000; # maximal rows to display interaction table in web page
@@ -63,6 +61,11 @@ Init.Data<-function(){
   }else{
     sqlite.path <<-"/media/zzggyy/disk/sqlite/"; #zgy local
   }
+
+  if(!.on.publica.web) {
+    sqlite.path <<- getwd();
+  }
+
   return(1)
 }
 
@@ -80,14 +83,16 @@ SetCurrentDataMulti <- function(){
   return(.set.nSet(dataSet));
 }
 
-SetFileType <- function(fileType){
-  file.type <<- fileType;
-}
+
 
 CheckQueryTypeMatch <- function(qvec, type, dbType){
-  
+
   if(type == "snp"){
+    if(length(startsWith(qvec, "rs"))>0){
     queryType <- "rsid";
+   }else{
+   queryType <- "region"
+   }
   }else if(type %in% c("gene","tf")){
     queryType <- "entrez";
   }else if(type %in% c("met", "peak", "m2m")){
@@ -97,8 +102,8 @@ CheckQueryTypeMatch <- function(qvec, type, dbType){
   }else if(type == "mir"){
     queryType <- "mir_acc";
   }
-
   GeneAnotDB <-doProteinIDMapping(qvec, queryType, dbType);
+
   if(is.null(nrow(GeneAnotDB)) && GeneAnotDB == 0){
     return(FALSE);
   }else{
@@ -149,17 +154,16 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   gene.mat <<- gene.mat
   GeneAnotDB <-doProteinIDMapping(rownames(gene.mat), queryType);
   na.inx <- is.na(GeneAnotDB[,1]) | is.na(GeneAnotDB[,2]);
-print(type)
-print("=====type")
+
   if(type == "ko"){
     dataSet$ko <- GeneAnotDB;
   }
 
   if(queryType == "region"){
-
-   dataSet$snpInputType <- "region"
-
-}
+   dataSet$snpRegion <- TRUE
+   }else{
+   dataSet$snpRegion <- FALSE
+  }
 
   if(sum(!na.inx) < 2){
     current.msg <<- "Less than two hits found in uniprot database. ";
@@ -302,9 +306,6 @@ SetDbType <- function(dbType){
   dbu.type <<- dbType;
 }
 
-SetNetwType <- function(netwType){
-  netw.type <<- netwType;
-}
 
 SetMirBo <- function(mirBo){
   requireMirExp <<- mirBo
@@ -511,6 +512,27 @@ UpdateModifiedTable <- function(type) {
 
 GetOrg <- function(){
   return(data.org);
+}
+
+PrepareSqliteDB <- function(sqlite_Path, onweb = TRUE) {
+  if(onweb) {return(TRUE)};
+  if(file.exists(sqlite_Path)) {return(TRUE)};
+  sqlite_key <- system.file('db/sqlite_keys.csv', package = "OmicsNetR")
+  dblist <- read.csv(sqlite_key);
+  dbNM <- basename(sqlite_Path);
+  if(!any(dblist$sqliteDBs == dbNM)){cat("Your database from remote end is not ready! Report this error: X10984OMNETR\n");return(FALSE)}
+  key <- dblist[dblist$sqliteDBs == dbNM, 2];
+  size <- dblist[dblist$sqliteDBs == dbNM, 3];
+  if(as.numeric(size) > 100){
+    DonwloadLink <- paste0("https://www.googleapis.com/drive/v3/files/",
+                           key,
+                           "?alt=media&key=AIzaSyAYHOnXzxMrNDuyc7JHNph_y11AsUTNyPQ")
+    # NOTE: This API key is only used for sqlite database download for OmicsNetR package.
+  } else {
+    DonwloadLink <- paste0("https://drive.google.com/uc?export=download&id=", key)
+  }
+  download.file(DonwloadLink, sqlite_Path);
+  return(TRUE)
 }
 
 #importFrom("grDevices", "col2rgb", "colorRampPalette", "dev.off","hsv", "rainbow")

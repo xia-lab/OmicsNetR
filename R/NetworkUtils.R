@@ -4,11 +4,6 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
-
-SetGraphFileName <- function(fileName){
-  graph_name <<- fileName;
-}
-
 .prepareSigProteinJSON <- function(type){
   result.list <- .prepareListSeeds(type);
   return(result.list);
@@ -106,7 +101,7 @@ BuildSeedProteinNet <- function(dataSetObj=NA){
 #' @export
 #'
 CreateGraph <- function(){
-  requireNamespace('igraph');
+  require('igraph');
   node.list <- omics.net$node.data;
   edge.list <- omics.net$edge.data;
   seed.proteins <- omics.net$node.data[,1];
@@ -117,8 +112,8 @@ CreateGraph <- function(){
 
   match.index <- match(V(overall.graph)$name, newIDs);
   expr.vals <- dataSet$seeds.expr[match.index];
-
   names(expr.vals) <- rownames(dataSet$seeds.expr)[match.index];
+  expr.vals <- unlist(expr.vals);
   expr.vec <- vector();
   if(length(dataSet$seed) > 0){
     for(i in 1:length(dataSet$seed)){
@@ -132,6 +127,7 @@ CreateGraph <- function(){
   expr.vec <- expr.vec[match.index];
   expr.vec <<- expr.vec;
   current.overall.graph <- overall.graph;
+
   overall.graph <- set.vertex.attribute(overall.graph, "abundance", index = V(overall.graph), value = expr.vals);
   overall.graph <<- overall.graph;
   substats <- DecomposeGraph(overall.graph);
@@ -168,15 +164,12 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
     convertIgraph2JSONFromFile(net.nm, json.nm, 3);
     return(.set.nSet(dataSet));
   }else{
-  GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
-
-  entrezIDs <- GeneAnotDB[,1];
-  names(entrezIDs) <- nd.nms;
-  current.anot <<- entrezIDs;
-  convertIgraph2JSON(dataSet, net.nm, json.nm, FALSE);
-
-
-  return(.set.nSet(dataSet));
+    GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
+    entrezIDs <- GeneAnotDB[,1];
+    names(entrezIDs) <- nd.nms;
+    current.anot <<- entrezIDs;
+    convertIgraph2JSON(dataSet, net.nm, json.nm, FALSE);
+    return(.set.nSet(dataSet));
   }
 }
 
@@ -186,7 +179,6 @@ PrepareMinNetwork <- function(dataSetObj=NA, net.nm, json.nm){
   ppi.comps$minimumNet <<- my.ppi;
   nd.nms <- V(my.ppi)$name;
   GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
-
   entrezIDs <- GeneAnotDB[,1];
   names(entrezIDs) <- nd.nms;
   current.anot <<- entrezIDs;
@@ -275,19 +267,19 @@ GetShortestPaths <- function(from, to, intermediate="false"){
   }
 
   if(intermediate == "true"){
-    edge.list <- as_edgelist(current.net)
-    edges.from <- edge.list[which(edge.list[,1] == from), ]
-    edges.from <- rbind(edges.from, edge.list[which(edge.list[,2] == from), ])
-    edges.to <- edge.list[which(edge.list[,1] == to), ]
-    edges.to  <- rbind(edges.to, edge.list[which(edge.list[,2] == to), ])
-    edges.from.universe <- unique(as.vector(edges.from))
-    edges.to.universe <- unique(as.vector(edges.to))
-    intersects <- intersect(edges.from.universe, edges.to.universe)
+    edge.list <- as_edgelist(current.net);
+    edges.from <- edge.list[which(edge.list[,1] == from), ];
+    edges.from <- rbind(edges.from, edge.list[which(edge.list[,2] == from), ]);
+    edges.to <- edge.list[which(edge.list[,1] == to), ];
+    edges.to  <- rbind(edges.to, edge.list[which(edge.list[,2] == to), ]);
+    edges.from.universe <- unique(as.vector(edges.from));
+    edges.to.universe <- unique(as.vector(edges.to));
+    intersects <- intersect(edges.from.universe, edges.to.universe);
     if(length(intersects) != 0){
       for(i in 1:length(intersects)){
         element <- paste(from, intersects[i], to, sep="->")
         if(!element %in% path.vec){
-          path.vec[length(path.vec) + i] <- paste(from, intersects[i], to, sep="->")
+          path.vec[length(path.vec) + i] <- paste(from, intersects[i], to, sep="->");
         }
       }
     }
@@ -305,24 +297,24 @@ GetShortestPaths <- function(from, to, intermediate="false"){
 # Adapted from netweavers package
 ###################
 weightCalc <- function(filt_net){
-  all_gene_int <- merge(table(filt_net[,2]),table(filt_net[,1]),all=TRUE)
-  neighbors <- aggregate(all_gene_int[,2],by=list(all_gene_int[,1]),sum)
-  names(neighbors) <- c("Protein","n")
-  data.frame(Protein=neighbors$Protein,weight=1/neighbors$n)
+  all_gene_int <- merge(table(filt_net[,2]),table(filt_net[,1]),all=TRUE);
+  neighbors <- aggregate(all_gene_int[,2],by=list(all_gene_int[,1]),sum);
+  names(neighbors) <- c("Protein","n");
+  data.frame(Protein=neighbors$Protein,weight=1/neighbors$n);
 }
 
 measureCalc <- function(protein_pvals,protein_wts,weightamt = 10){
-  prot_data <- merge(protein_pvals,protein_wts,by='Protein',all=TRUE)
-  prot_data$measure <- -log((prot_data$pvalue)*(prot_data$weight)^(1/weightamt))
-  net_no_pval <- is.na(prot_data$measure) & !is.na(prot_data$weight)
-  prot_data[net_no_pval,'measure'] <- 0
-  prot_data
+  prot_data <- merge(protein_pvals,protein_wts,by='Protein',all=TRUE);
+  prot_data$measure <- -log((prot_data$pvalue)*(prot_data$weight)^(1/weightamt));
+  net_no_pval <- is.na(prot_data$measure) & !is.na(prot_data$weight);
+  prot_data[net_no_pval,'measure'] <- 0;
+  prot_data;
 }
 
 scoreClusters <- function(clust_2_protein,prot_meas){
-  clust_score_total <- apply(clust_2_protein[,-c(1,2)],1,function(x){do.call(m,list(prot_meas[prot_meas$Protein%in%x[!is.na(x)],'measure']))})
-  names(clust_score_total) <- clust_2_protein[,1]
-  clust_score_total
+  clust_score_total <- apply(clust_2_protein[,-c(1,2)],1,function(x){do.call(m,list(prot_meas[prot_meas$Protein%in%x[!is.na(x)],'measure']))});
+  names(clust_score_total) <- clust_2_protein[,1];
+  clust_score_total;
 }
 
 #' Compute minimum connected subnetwork from input nodes using shortest path based approach
@@ -409,14 +401,14 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
   protein.vec <- result.list$protein.vec;
   cat(netw.type, netInv,inputType, "\n")
 
-  requireNamespace("RJSONIO");
+  require("RJSONIO");
 
   # now do the database search
   if(netw.type == "ppi" || netw.type == "gene" || netw.type == "protein"){
     table.nm = paste(data.org, db.type, sep="_");
     res <- QueryPpiSQLite(table.nm, protein.vec, require.exp, min.score);
 
-    if(net.order == "zero" || dataSet$ppiZero){
+    if(dataSet$ppiZero){
       hit.inx1 <- res[,1] %in% protein.vec;
       hit.inx2 <- res[,2] %in% protein.vec;
       res <- res[(hit.inx1 & hit.inx2),];
@@ -441,24 +433,26 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
       net.info$snp.ids <- c(net.info$snp.ids, unique(node.ids));
     }
   } else if(netw.type == "snp"){
-    requireNamespace('RSQLite');
+    require('RSQLite');
+    
+ 
 
     if(db.type == "PhenoScanner"){
 
-      requireNamespace("tidyr");
+      require("tidyr");
       if(dataSet$phesc.opt=="eqtl"){
         if(snpRegion==FALSE){
-        res <- Query.PhenoScanner(snpquery= protein.vec,catalogue="eQTL")
+        res <- Query.PhenoScanner(snpquery= protein.vec,catalogue="eQTL");
         fast.write.csv(res$results, file="phenoscanner.eQtl.csv",row.names=FALSE);
-        res <- res$results[,c("rsid","exp_gene")]
+        res <- res$results[,c("rsid","exp_gene")];
        }else{
-        res <- Query.PhenoScanner(regionquery= protein.vec,catalogue="eQTL")
+        res <- Query.PhenoScanner(regionquery= protein.vec,catalogue="eQTL");
         fast.write.csv(res$results, file="phenoscanner.eQtl.csv",row.names=FALSE);
-        res <- unique(res$results[,c("rsid","exp_gene","region")])
+        res <- unique(res$results[,c("rsid","exp_gene","region")]);
        }
-        res <- unique(res[which(!(is.na(res$exp_gene)) &res$exp_gene !=""&res$exp_gene !="-" ),])
-        colnames(res)[2] = "symbol"
-        res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F))
+        res <- unique(res[which(!(is.na(res$exp_gene)) &res$exp_gene !=""&res$exp_gene !="-" ),]);
+        colnames(res)[2] = "symbol";
+        res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F));
 
       }else{
         if(snpRegion==FALSE){
@@ -474,31 +468,34 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
          res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F))
       }
 
-      res$entrez = doGeneIDMapping(res$symbol,type="symbol")
-      res$entrez[is.na(res$entrez)] = res$symbol[is.na(res$entrez)]
+      res$entrez = doGeneIDMapping(res$symbol,type="symbol");
+      res$entrez[is.na(res$entrez)] = res$symbol[is.na(res$entrez)];
 
     }else if(db.type == "vep"){
 
       if(dataSet$vep.opt=="dis"){
 
-        res <- QueryVEP(protein.vec, vepDis=dataSet$vep.dis, snpRegion = snpRegion)
+        res <- QueryVEP(protein.vec, vepDis=dataSet$vep.dis, snpRegion = snpRegion);
         fast.write.csv(res, file="vep.map.csv",row.names=FALSE);
-        res <-  unique(res[which(res$gene_symbol !="NA"),c("rsid","gene_symbol")])
+        res <-  unique(res[which(res$gene_symbol !="NA"),c("rsid","gene_symbol")]);
       }else{
-        requireNamespace("dplyr")
+        require("dplyr")
         res<- QueryVEP(protein.vec, vepDis=50,snpRegion = snpRegion)
         fast.write.csv(res, file="vep.map.csv",row.names=FALSE);
-        res$distance[which(res$distance=="NA")] = 0
-        res <- unique(res[!(is.na(res$gene_symbol)),c("gene_symbol","rsid","distance")])
-        res <- unique(res[!(duplicated(res$gene_symbol,res$rsid)),])
+        res$distance[which(res$distance=="NA")] = 0;
+        res <- unique(res[!(is.na(res$gene_symbol)),c("gene_symbol","rsid","distance")]);
+        res <- unique(res[!(duplicated(res$gene_symbol,res$rsid)),]);
         res <- data.frame(res %>% arrange(distance) %>%
                            group_by(rsid) %>%
-                           mutate(rank = rank(distance)),stringsAsFactors=F)
-        res <- res[which(res$rank<(dataSet$vep.num + 1)),]
+                           mutate(rank = rank(distance)),stringsAsFactors=F);
+        res <- res[which(res$rank<(dataSet$vep.num + 1)),];
       }
 
       res$entrez <- doGeneIDMapping(res$gene_symbol,type="symbol")
       res$entrez[is.na(res$entrez)] <- res$gene_symbol[is.na(res$entrez)]
+      if(snpRegion){
+       res$rsid <- paste0("chr",res$rsid)
+       }
 
     }else{
       if(db.type == "admire"){
@@ -521,10 +518,10 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     }else{
       targetColNm <- "entrez";
     }
-    colInx <- which(colnames(res) == targetColNm)
+    colInx <- which(colnames(res) == targetColNm);
 
-    snp.list <- list()
-    snp.type.list <- list()
+    snp.list <- list();
+    snp.type.list <- list();
     snpTable <<- snp.list;
 
     edge.res <- data.frame(Source=res[,"rsid"],Target=res[,colInx], stringsAsFactors=FALSE);
@@ -535,7 +532,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
 
     if(db.type == "PhenoScanner" & snpRegion==TRUE){
-
+ 
      node.ids <- c(res$region[match(edge.res$Source,res$rsid)], edge.res[,"Target"])
     #node.ids <- c(edge.res[,"Source"], edge.res[,"Target"])
     #protein.vec <- unique(res[,"rsid"])
@@ -557,14 +554,13 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     }
     node.nms <- c(res[,"rsid"], symb);
 
-
     if(netInv == "direct"){
-      targetIds <- unique(c(net.info$gene.ids, node.ids[!node.ids %in% protein.vec]))
-      net.info$snp.ids <- unique(protein.vec)
+      targetIds <- unique(c(net.info$gene.ids, node.ids[!node.ids %in% protein.vec]));
+      net.info$snp.ids <- unique(protein.vec);
     }else{
-      net.info$snp.ids <- unique(res[,"rsid"])
+      net.info$snp.ids <- unique(res[,"rsid"]);
       if(!zero){
-        targetIds <- c(unique(protein.vec))
+        targetIds <- c(unique(protein.vec));
       }
     }
 
@@ -596,21 +592,21 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     node.nms <- c(res[,"symbol"], res[,"tfname"]);
 
     if(netInv == "direct"){
-      net.info$gene.ids <- unique(c(net.info$gene.ids, node.ids[!node.ids %in% protein.vec]))
-      net.info$tf.ids <-  unique(res[,"tfid"])
+      net.info$gene.ids <- unique(c(net.info$gene.ids, node.ids[!node.ids %in% protein.vec]));
+      net.info$tf.ids <-  unique(res[,"tfid"]);
     }else{
-      net.info$tf.ids <- unique(res[,"tfid"])
+      net.info$tf.ids <- unique(res[,"tfid"]);
       if(!zero){
-        net.info$gene.ids <- c(unique(protein.vec))
+        net.info$gene.ids <- c(unique(protein.vec));
       }
     }
 
   } else if(netw.type == "mir") { # in miRNA, table name is org code, colname is id type
 
     if(db.type =="targetscan"){
-      table.nm <- data.org
+      table.nm <- data.org;
     }else{
-      table.nm <- data.org
+      table.nm <- data.org;
     }
     res <- QueryMirSQLite(table.nm, "mir_id", protein.vec, netInv, db.type);
     if(nrow(res)==0){ return(c(0,0)); }
@@ -626,43 +622,12 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     node.nms <- c(res[,"mir_acc"], res[,"symbol"]);
 
     if(netInv == "direct"){
-      net.info$gene.ids <- unique(c(net.info$gene.ids, node.ids[!node.ids %in% protein.vec]))
-      net.info$mir.ids <- unique(res[,"mir_id"])
+      net.info$gene.ids <- unique(c(net.info$gene.ids, node.ids[!node.ids %in% protein.vec]));
+      net.info$mir.ids <- unique(res[,"mir_id"]);
     }else{
-      net.info$mir.ids <- unique(res[,"mir_id"])
+      net.info$mir.ids <- unique(res[,"mir_id"]);
       if(!zero){
-        net.info$gene.ids <- c(net.info$gene.ids, unique(res[,"entrez"]))
-      }
-    }
-
-  } else if (netw.type == "ko"){
-    table.nm <- "ko"
-    #print(table.nm)
-    if(netInv == "direct"){
-      protein.vec <- rownames(dataSet$exp.mat[["ko"]]);
-      seed.genes <<- c(seed.genes, protein.vec);
-    }
-    res <- QueryKoSQLiteNet(table.nm, protein.vec, netInv);
-
-    # no hits
-    if(nrow(res)==0){ return(c(0,0)); }
-
-    edge.res <- data.frame(Source=res[,"ko"],Target=res[,"kegg"], stringsAsFactors=FALSE);
-
-    if(nrow(res)!=0){
-      row.names(edge.res) <- 1:nrow(res);
-    }
-    fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
-    node.ids <- c(res[,"ko"], res[,"kegg"])
-    node.nms <- c(res[,"enzyme"], res[,"compound"]);
-
-    if(netInv == "direct"){
-      net.info$protein.ids <- unique(protein.vec)
-      net.info$met.ids <- node.ids[!node.ids %in% protein.vec]
-    }else{
-      net.info$protein.ids <- node.ids[!node.ids %in% protein.vec]
-      if(!zero){
-        net.info$protein.ids <- c(net.info$gene.ids, unique(protein.vec))
+        net.info$gene.ids <- c(net.info$gene.ids, unique(res[,"entrez"]));
       }
     }
 
@@ -692,7 +657,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
       row.names(edge.res) <- 1:nrow(res);
     }
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
-    node.ids <- c(res[,"kegg"], res[,"entrez"])
+    node.ids <- c(res[,"kegg"], res[,"entrez"]);
     node.nms <- c(res[,"met"], res[,"symbol"]);
 
     prot.ids <- unique( res[,"entrez"]);
@@ -704,30 +669,27 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
       if("peak" %in% curr.types){
         not.gene.ids <- c(net.info$peak.ids,
                           net.info$met.ids, net.info$kncmpd.ids)
-        net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"][!res[,"kegg"] %in% not.gene.ids]))
-        net.info$protein.ids <- c(net.info$protein.ids,
-                                  unique( prot.ids))
+        net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"][!res[,"kegg"] %in% not.gene.ids]));
+        net.info$protein.ids <- c(net.info$protein.ids, unique( prot.ids));
       }else{
-        net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"]))
-        net.info$protein.ids <- c(net.info$protein.ids,
-                                  unique( prot.ids))
+        net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"]));
+        net.info$protein.ids <- c(net.info$protein.ids, unique( prot.ids));
       }
     }else{
-      net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"]))
+      net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"]));
       if(!zero){
-        net.info$protein.ids <- c(net.info$protein.ids, unique(prot.ids))
+        net.info$protein.ids <- c(net.info$protein.ids, unique(prot.ids));
       }
     }
 
   } else if(netw.type == "peak") {
 
-    net.info$met.ids <- PeakSet$mets
-    net.info$peak.ids <- PeakSet$put.mets
+    net.info$met.ids <- PeakSet$mets;
+    net.info$peak.ids <- PeakSet$put.mets;
     seed.genes <<- unique(c(seed.genes, PeakSet$mets));
-    node.ids <- PeakSet$nodes.df[,1]
-    node.nms <- PeakSet$nodes.df[,2]
-    edge.res <- PeakSet$edges.df
-
+    node.ids <- PeakSet$nodes.df[,1];
+    node.nms <- PeakSet$nodes.df[,2];
+    edge.res <- PeakSet$edges.df;
 
   } else if(netw.type == "mic") { # in mic
     # in mic
@@ -738,9 +700,9 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     if(nrow(res)==0){ return(c(0,0)); }
     # no hits
 
-    colnames(res)[colnames(res) == table.nm] <- "taxa"
-    edge.res.score <- data.frame(Source=res[,"taxa"],Target=res[,"KEGG"],Score=res[,"potential"],stringsAsFactors = FALSE)
-    edge.res <- edge.res.score[,-3]
+    colnames(res)[colnames(res) == table.nm] <- "taxa";
+    edge.res.score <- data.frame(Source=res[,"taxa"],Target=res[,"KEGG"],Score=res[,"potential"],stringsAsFactors = FALSE);
+    edge.res <- edge.res.score[,-3];
     if(nrow(res)!=0){
       row.names(edge.res) <- 1:nrow(res);
     }
@@ -749,35 +711,35 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     node.nms <- c(res[,"taxa"], res[,"metabolite"]);
 
     if(netInv == "direct"){
-      net.info$met.ids <- unique(c(net.info$met.ids, res[,"KEGG"]))
-      net.info$mic.ids <- unique(protein.vec)
+      net.info$met.ids <- unique(c(net.info$met.ids, res[,"KEGG"]));
+      net.info$mic.ids <- unique(protein.vec);
     }else{
-      net.info$mic.ids <- node.ids[!node.ids %in% protein.vec]
+      net.info$mic.ids <- node.ids[!node.ids %in% protein.vec];
       if(!zero){
-        net.info$met.ids <- c(net.info$met.ids, res[,"KEGG"])
+        net.info$met.ids <- c(net.info$met.ids, res[,"KEGG"]);
       }
     }
-    print(netInv);
-    print(net.info$met.ids);
-    requireNamespace("igraph");
+    require("igraph");
     g <- simplify(graph.data.frame(edge.res, directed=FALSE)) #, vertices=node.list));
 
-    met.ids <- unique(net.info$met.ids)
-    met.microbe.list <- list()
-    met.microbe.score.list <- list()
-    mic.table <- list()
+    met.ids <- unique(net.info$met.ids);
+    met.microbe.list <- list();
+    met.microbe.score.list <- list();
+    mic.table <- list();
     for( i in 1:length(met.ids)){
       met <- met.ids[i]
+      if(length(which(edge.res$Target == met))>1){
       met.microbe.list[[met]] <- as.vector(edge.res[which(edge.res$Target == met), 1])
       met.microbe.score.list[[met]] <- as.vector(edge.res.score[which(edge.res.score$Target == met), 3])
+      }
     }
     for(i in 1:nrow(res)){
       mic.table[[i]] <- unlist(res[i, ]);
       exp.mat <- dataSet$exp.mat$mic;
       exp <- exp.mat[rownames(exp.mat) == res[i,"taxa"]];
       if(exp != 0){
-        mic.table[[i]]["AbundPred"] <- as.numeric(exp) * as.numeric(mic.table[[i]]["potential"])
-        mic.table[[i]]["potential"] <- as.numeric(mic.table[[i]]["potential"])
+        mic.table[[i]]["AbundPred"] <- as.numeric(exp) * as.numeric(mic.table[[i]]["potential"]);
+        mic.table[[i]]["potential"] <- as.numeric(mic.table[[i]]["potential"]);
       }
     }
 
@@ -785,6 +747,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     micSet[["met.mic"]] <- met.microbe.list;
     micSet[["met.mic.score"]] <- met.microbe.score.list;
     micSet[["met.mic.table"]] <- mic.table;
+    print("micset");
     qs::qsave(micSet, "micSet.qs");
 
     dataSet <<- dataSet;
@@ -808,7 +771,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
       data.org <<- "microbiome";
     }
 
-    res <- extendMetPeakNetwork(table.nm)
+    res <- extendMetPeakNetwork(table.nm);
     if(is.list(res)) {
       edge.res <- res$edge.res;
       net.info <- res$net.info;
@@ -849,45 +812,31 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     node.ids <- c(res[,"sourceID"], res[,"productID"])
     node.nms <- c(res[,"sourceNM"], res[,"productNM"]);
 
-
     if(netInv == "direct"){
       if("peak" %in% dataSet$type){
-        not.kncmpd.ids <- c(net.info$peak.ids,
-                            net.info$met.ids)
-        net.info$kncmpd.ids <- c(net.info$kncmpd.ids,
-                                 node.ids[!node.ids %in% not.kncmpd.ids])
+        not.kncmpd.ids <- c(net.info$peak.ids, net.info$met.ids);
+        net.info$kncmpd.ids <- c(net.info$kncmpd.ids, node.ids[!node.ids %in% not.kncmpd.ids]);
       }else{
-        net.info$met.ids <- unique(protein.vec)
-        net.info$kncmpd.ids <- c(net.info$kncmpd.ids,
-                                 node.ids[!node.ids %in% protein.vec])
-
+        net.info$met.ids <- unique(protein.vec);
+        net.info$kncmpd.ids <- c(net.info$kncmpd.ids, node.ids[!node.ids %in% protein.vec]);
       }
     }else{
-      net.info$met.ids <- node.ids[!node.ids %in% protein.vec]
+      net.info$met.ids <- node.ids[!node.ids %in% protein.vec];
       if(!zero){
-        net.info$kncmpd.ids <- c(net.info$kncmpd.ids, unique(protein.vec))
+        net.info$kncmpd.ids <- c(net.info$kncmpd.ids, unique(protein.vec));
       }
     }
-    cat("m2m.mic running reaches here \n")
+    cat("m2m.mic running reaches here \n");
   }
 
   if(length(edge.res)>0){
     netw_input_type <- paste0(netw.type,"_", inputType,"_", data.org);
     edgeu.res.list[[netw_input_type]] <<- unique(edge.res[,c(1,2)]);
-    nodeu.ids <<- c(nodeu.ids, node.ids)
-    nodeu.nms <<- c(nodeu.nms, node.nms)
+    nodeu.ids <<- c(nodeu.ids, node.ids);
+    nodeu.nms <<- c(nodeu.nms, node.nms);
   }
   net.info <<- net.info;
   return(1);
-}
-
-
-SetNetOrder <- function(netOrder){
-  net.order <<- netOrder;
-}
-
-SetBuildOpt<- function(opt){
-  build.opt <<- opt;
 }
 
 SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
@@ -1097,20 +1046,12 @@ BuildPCSFNet <- function(dataSetObj=NA){
   }
 }
 
-SetNetBuildOpt <- function(opt){
-  netbuild.opt <<- opt
-}
-
-
 # for a given graph, obtain the smallest subgraphs that contain
 # all the seed nodes. This is acheived by iteratively remove
 # the marginal nodes (degree = 1) that are not in the seeds
 
 DecomposeGraph <- function(gObj, minNodeNum = 2){
   # now decompose to individual connected subnetworks
-  if(netbuild.opt == "zero"){
-    minNodeNum =2;
-  }
   if(uploadedGraph == "false"){
     comps <-decompose.graph(gObj, min.vertices=minNodeNum);
   }else{
@@ -1259,10 +1200,8 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
     qnum.vec <- c(qnum.vec, qnums);
 
     # calculate p values (comparing in- out- degrees)
-    #subgraph <- induced.subgraph(g, path.inx);
     subgraph <- induced.subgraph(g, path.ids);
     in.degrees <- degree(subgraph);
-    #out.degrees <- degree(g, path.inx) - in.degrees;
     out.degrees <- degree(g, path.ids) - in.degrees;
     ppval <- wilcox.test(in.degrees, out.degrees)$p.value;
     ppval <- signif(ppval, 3);
@@ -1278,27 +1217,6 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
   qnum.vec <- qnum.vec[ord.inx];
   ord.inx <- order(qnum.vec, decreasing=T);
   community.vec <- community.vec[ord.inx];
-  if(1==2){
-    metList <- rownames(dataSet$exp.mat[["met"]]);
-    hits.query <- lapply(com.vec,
-                         function(x) {
-                           x[x %in% metList];
-                         }
-    );
-    toRemove <- vector()
-    inxs <- vector();
-    for(i in 1:length(hits.query)){
-      if(length(hits.query[[i]]) < 10){
-        toRemove = c(toRemove, com.vec[[i]])
-        inxs = c(inxs, i)
-      }
-    }
-    com.vec = com.vec[inxs]
-    community.vec= community.vec[inxs]
-    #g <- ppi.comps[[current.net.nm]];
-    #g <-delete_vertices(g, unlist(toRemove))
-    #ppi.comps[[current.net.nm]] <<- g
-  }
 
   all.communities <- paste(community.vec, collapse="||");
   colnames(gene.community) <- c("Id", "Label", "Module");
@@ -1329,7 +1247,7 @@ UpdateNetworkLayout3D <- function(algo, filenm){
     );
   }
   # now only save the node pos to json
-  requireNamespace("RJSONIO");
+  require("RJSONIO");
   netData <- list(nodes=nodes);
   sink(filenm);
   cat(toJSON(netData));
@@ -1352,7 +1270,7 @@ UpdateNetworkLayout <- function(algo, filenm, focus){
     );
   }
   # now only save the node pos to json
-  requireNamespace("RJSONIO");
+  require("RJSONIO");
   netData <- list(nodes=nodes);
   sink(filenm);
   cat(toJSON(netData));
@@ -1361,7 +1279,7 @@ UpdateNetworkLayout <- function(algo, filenm, focus){
 }
 
 PerformLayOut <- function(net.nm, algo, focus){
-  requireNamespace("igraph")
+  require("igraph")
 
   g <- ppi.comps[[net.nm]];
   vc <- vcount(g);
@@ -1409,7 +1327,7 @@ PerformLayOut <- function(net.nm, algo, focus){
     l <- layout_with_sugiyama(g, vgap=vc/4)
     pos.xy <- -l$layout
   }else if(algo == "circular_tripartite"){
-    requireNamespace("ggforce")
+    require("ggforce")
     l <- layout_with_sugiyama(g, layers = as.numeric(V(g)$layers)*(vc/3) +30)
     layout <- l$layout
 
@@ -1426,7 +1344,7 @@ PerformLayOut <- function(net.nm, algo, focus){
     l <- layout_with_sugiyama(g, layers = as.numeric(V(g)$layers)*(vc/4))
     pos.xy <- -l$layout[,2:1]
   }else if(algo == "concentric"){
-    requireNamespace("graphlayouts")
+    require("graphlayouts")
     # the fist element in the list for concentric is the central node.
     if(focus==""){
       inx=1;
@@ -1436,7 +1354,7 @@ PerformLayOut <- function(net.nm, algo, focus){
     coords <- layout_with_focus(g,inx)
     pos.xy <- coords$xy
   }else if(algo == "backbone"){
-    requireNamespace("graphlayouts")
+    require("graphlayouts")
     if(length(V(g)$name)<2000){
       coords <- layout_with_stress(g)
       pos.xy <- coords
@@ -1552,7 +1470,6 @@ initNetwork <- function(){
   nodeu.ids <<- vector()
   nodeu.nms <<- vector()
   expr.vec <<- vector()
-  expand.types <- vector();
   result.listu <<- list();
   seed.genes <<- vector();
   ppi.comps <<- list();
@@ -1599,11 +1516,11 @@ SetStringParam <-function(dataSetObj=NA, require.exp=T, min.score=900){
 QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType="gene"){
   containMsg <- 0;
   snpPeakMicBool <- F;
-  build.opt <<- "all";
 
-  require.exp <- dataSet$require.exp
-  min.score <- dataSet$min.score
-
+  require.exp <- dataSet$require.exp;
+  min.score <- dataSet$min.score;
+  snpRegion <- dataSet$snpRegion
+ 
   edge.res <- data.frame();
   if(length(edgeu.res.list) > 0){
     for(i in 1:length(edgeu.res.list)){
@@ -1613,7 +1530,6 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   }
 
   old.edges <- edge.res;
-
   query.mat <- dataSet$exp.mat[[inputType]];
 
 
@@ -1628,6 +1544,8 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   result.listu$protein.vec <- unique(as.character(query.vec));
   result.listu$type <- type;
   result.listu <<- result.listu;
+
+
 
   if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
     if(type != "peak"){
@@ -1646,7 +1564,7 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
 
   cat(inputType, type, dbType, require.exp, min.score, inv, FALSE, "\n")
 
-  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE, F);
+  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE, snpRegion);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
 
@@ -1719,11 +1637,11 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
 
   containMsg <- 0;
   snpPeakMicBool <- F;
-  build.opt <<- "all";
 
   require.exp <- dataSet$require.exp
   min.score <- dataSet$min.score
 
+  snpRegion <- dataSet$snpRegion
   edge.res <- data.frame();
 
   if("mic" %in% curr.types && type == "mic"){
@@ -1770,7 +1688,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     }
 
     if(!snpPeakMicBool && length(dataSet$exp.mat[["gene"]])>0){
-      query.vec <- unique(seed.proteins)
+      query.vec <- unique(dataSet$seeds.proteins)
     }else{
       query.vec <- unique(nodes.query)
     }
@@ -1812,7 +1730,6 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     }
   }
 
-
   if(type == "m2m" && exists("PeakSet")) {
     result.listu$protein.vec <- PeakSet[["nodes.df"]][["Id"]];
     result.listu$type <- "m2m";
@@ -1830,7 +1747,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   if(inputType == type){
     inv = "direct";
   }
-  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE,F);
+  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE,snpRegion);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
 
@@ -1907,11 +1824,11 @@ GetNetworkTopology <- function(netnm){
 #' @export
 #'
 PlotDegreeHistogram <- function(imgNm, netNm = "NA", dpi=72, format="png"){
-  requireNamespace("Cairo")
+  require("Cairo")
   dpi<-as.numeric(dpi)
   imgNm <- paste(imgNm, "dpi", dpi, ".", format, sep="");
   Cairo(file=imgNm, width=400, height=400, type="png", bg="white");
-  requireNamespace("ggplot2")
+  require("ggplot2")
   if(netNm != "NA"){
     overall.graph <- ppi.comps[[netNm]];
   }
@@ -1943,11 +1860,11 @@ PlotDegreeHistogram <- function(imgNm, netNm = "NA", dpi=72, format="png"){
 #' @export
 #' @import Cairo
 PlotBetweennessHistogram <- function(imgNm, netNm = "NA",dpi=72, format="png"){
-  requireNamespace("Cairo")
+  require("Cairo")
   dpi<-as.numeric(dpi)
   imgNm <- paste(imgNm, "dpi", dpi, ".", format, sep="");
   Cairo(file=imgNm, width=400, height=400, type="png", bg="white");
-  requireNamespace("ggplot2")
+  require("ggplot2")
   if(netNm != "NA"){
     overall.graph <- ppi.comps[[netNm]];
   }
@@ -2030,7 +1947,7 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   dataSet <<- dataSet;
   if(.on.public.web){
     .set.nSet(dataSet)
-    return(cmp.nms);
+    return(1);
   }else{
     return(.set.nSet(dataSet))
   }
@@ -2053,8 +1970,8 @@ SetMicThresh <- function(thresh){
 #' @export
 
 DoGba <- function(fileNm="NA", method="rwr", nodeids){
-  requireNamespace("RandomWalkRestartMH")
-  requireNamespace("igraph")
+  require("RandomWalkRestartMH")
+  require("igraph")
 
   nodes <- strsplit(nodeids, ",")[[1]];
   g <- ppi.comps[[current.net.nm]];
@@ -2070,7 +1987,7 @@ DoGba <- function(fileNm="NA", method="rwr", nodeids){
   if(nrow(resObj) > 100){
     resObj <- resObj[c(1:100),]
   }
-  requireNamespace("RJSONIO");
+  require("RJSONIO");
   sink(fileNm);
   cat(toJSON(resObj));
   sink();
@@ -2193,7 +2110,10 @@ FilterByPvalue <- function(pvaluecutoff){
 }
 
 queryFilterDB <- function(type, org){
-  requireNamespace('RSQLite');
+  require('RSQLite');
+  if(!PrepareSqliteDB(paste(sqlite.path, "tissue_filter.sqlite", sep=""), .on.public.web)){
+      stop("Sqlite database is missing, please check your internet connection!");
+  }
   conv.db <- dbConnect(SQLite(), paste(sqlite.path, "tissue_filter.sqlite", sep=""));
   db.map <- dbReadTable(conv.db, paste0(data.org,"_",type));
   dbDisconnect(conv.db); cleanMem();
@@ -2293,7 +2213,7 @@ DeleteIndNet <- function(netNm){
 
 #type: subnetwork (networkbuilder page) or ind (database selection page)
 PrepareGraph <- function(net.nm, type="", export=T){
-  requireNamespace("igraph");
+  require("igraph");
   if(type == "subnetwork"){
     g <- ppi.comps[[net.nm]];
   }else{
@@ -2368,7 +2288,7 @@ SaveNetworkJson <- function(fileNm){
   obj$omics.net <- omics.net
   obj$data.org <- data.org
 
-  requireNamespace("rjson");
+  require("rjson");
   sink(fileNm);
   cat(toJSON(obj));
   sink();
