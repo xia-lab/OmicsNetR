@@ -134,8 +134,10 @@ CreateGraph <- function(){
   g <<- overall.graph
   seed.proteins <<- seed.proteins
   if(!is.null(substats)){
+    message("Network Graph has been created!")
     return(c(length(seed.genes), length(seed.proteins), net.stats$Node[1], net.stats$Edge[1], length(ppi.comps), substats));
   }else{
+    message("Network Graph created!")
     overall.graph <<- current.overall.graph;
     return(0);
   }
@@ -162,6 +164,7 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
 
   if(uploadedGraph && dataSet$fileType != "jsonOmicsnet"){
     convertIgraph2JSONFromFile(net.nm, json.nm, 3);
+    message("Conversion from Graph object into Json file completed successfully!")
     return(.set.nSet(dataSet));
   }else{
     GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
@@ -169,6 +172,7 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
     names(entrezIDs) <- nd.nms;
     current.anot <<- entrezIDs;
     convertIgraph2JSON(dataSet, net.nm, json.nm, FALSE);
+    message("Conversion from Graph object into Json file completed successfully!")
     return(.set.nSet(dataSet));
   }
 }
@@ -399,7 +403,6 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
   edge.res <-data.frame();
   result.list <- result.listu;
   protein.vec <- result.list$protein.vec;
-  cat(netw.type, netInv,inputType, "\n")
 
   require("RJSONIO");
 
@@ -638,7 +641,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     }else{
       table.nm <- paste(data.org, db.type, sep="_");
     }
-    cat(table.nm, "===========", "\n");
+
     res <- QueryMetSQLiteNet(table.nm, protein.vec, netInv);
     # no hits
     if(nrow(res)==0){ return(c(0,0)); }
@@ -665,7 +668,6 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     prot.ids <- prot.ids[!rm.inx];
 
     if(netInv == "direct"){
-      cat(curr.types, "=====", "\n")
       if("peak" %in% curr.types){
         not.gene.ids <- c(net.info$peak.ids,
                           net.info$met.ids, net.info$kncmpd.ids)
@@ -794,8 +796,6 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
       table.nm <- "hsa_recon3_m2m";
     }
 
-    cat("data.org is", data.org, "\n")
-
     res <- QueryMicM2mSQLiteNet(table.nm, protein.vec);
 
     # no hits
@@ -826,7 +826,6 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
         net.info$kncmpd.ids <- c(net.info$kncmpd.ids, unique(protein.vec));
       }
     }
-    cat("m2m.mic running reaches here \n");
   }
 
   if(length(edge.res)>0){
@@ -1562,8 +1561,6 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
     result.listu <<- result.listu;
   }
 
-  cat(inputType, type, dbType, require.exp, min.score, inv, FALSE, "\n")
-
   SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE, snpRegion);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
@@ -1659,20 +1656,18 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
       inputType <- "gene";
     }
 
-  if(length(edgeu.res.list) > 0){
-    for(i in 1:length(edgeu.res.list)){
-    nm <- paste0(type,"_", inputType);
-    if(names(edgeu.res.list)[i] != nm){
-      edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
+  if (length(edgeu.res.list) > 0) {
+    for (i in 1:length(edgeu.res.list)) {
+      nm <- paste0(type, "_", inputType)
+      if (names(edgeu.res.list)[i] != nm) {
+        edge.res <- rbind(edge.res, edgeu.res.list[[i]])
+      }
     }
-    cat(names(edgeu.res.list)[i] != nm, "======");
-    }
-    nodes.query <- c(edge.res[,1], edge.res[,2])
+    nodes.query <- c(edge.res[, 1], edge.res[, 2])
   }
 
   old.edges <- edge.res;
   query.mat <- dataSet$exp.mat[[type]];
-
 
   if (length(query.mat) == 0) {
     inv = "inverse"
@@ -1743,7 +1738,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   if("peak" == orig.inputType && type == "met"){ #m2p after peak is direct
     inv = "direct";
   }
-  cat(orig.inputType, type, "\n");
+
   if(inputType == type){
     inv = "direct";
   }
@@ -1790,16 +1785,15 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     min.score = 900
   );
 
-
   dataSet$seeds.proteins <- unique(seed.genes);
-  dataSet <<- dataSet
-
+  dataSet <<- dataSet;
   ComputeIndSubnetStats(dataSet);
 
   if(.on.public.web){
     .set.nSet(dataSet);
     return(c(nrow(node.res), nrow(edge.res), containMsg));
   }else{
+    message("Query Net Finished.")
     return(.set.nSet(dataSet));
   }
 }
