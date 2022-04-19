@@ -128,7 +128,7 @@ CreateGraph <- function(){
   expr.vec <<- expr.vec;
   current.overall.graph <- overall.graph;
 
-  overall.graph <- set.vertex.attribute(overall.graph, "abundance", index = V(overall.graph), value = expr.vals);
+  overall.graph <- suppressWarnings(set.vertex.attribute(overall.graph, "abundance", index = V(overall.graph), value = expr.vals));
   overall.graph <<- overall.graph;
   substats <- DecomposeGraph(overall.graph);
   g <<- overall.graph
@@ -1610,6 +1610,7 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
     .set.nSet(dataSet);
     return(c(nrow(node.res), nrow(edge.res), containMsg));
   }else{
+    message("Network building with type of ", type, " has been finsihed!")
     return(.set.nSet(dataSet));
   }
 }

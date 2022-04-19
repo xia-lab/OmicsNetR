@@ -1575,7 +1575,7 @@ Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
 
 Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalogue="GWAS", pvalue=1E-5, proxies="None", r2=0.8, build=37){
 
-  cat("PhenoScanner V2\n")
+  cat("PhenoScanner V2 is being used now ...\n")
   if(is.null(snpquery) & is.null(regionquery) & is.null(genequery)) stop("no query has been requested")
   if((length(snpquery[1])+length(regionquery[1])+length(genequery[1]))>1) stop("only one query type allowed")
   if(!(catalogue=="None" | catalogue=="GWAS" | catalogue=="eQTL" | catalogue=="pQTL" | catalogue=="mQTL" | catalogue=="methQTL")) stop("catalogue has to be one of None, GWAS, eQTL, pQTL, mQTL or methQTL")
@@ -1611,23 +1611,59 @@ Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, 
         print(paste0("Error: ",json_data$error))
         next
       }
-      if(length(json_data$results)>0){
-        fields <- json_data$results[[1]]; json_data$results[[1]] <- NULL
-        if(length(json_data$results)>0){
-          tables <- as.data.frame(matrix(unlist(json_data$results), ncol=length(fields), byrow=T), stringsAsFactors=F)
+      if (length(json_data$results) > 0) {
+        fields <- json_data$results[[1]]
+        json_data$results[[1]] <- NULL
+        if (length(json_data$results) > 0) {
+          tables <-
+            as.data.frame(matrix(
+              unlist(json_data$results),
+              ncol = length(fields),
+              byrow = T
+            ), stringsAsFactors = F)
           names(tables) <- fields
-          results <- rbind(results,tables)
-          if(length(snpquery)==1){print(paste0(snpquery," -- queried"))}else{print(paste0(i," -- chunk of 10 SNPs queried"))}
-        }else{if(length(snpquery)==1){print(paste0("Warning: no results found for ",snpquery))}else{print(paste0("Warning: no results found for chunk ",i))}}
+          results <- rbind(results, tables)
+          if (length(snpquery) == 1) {
+            print(paste0(snpquery, " -- queried"))
+          } else{
+            print(paste0(i, " -- chunk of 10 SNPs queried"))
+          }
+        } else{
+          if (length(snpquery) == 1) {
+            print(paste0("Warning: no results found for ", snpquery))
+          } else{
+            print(paste0("Warning: no results found for chunk ", i))
+          }
+        }
       }
-      if(length(json_data$snps)>0){
-        fields_snps <- json_data$snps[[1]]; json_data$snps[[1]] <- NULL
-        if(length(json_data$snps)>0){
-          tables_snps <- as.data.frame(matrix(unlist(json_data$snps), ncol=length(fields_snps), byrow=T), stringsAsFactors=F)
+      if (length(json_data$snps) > 0) {
+        fields_snps <- json_data$snps[[1]]
+        json_data$snps[[1]] <- NULL
+        if (length(json_data$snps) > 0) {
+          tables_snps <-
+            as.data.frame(matrix(
+              unlist(json_data$snps),
+              ncol = length(fields_snps),
+              byrow = T
+            ), stringsAsFactors = F)
           names(tables_snps) <- fields_snps
-          snps <- rbind(snps,tables_snps)
-          if(length(json_data$results)==0){if(length(snpquery)==1){print(paste0(snpquery," -- queried"))}else{print(paste0(i," -- chunk of 10 SNPs queried"))}}
-        }else{if(length(json_data$results)==0){if(length(snpquery)==1){print(paste0("Warning: no results found for ",snpquery))}else{print(paste0("Warning: no results found for chunk ",i))}}}
+          snps <- rbind(snps, tables_snps)
+          if (length(json_data$results) == 0) {
+            if (length(snpquery) == 1) {
+              print(paste0(snpquery, " -- queried"))
+            } else{
+              print(paste0(i, " -- chunk of 10 SNPs queried"))
+            }
+          }
+        } else{
+          if (length(json_data$results) == 0) {
+            if (length(snpquery) == 1) {
+              print(paste0("Warning: no results found for ", snpquery))
+            } else{
+              print(paste0("Warning: no results found for chunk ", i))
+            }
+          }
+        }
       }
     }
     output <- list(snps=snps, results=results)

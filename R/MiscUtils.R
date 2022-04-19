@@ -38,7 +38,7 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
     colnms <- colnames(data);
     dup.inx <- duplicated(all.nms);
     dim.orig  <- dim(data);
-    data <- apply(data, 2, as.numeric); # force to be all numeric
+    data <- suppressWarnings(apply(data, 2, as.numeric)); # force to be all numeric
     dim(data) <- dim.orig; # keep dimension (will lost when only one item)
     rownames(data) <- all.nms;
     colnames(data) <- colnms;

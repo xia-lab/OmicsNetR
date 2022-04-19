@@ -145,7 +145,7 @@ PerformDataProcessing <- function() {
                                              ppm_tol =
                                                PeakSet$ParamSet$ppm*1e-6)
 
-  cat("done!\nStart preparing edge set...")
+  cat("done!\nStart preparing edge set...\n")
   # return(testtingg(Mset = PeakSet,
   #                  NodeSet,
   #                  mz_tol_abs = 2e-4,
@@ -171,14 +171,14 @@ PerformDataProcessing <- function() {
                                    Mset = PeakSet,
                                    LibrarySet = LibrarySet)
   EdgeSet_all = merge_edgeset(EdgeSet, EdgeSet_expand)
-  cat("done!\nTime consumed this step: ", Sys.time() - t0, "\n", "Start Propagate_structureset...\n");
+  cat("done!\nTime consumed this step: ", Sys.time() - t0, "\n");
   PeakSet$LibrarySet <- LibrarySet;
   PeakSet$NodeSet <- NodeSet;
   PeakSet$EdgeSet <- EdgeSet;
   PeakSet$StructureSet <- StructureSet;
   PeakSet$EdgeSet_all <- EdgeSet_all;
   PeakSet <<- PeakSet;
-
+  message("Peak data processing completed!");
   return(1)
 }
 
@@ -208,6 +208,7 @@ PerformPropagation <- function() {
   PeakSet$StructureSet_df <- StructureSet_df;
   cat("done!\n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
+  message("Peak data constructing propagation completed!");
   return(1);
 }
 
@@ -226,6 +227,7 @@ PerformGlobalOptimization <- function() {
   PeakSet <- .networkConstruct(PeakSet);
   cat("Global done!\n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
+  message("Global optimization completed!");
   return(1);
 }
 
@@ -278,6 +280,7 @@ PerformAnnotation <- function() {
     PeakSet <<- PeakSet <- .cleanPeakSet(PeakSet);
     qs::qsave(PeakSet, file = "PeakSet_done.qs");
     cat("Annotation done!\n Time consumed this step: ", Sys.time() - t0, "\n")
+    message("Peak annotation completed!");
     return(1)
 }
 

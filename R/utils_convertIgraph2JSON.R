@@ -130,8 +130,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     snp.inx <- nms %in% rownames(dataSet$mat[["snp"]]);
   }
 
-  containsGP <- any(gene.nms %in% prot.nms) ## check if any overlap between gene and protein
-  cat("containsGP = ", containsGP, "\n")
+  containsGP <- any(gene.nms %in% prot.nms); ## check if any overlap between gene and protein
 
   genes.inx <- nms %in% rownames(dataSet$seed[["gene"]])[dataSet$gene_type_vec %in% c(1,2)];
   tfs.inx <- nms %in% rownames(dataSet$seed[["tf"]]);
