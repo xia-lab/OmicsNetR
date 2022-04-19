@@ -181,7 +181,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   shapes[mic.inx] <- "microbe"
   shapes[snp.inx] <- "snp";
 
-
   seeds[genes.inx] <- "gene";
   seeds[tfs.inx] <- c("tf",itypes[tf.inx]);
   seeds[mirs.inx] <- c("mir",itypes[mir.inx]);

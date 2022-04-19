@@ -86,12 +86,12 @@ Init.Data<-function(){
 
   if(!.on.public.web) {
     sqlite.path <<- paste0(getwd(), "/");
-    lib.path <<- "https://www.omicsnet.ca/OmicsNet/resources/data/"
+    lib.path <<- "https://www.omicsnet.ca/OmicsNet/resources/data/";
+    message("A dataset has been initiated.");
     return(dataSet);
   } else {
     .on.public.web <<- TRUE;
   }
-  message("A dataset has been initiated.")
   return(1)
 }
 

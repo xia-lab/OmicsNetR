@@ -1544,8 +1544,6 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   result.listu$type <- type;
   result.listu <<- result.listu;
 
-
-
   if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
     if(type != "peak"){
         current.msg<<- paste("Please make sure correct interaction type is selected!")
@@ -1553,7 +1551,6 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
         print("Please make sure correct interaction type is selected!");
     }
   }
-
 
   if(type == "m2m" && exists("PeakSet")) {
     result.listu$protein.vec <- PeakSet[["nodes.df"]][["Id"]];
@@ -1580,7 +1577,7 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   }
 
   if(length(edge.res)>0 && length(old.edges)>0){
-    if(dim(edge.res) == dim(old.edges)){
+    if(all(dim(edge.res) == dim(old.edges))){
       current.msg<<- paste("No interactions have been detected!")
       containMsg <- 1;
       return(c(0, 0, containMsg));
@@ -1761,7 +1758,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   }
 
   if(length(edge.res)>0 && length(old.edges)>0){
-    if(dim(edge.res) == dim(old.edges)){
+    if(all(dim(edge.res) == dim(old.edges))){
       current.msg<<- paste("No interactions have been detected!")
       containMsg <- 1;
       return(c(0, 0, containMsg));
