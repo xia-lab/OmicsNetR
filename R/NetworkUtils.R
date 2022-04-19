@@ -160,7 +160,7 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
   nd.nms <- V(my.ppi)$name;
   current.net.nm <<- net.nm;
 
-  if(uploadedGraph && fileTypeu != "jsonOmicsnet"){
+  if(uploadedGraph && dataSet$fileType != "jsonOmicsnet"){
     convertIgraph2JSONFromFile(net.nm, json.nm, 3);
     return(.set.nSet(dataSet));
   }else{
@@ -434,8 +434,8 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     }
   } else if(netw.type == "snp"){
     require('RSQLite');
-    
- 
+
+
 
     if(db.type == "PhenoScanner"){
 
@@ -532,7 +532,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
 
     if(db.type == "PhenoScanner" & snpRegion==TRUE){
- 
+
      node.ids <- c(res$region[match(edge.res$Source,res$rsid)], edge.res[,"Target"])
     #node.ids <- c(edge.res[,"Source"], edge.res[,"Target"])
     #protein.vec <- unique(res[,"rsid"])
@@ -1520,7 +1520,7 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
   require.exp <- dataSet$require.exp;
   min.score <- dataSet$min.score;
   snpRegion <- dataSet$snpRegion
- 
+
   edge.res <- data.frame();
   if(length(edgeu.res.list) > 0){
     for(i in 1:length(edgeu.res.list)){
@@ -2229,14 +2229,11 @@ PrepareGraph <- function(net.nm, type="", export=T){
     hit.inx <- match(nms, omics.net$node.data[,1]);
 
    if(length(which(is.na(hit.inx)))>0){
-
-    hit.inx <- match(nms, omics.net$node.data[,2]);
+     hit.inx <- match(nms, omics.net$node.data[,2]);
      lbls <- omics.net$node.data[hit.inx, 1];
-     }else{
+   }else{
      lbls <- omics.net$node.data[hit.inx, 2];
-
-    }
-   #
+   }  
     edge.res <- cbind(edge.res, lbls);
 
   }
@@ -2255,6 +2252,9 @@ PrepareGraph <- function(net.nm, type="", export=T){
   return(file.nm);
 }
 
+#' SetPpiZero
+#' @param ppiZero ppiZero
+#' @export
 SetPpiZero <- function(ppiZero){
   dataSet$ppiZero <<- ppiZero;
 }
@@ -2267,7 +2267,7 @@ SetPpiZero <- function(ppiZero){
 #' @export
 #'
 SaveNetworkJson <- function(fileNm){
-  dataSet <- .get.nSet(NA);
+  dataSet <- .get.nSet(dataSet);
   obj <- list();
   obj$dataSet <- list();
   seed.list <- dataSet$seed;

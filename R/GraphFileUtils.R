@@ -6,7 +6,7 @@
 
 ProcessOmicsNetJson <- function(dataSet, fileName) {
   require("RJSONIO");
-  obj <- fromJSON(fileName)
+  obj <- RJSONIO::fromJSON(fileName)
   seed <- obj$dataSet$seed
   for(i in 1:length(seed)){
     df <- seed[[i]];
@@ -51,7 +51,7 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
   require("igraph");
   types_arr <<- "";
 
-  fileTypeu <<- fileType;
+  dataSet$fileType <- fileType;
   current.msg <<- NULL;
 
   if(grepl("scatter", fileName)){

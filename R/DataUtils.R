@@ -4,7 +4,14 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
-.on.public.web <<- TRUE;
+.onAttach <- function (libname, pkgname){
+  .on.public.web <<- FALSE;
+  k1 <- paste("OmicsNetR",
+              utils::packageVersion( "OmicsNetR"),
+              "initialized Successfully !")
+  k0 <- "\n";
+  packageStartupMessage(c(k1,k0));
+}
 
 #' Initialize dataSet object for downstream functions
 #'
@@ -13,6 +20,9 @@ Init.Data<-function(){
 
   if(exists("dataSet")){
     return(1)
+  }
+  if(!exists(".on.public.web")){
+    .on.public.web <<- FALSE;
   }
 
   dataSet <- list();
@@ -62,8 +72,12 @@ Init.Data<-function(){
     sqlite.path <<-"/media/zzggyy/disk/sqlite/"; #zgy local
   }
 
-  if(!.on.publica.web) {
-    sqlite.path <<- getwd();
+  if(!.on.public.web) {
+    sqlite.path <<- paste0(getwd(), "/");
+    lib.path <<- "https://www.omicsnet.ca/OmicsNet/resources/data/"
+    return(dataSet);
+  } else {
+    .on.public.web <<- TRUE;
   }
 
   return(1)
@@ -517,20 +531,9 @@ GetOrg <- function(){
 PrepareSqliteDB <- function(sqlite_Path, onweb = TRUE) {
   if(onweb) {return(TRUE)};
   if(file.exists(sqlite_Path)) {return(TRUE)};
-  sqlite_key <- system.file('db/sqlite_keys.csv', package = "OmicsNetR")
-  dblist <- read.csv(sqlite_key);
+
   dbNM <- basename(sqlite_Path);
-  if(!any(dblist$sqliteDBs == dbNM)){cat("Your database from remote end is not ready! Report this error: X10984OMNETR\n");return(FALSE)}
-  key <- dblist[dblist$sqliteDBs == dbNM, 2];
-  size <- dblist[dblist$sqliteDBs == dbNM, 3];
-  if(as.numeric(size) > 100){
-    DonwloadLink <- paste0("https://www.googleapis.com/drive/v3/files/",
-                           key,
-                           "?alt=media&key=AIzaSyAYHOnXzxMrNDuyc7JHNph_y11AsUTNyPQ")
-    # NOTE: This API key is only used for sqlite database download for OmicsNetR package.
-  } else {
-    DonwloadLink <- paste0("https://drive.google.com/uc?export=download&id=", key)
-  }
+  DonwloadLink <- paste0("https://www.xialab.ca/resources/sqlite/", dbNM);
   download.file(DonwloadLink, sqlite_Path);
   return(TRUE)
 }

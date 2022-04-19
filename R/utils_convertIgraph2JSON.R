@@ -1,35 +1,40 @@
 
 #color shape layout important
 my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3){
+
+  if(exists("lbls",envir = .GlobalEnv)) {
+    lbls <- get("lbls", envir = .GlobalEnv)
+  } else {
+    lbls <<- NA;
+  }
+
   dataSet <- .get.nSet(dataSetObj);
   dim <- as.numeric(dim)
   types_arr <<- dataSet$type;
-  
+
   if(thera){
     g <- my.ppi;
   }else{
     g <- ppi.comps[[net.nm]];
   }
-  
+
   modules = "NA"
 
   nms <- V(g)$name;
   #save(omics.net,g, file = "omics.net___checking.rda")
-  if(dataSet$snpRegion & length(grep("^rs",omics.net$node.data[,2]))>0 ){
-   omics.net$node.data[,3] <- omics.net$node.data[,1]
-   omics.net$node.data[grepl("^chr",omics.net$node.data[,3]),3] <- omics.net$node.data[grepl("^chr",omics.net$node.data[,3]),2]
-  
-   hit.inx <- match(nms, omics.net$node.data[,3]);
-
-  }else{
-    
-  hit.inx <- match(nms, omics.net$node.data[,1]);
- 
+  if(!is.null(dataSet$snpRegion)){
+    if(dataSet$snpRegion & length(grep("^rs",omics.net$node.data[,2]))>0 ){
+      omics.net$node.data[,3] <- omics.net$node.data[,1]
+      omics.net$node.data[grepl("^chr",omics.net$node.data[,3]),3] <- omics.net$node.data[grepl("^chr",omics.net$node.data[,3]),2];
+      hit.inx <- match(nms, omics.net$node.data[,3]);
+    } else {
+      hit.inx <- match(nms, omics.net$node.data[,1]);
+    }
+  } else {
+    hit.inx <- match(nms, omics.net$node.data[,1]);
   }
-lbls <- omics.net$node.data[hit.inx, 2];
- 
-print(lbls)
-  
+  bls <- omics.net$node.data[hit.inx, 2];
+
   # setup shape (gene circle, other squares)
   if("peak" %in% dataSet$type){
     shapes <- rep("putative_met", length(nms));
@@ -38,15 +43,15 @@ print(lbls)
   }
   itypes <- rep("circle", length(nms));
   seeds <- rep("circle", length(nms));
-  
+
   # get edge data
   edge.mat <- get.edgelist(g);
   edge.mat1 = data.frame(edge.mat)
   edge.mat1$color = "target"
   edge.mat1 = as.matrix(edge.mat1)
-  
+
   edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2], color = edge.mat1[,3]);
-  
+
   # now get coords
   pos.xy <- PerformLayOut(net.nm, "Default");
   # get the note data
@@ -59,7 +64,7 @@ print(lbls)
   exp <-as.vector(get.vertex.attribute(g, name="abundance", index = V(g)));
   exp[is.na(exp)] <- 0;
   node.exp <- as.numeric(exp);
-  
+
 
   # node size to degree values
   if(vcount(g)>500){
@@ -69,7 +74,7 @@ print(lbls)
   }else{
     min.size = 3;
   }
-  
+
   node.sizes <- as.numeric(rescale2NewRange((log(node.btw+1))^2, min.size, 9))*3 +5;
   node.sizes2d <- as.numeric(rescale2NewRange((log(node.btw+1))^2, min.size, 12));
   centered <- T;
@@ -79,28 +84,28 @@ print(lbls)
   topo.val <- log(node.btw+1);
   topo.colsb <- topo.colsb1 <- rep("#D3D3D3", length(nms));
   topo.colsw <- topo.colsw1 <- rep("#D3D3D3", length(nms));
-  
+
   # color based on expression
   bad.inx <- is.na(node.exp) | node.exp==0;
   if(!all(bad.inx)){
     exp.val <- node.exp;
-    node.colsb.exp <- ComputeColorGradient(exp.val, "black", centered); 
+    node.colsb.exp <- ComputeColorGradient(exp.val, "black", centered);
     node.colsw.exp <- ComputeColorGradient(exp.val, "white", centered);
-    node.colsb.exp[bad.inx] <- "#d3d3d3"; 
-    node.colsw.exp[bad.inx] <- "#c6c6c6"; 
+    node.colsb.exp[bad.inx] <- "#d3d3d3";
+    node.colsw.exp[bad.inx] <- "#c6c6c6";
   }else{
-    node.colsb.exp <- rep("#D3D3D3",length(node.dgr)); 
-    node.colsw.exp <- rep("#C6C6C6",length(node.dgr)); 
+    node.colsb.exp <- rep("#D3D3D3",length(node.dgr));
+    node.colsw.exp <- rep("#C6C6C6",length(node.dgr));
   }
-  
+
   gene.nms <- rownames(dataSet$seed[["gene"]] )
   prot.nms <- rownames(dataSet$seed[["protein"]] )
-  
+
   # now update for bipartite network
-  
+
   #edge.mat1 <<- edge.mat
   gene.inx <- nms %in% c(net.info$gene.ids, net.info$ko.ids);
-  
+
   if(length(net.info$gene.ids) == 0 && length(net.info$protein.ids) == 0 ){
     #gene.inx = predicted.inx;
     #predicted.inx = rep(FALSE,length(node.dgr));
@@ -113,11 +118,15 @@ print(lbls)
   peak.inx <- nms %in% net.info$peak.ids;
   met.inx <- nms %in% net.info$met.ids;
   reg.inx <- nms %in% net.info$reg.ids;
-  mic.inx <- nms %in% net.info$mic.ids
+  mic.inx <- nms %in% net.info$mic.ids;
 
-  if(dataSet$snpRegion & length(grep("^rs",omics.net$node.data[,2]))>0 ){
-  snp.inx <- grepl("^rs[0-9]",nms)
-  }else{
+  if(!is.null(dataSet$snpRegion)){
+    if(dataSet$snpRegion & length(grep("^rs",omics.net$node.data[,2]))>0 ){
+      snp.inx <- grepl("^rs[0-9]",nms)
+    }else{
+      snp.inx <- nms %in% rownames(dataSet$mat[["snp"]]);
+    }
+  } else {
     snp.inx <- nms %in% rownames(dataSet$mat[["snp"]]);
   }
 
@@ -132,10 +141,10 @@ print(lbls)
   topo.colsw[gene.inx] <- "#FF8484";
   topo.colsw[kncmpd.inx] <- "#00ffff";
   topo.colsw[prot.inx] <- "#FF8484";
-  topo.colsw[tf.inx] <- "#39FF14"; 
-  topo.colsw[mir.inx] <- "#00f6ff"; 
+  topo.colsw[tf.inx] <- "#39FF14";
+  topo.colsw[mir.inx] <- "#00f6ff";
   topo.colsw[peak.inx] <- "#D3D3D3";
-  
+
   topo.colsw[met.inx] <- "#ffff00";
   topo.colsw[reg.inx] <- "#ff9900";
   topo.colsw[mic.inx] <- "#39FF14";
@@ -152,32 +161,32 @@ print(lbls)
     color.vec <- c("#FF8484", "#FF8484", "#39FF14","#00f6ff", "#D3D3D3", "#00ffff", "#ffff00", "#ff9900", "#39FF14");
   }
   names(color.vec) <- c("gene", "protein", "tf", "mir", "peak", "kncmpd", "met", "reg", "mic");
-  
+
   #if(any(predicted.inx)){
   #  types_arr <<- c(types_arr, "interactor");
   #}
   if(any(gene.inx) && !"gene" %in% types_arr){
     types_arr <<- c(types_arr, "gene");
-  }   
-  
+  }
+
   shapes[gene.inx] <- "gene";
   shapes[prot.inx] <- "protein";
   shapes[tf.inx] <- "tf";
   shapes[mir.inx] <- "mir";
   shapes[kncmpd.inx] <- "kncmpd";
-  
+
   shapes[peak.inx] <- "putative_met";
   shapes[met.inx] <- "met";
   shapes[reg.inx] <- "reg"
   shapes[mic.inx] <- "microbe"
   shapes[snp.inx] <- "snp";
 
-  
+
   seeds[genes.inx] <- "gene";
   seeds[tfs.inx] <- c("tf",itypes[tf.inx]);
   seeds[mirs.inx] <- c("mir",itypes[mir.inx]);
   seeds[mets.inx] <- c("met", itypes[met.inx]);
-  
+
   types <- rep("", length(shapes))
   types[gene.inx] <- paste(types[gene.inx],"gene");
   types[peak.inx] <- "putative_met"
@@ -187,9 +196,9 @@ print(lbls)
   types[met.inx] <- "met";
   types[snp.inx] <- "snp";
   types[kncmpd.inx] <- "kncmpd";
-  
+
   types <- trimws(types);
-  
+
   network_prop = list();
   for(i in 1:length(node.sizes)){
     network_prop[[i]]  <- list(
@@ -199,33 +208,33 @@ print(lbls)
   }
 
   seed.inx <- nms %in% names(expr.vec);
-  
+
   seed_arr <- rep("notSeed",length(node.dgr));
   seed_arr[seed.inx] <- "seed";
-  
+
   type <- rep(FALSE,length(node.dgr))
   type[seed.inx] = TRUE
-  
+
   lblsu <<- lbls;
   node_attr = list.vertex.attributes(g);
-  node_attr = node_attr[which(node_attr!="names")] 
-  
+  node_attr = node_attr[which(node_attr!="names")]
+
   # now create the json object
   nodes <- vector(mode="list");
-  
-  
+
+
   require("stringr")
   displayedLabel<-lbls;
   long.inx <- which(stringr:::str_length(lbls) > 32);
   displayedLabel[long.inx] <- paste0(strtrim(lbls[long.inx],  rep(32, length(lbls[long.inx]))), "..." )
-  
+
   for(i in 1:length(node.sizes)){
     nodes[[i]] <- list(
-      id=nms[i], 
+      id=nms[i],
       idx=i,
       label=lbls[i],
       displayedLabel = displayedLabel[i],
-      size=node.sizes[i], 
+      size=node.sizes[i],
       size2d=node.sizes2d[i],
       type=shapes[i],
       molType=shapes[i],
@@ -243,7 +252,7 @@ print(lbls)
       y2d = pos.xy[i,2],
       user =network_prop[[i]],
       attributes=list(
-        degree=node.dgr[i], 
+        degree=node.dgr[i],
         between=node.btw[i],
         expr = node.exp[i],
         closeness = node.clo[i],
@@ -251,9 +260,9 @@ print(lbls)
       )
     );
   }
-  
+
   middleLayerType <- unique(shapes)[1]
-  
+
   for(i in 1:length(unique(shapes))){
     inx <- shapes == unique(shapes)[i]
     if(i == 1){
@@ -264,34 +273,39 @@ print(lbls)
     }
     }
   }
-  
+
   V(g)$layers <- as.numeric(as.factor(shapes));
   ppi.comps[[net.nm]] <<- g;
 
   summary = vector(mode="list");
   summary[[1]] = list(nodes=vcount(g));
   summary[[2]] = list(edges=ecount(g));
-  
+
   # save node table
 
   nd.tbl <- data.frame(Id=nms, Label=lbls, Degree=node.dgr, Betweenness=round(node.btw,2));
-  # order 
+  # order
   ord.inx <- order(nd.tbl[,3], nd.tbl[,4], decreasing = TRUE)
   nd.tbl <- nd.tbl[ord.inx, ];
   fast.write.csv(nd.tbl, file="node_table.csv", row.names=FALSE);
-  
+
   # covert to json
   require(RJSONIO);
   db.path <- paste(lib.path,data.org,"/entrez.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   conv <- readRDS(db.path)
   netData <- list(nodes=nodes,typeVec=dataSet$gene_type_vec, edges=edge.mat, modules=modules, conv = conv, prot.nms=prot.nms,gene.nms=gene.nms, containsGP=containsGP, middleLayerType = middleLayerType);
 
-  
+
   if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv)
     netData[["peakNodes"]] <- PeakSet$nodes;
     netData[["peakEdges"]] <- PeakSet$edges;
-  } 
+  }
 
   if("mic" %in% dataSet$type ){
     micSet <- qs::qread("micSet.qs");
@@ -309,12 +323,12 @@ print(lbls)
     netData[["metMicTable"]] <- micTbl
     netData[["micThresh"]] <- dataSet$mic.thresh;
   }
-  
+
   if(any(dataSet$gene_type_vec == 4)){
     netData[["snpTable"]] <- snpTable;
     netData[["snpTableConsequence"]] <- snpTableConsequence;
   }
-  
+
 
   netData[["colorVec"]] <- color.vec;
   dataSet$jsonNms$network <<- filenm
