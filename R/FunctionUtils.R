@@ -492,6 +492,13 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     require('RSQLite');
     mic.taxa <<- type;
     db.path <- paste(lib.path, "microbiome", "/taxaInfo.rds", sep="");
+
+    if(!.on.public.web){
+      nm <- basename(db.path);
+      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+      db.path <- nm;
+    }
+
     taxlist <- readRDS(db.path);
     db.map <- taxlist[[type]]
     db.map[, type] <- gsub("\\[|\\]","", db.map[, type])
@@ -554,6 +561,13 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
 
   }else if(type == "symbol"){
     db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+
+    if(!.on.public.web){
+      nm <- basename(db.path);
+      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+      db.path <- nm;
+    }
+
     gene.map <- readRDS(db.path);
     if(data.org == "hsa"){
       q.vec = toupper(q.vec);
@@ -565,6 +579,13 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
   }else if(type %in% c("meta", "kegg", "chebi", "name", "bigg", "pubchem", "hmdb")){
 
     db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
+
+    if(!.on.public.web){
+      nm <- basename(db.path);
+      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+      db.path <- nm;
+    }
+
     cmpd.map <- readRDS(db.path)
     q.type <- type;
     cmpd.vec <- q.vec
@@ -634,6 +655,13 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
       print("Unknown data type1");
       return(0);
     }
+
+    if(!.on.public.web){
+      nm <- basename(db.path);
+      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+      db.path <- nm;
+    }
+
     db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "accession"]);
     entrezs <- db.map[hit.inx, ];
@@ -654,10 +682,24 @@ doGeneIDMapping <- function(q.vec, type){
 
   if(type == "symbol"){
     db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+
+    if(!.on.public.web){
+      nm <- basename(db.path);
+      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+      db.path <- nm;
+    }
+
     db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "symbol"]);
   }else if(type == "entrez"){
     db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+
+    if(!.on.public.web){
+      nm <- basename(db.path);
+      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+      db.path <- nm;
+    }
+
     db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "gene_id"]);
   }else{
@@ -681,6 +723,13 @@ doGeneIDMapping <- function(q.vec, type){
       print("Unknown data type2");
       return(0);
     }
+
+    if(!.on.public.web){
+      nm <- basename(db.path);
+      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+      db.path <- nm;
+    }
+
     db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "accession"]);
   }
@@ -692,6 +741,13 @@ doGeneIDMapping <- function(q.vec, type){
 
 doEntrez2SymbolMapping <- function(entrez.vec){
   db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+
+  if(!.on.public.web){
+    nm <- basename(db.path);
+    download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+    db.path <- nm;
+  }
+
   gene.map <- readRDS(db.path);
 
   hit.inx <- match(entrez.vec, gene.map[, "gene_id"]);
@@ -706,6 +762,13 @@ doEntrez2SymbolMapping <- function(entrez.vec){
 
 doKegg2NameMapping <- function(entrez.vec){
   db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
+
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
+
   gene.map <- readRDS(db.path);
 
   hit.inx <- match(entrez.vec, gene.map[, "kegg_id"]);
@@ -719,6 +782,13 @@ doKegg2NameMapping <- function(entrez.vec){
 
 doPubchem2NameMapping <- function(entrez.vec){
   db.path <- paste(lib.path, "/lib/pubchem_lib.qs", sep="");
+
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
+
   full.map <- qs::qread(db.path);
 
   hit.inx <- match(entrez.vec, full.map[, "accession"]);
@@ -732,6 +802,13 @@ doPubchem2NameMapping <- function(entrez.vec){
 
 doHMDB2NameMapping <- function(entrez.vec){
   db.path <- paste(lib.path, "/lib/hmdb_lib.qs", sep="");
+
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
+
   full.map <- qs::qread(db.path);
 
   hit.inx <- match(entrez.vec, full.map[, "accession"]);
@@ -745,6 +822,13 @@ doHMDB2NameMapping <- function(entrez.vec){
 
 doHMDB2KEGGMapping <- function(entrez.vec){
   db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
+
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
+
   gene.map <- readRDS(db.path);
 
   hit.inx <- match(entrez.vec, gene.map[, "hmdb_id"]);
@@ -758,9 +842,23 @@ doHMDB2KEGGMapping <- function(entrez.vec){
 
 doPubchem2KEGGMapping <- function(entrez.vec){
   db.path <- paste(lib.path, "/lib/pubchem_lib.qs", sep="");
+
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
+
   full.map <- qs::qread(db.path);
 
   db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
+
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
+
   gene.map <- readRDS(db.path);
 
   hit.inx <- match(entrez.vec, full.map[, "accession"]);
@@ -783,6 +881,13 @@ doPubchem2KEGGMapping <- function(entrez.vec){
 # note, entrez.vec could contain NA/null, cannot use rownames
 doEntrezIDAnot <- function(entrez.vec){
   db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
+
   gene.map <- readRDS(db.path);
 
   hit.inx <- match(entrez.vec, gene.map[, "gene_id"]);
@@ -796,6 +901,11 @@ doEntrezIDAnot <- function(entrez.vec){
 
 doUniprot2EntrezMapping <- function(uniprot.vec){
   db.path <- paste(lib.path, data.org, "/entrez_uniprot.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   db.map <-  readRDS(db.path);
   hit.inx <- match(uniprot.vec, db.map[, "accession"]);
   entrezs <- db.map[hit.inx, "gene_id"];
@@ -805,6 +915,11 @@ doUniprot2EntrezMapping <- function(uniprot.vec){
 
 doEntrez2UniprotMapping <- function(entrez.vec){
   db.path <- paste(lib.path, data.org, "/entrez_uniprot.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   db.map <-  readRDS(db.path);
   hit.inx <- match(entrez.vec, db.map[, "gene_id"]);
   unips <- db.map[hit.inx, "accession"];
@@ -814,6 +929,11 @@ doEntrez2UniprotMapping <- function(entrez.vec){
 
 doString2EntrezMapping <- function(string.vec){
   db.path <- paste(lib.path, data.org, "/entrez_string.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   db.map <-  readRDS(db.path);
   hit.inx <- match(string.vec, db.map[, "accession"]);
   entrezs <- db.map[hit.inx, "gene_id"];
@@ -823,6 +943,11 @@ doString2EntrezMapping <- function(string.vec){
 
 doEmblGene2EntrezMapping <- function(emblgene.vec){
   db.path <- paste(lib.path, data.org, "/entrez_embl_gene.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   db.map <-  readRDS(db.path);
   hit.inx <- match(emblgene.vec, db.map[, "accession"]);
   entrezs <- db.map[hit.inx, "gene_id"];
@@ -832,6 +957,11 @@ doEmblGene2EntrezMapping <- function(emblgene.vec){
 
 doSymbol2EntrezMapping <- function(symbol.vec){
   db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   db.map <-  readRDS(db.path);
   hit.inx <- match(symbol.vec, db.map[, "symbol"]);
   entrezs <- db.map[hit.inx, "gene_id"];
@@ -841,6 +971,11 @@ doSymbol2EntrezMapping <- function(symbol.vec){
 
 doEmblProtein2EntrezMapping <- function(emblprotein.vec){
   db.path <- paste(lib.path, data.org, "/entrez_embl_protein.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   db.map <-  readRDS(db.path);
   hit.inx <- match(emblprotein.vec, db.map[, "accession"]);
   entrezs <- db.map[hit.inx, "gene_id"];
@@ -850,6 +985,11 @@ doEmblProtein2EntrezMapping <- function(emblprotein.vec){
 
 doEntrez2EmblProteinMapping <- function(entrez.vec){
   db.path <- paste(lib.path, data.org, "/entrez_embl_protein.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(db.path);
+    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
+    db.path <- nmdb;
+  }
   db.map <-  readRDS(db.path);
   hit.inx <- match(entrez.vec, db.map[, "gene_id"]);
   entrezs <- db.map[hit.inx, "accession"];
@@ -1290,7 +1430,10 @@ QueryDrugSQLite <- function(q.vec, regsearch){
 QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, uniExclude=T, orphExclude = T){
 
   require('RSQLite');
-  path <- paste0(sqlite.path, sql.nm)
+  path <- paste0(sqlite.path, sql.nm);
+  if(!PrepareSqliteDB(path, .on.public.web)){
+    stop("Sqlite database is missing, please check your internet connection!");
+  }
   mir.db <- dbConnect(SQLite(), path);
 
   query <- paste (shQuote(q.vec),collapse=",");
@@ -1310,6 +1453,12 @@ QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, un
     met.path <- paste(lib.path, "microbiome", "/met4path.rds", sep="");
   }else{
     met.path <- paste(lib.path, "microbiome", "/metInfo.rds", sep="");
+  }
+
+  if(!.on.public.web){
+    nmdb <- basename(met.path);
+    download.file(met.path, destfile = nmdb, method="libcurl", mode = "wb");
+    met.path <- nmdb;
   }
 
   met.info <- readRDS(met.path);

@@ -2,31 +2,31 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 path_annotate <- function(ilp_nodes, canu_met, ilp_edges_anno_met, dis_mat_met, g_annotation, canu_nonmet, ilp_edges_anno_nonmet, dis_mat_nonmet, g_anno_non) {
-    .Call('_OmicsNetR_path_annotate', PACKAGE = 'OmicsNetR', ilp_nodes, canu_met, ilp_edges_anno_met, dis_mat_met, g_annotation, canu_nonmet, ilp_edges_anno_nonmet, dis_mat_nonmet, g_anno_non)
+    .Call(`_OmicsNetR_path_annotate`, ilp_nodes, canu_met, ilp_edges_anno_met, dis_mat_met, g_annotation, canu_nonmet, ilp_edges_anno_nonmet, dis_mat_nonmet, g_anno_non)
 }
 
 matchHMDB <- function(annotation, Restable, peakidx, formularidx) {
-    .Call('_OmicsNetR_matchHMDB', PACKAGE = 'OmicsNetR', annotation, Restable, peakidx, formularidx)
+    .Call(`_OmicsNetR_matchHMDB`, annotation, Restable, peakidx, formularidx)
 }
 
 convert2KEGG <- function(HMDBIDs, database) {
-    .Call('_OmicsNetR_convert2KEGG', PACKAGE = 'OmicsNetR', HMDBIDs, database)
+    .Call(`_OmicsNetR_convert2KEGG`, HMDBIDs, database)
 }
 
 initialize_structureset <- function(NodeSet) {
-    .Call('_OmicsNetR_initialize_structureset', PACKAGE = 'OmicsNetR', NodeSet)
+    .Call(`_OmicsNetR_initialize_structureset`, NodeSet)
 }
 
 Heterodimer_connection_core <- function(pgroup, ppm) {
-    .Call('_OmicsNetR_Heterodimer_connection_core', PACKAGE = 'OmicsNetR', pgroup, ppm)
+    .Call(`_OmicsNetR_Heterodimer_connection_core`, pgroup, ppm)
 }
 
 fast_calculate_formula <- function(formular1, transformulas, sign) {
-    .Call('_OmicsNetR_fast_calculate_formula', PACKAGE = 'OmicsNetR', formular1, transformulas, sign)
+    .Call(`_OmicsNetR_fast_calculate_formula`, formular1, transformulas, sign)
 }
 
 propagate_heterodimer_core <- function(df_heterodimer, sf, propagation_category, node_mass, ppm_threshold) {
-    .Call('_OmicsNetR_propagate_heterodimer_core', PACKAGE = 'OmicsNetR', df_heterodimer, sf, propagation_category, node_mass, ppm_threshold)
+    .Call(`_OmicsNetR_propagate_heterodimer_core`, df_heterodimer, sf, propagation_category, node_mass, ppm_threshold)
 }
 
 #' Internal function \code{call_sr}
@@ -43,6 +43,6 @@ propagate_heterodimer_core <- function(df_heterodimer, sf, propagation_category,
 #' @author Murodzhon Akhmedov
 #'
 call_sr <- function(from, to, cost, node_names, node_prizes) {
-    .Call('_OmicsNetR_call_sr', PACKAGE = 'OmicsNetR', from, to, cost, node_names, node_prizes)
+    .Call(`_OmicsNetR_call_sr`, from, to, cost, node_names, node_prizes)
 }
 

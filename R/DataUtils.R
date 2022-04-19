@@ -26,6 +26,8 @@ Init.Data<-function(){
   }
 
   dataSet <- list();
+  dataSet$snpRegion <- F;
+  dataSet$allOrgs <- "";
   dataSet$viewTable <- list();
   dataSet$require.exp <- T;
   dataSet$ppiZero <- F;
@@ -42,6 +44,16 @@ Init.Data<-function(){
                  "Fatty acid metabolism",
                  "Biosynthesis of amino acids",
                  "Degradation of aromatic compounds");
+
+  dataSet$mic.exclude.opt <- "currency";
+  dataSet$currExclude <- "true";
+  dataSet$phenoPs <- dataSet$orphExclude <- dataSet$uniExclude <- "TRUE";
+  dataSet$phesc.opt <- "eqtl";
+  dataSet$vep.opt <- "dis";
+  dataSet$vep.num <- "1";
+  dataSet$vep.dis <- "5";
+  dataSet$phenoEq <- "FALSE";
+
   dataSet <<- dataSet;
 
   # set up other global vars
@@ -323,6 +335,14 @@ SetDbType <- function(dbType){
 
 SetMirBo <- function(mirBo){
   requireMirExp <<- mirBo
+}
+
+SetAllOrgs <- function(orgs){
+  dataSet$allOrgs <<- orgs
+}
+
+GetAllOrgs <- function(){
+  return(dataSet$allOrgs);
 }
 
 GetInputTypes <- function(dataSetObj=NA){

@@ -29,6 +29,19 @@ ProcessOmicsNetJson <- function(dataSet, fileName) {
   omics.net <<- omics.net;
   net.info <<- obj$net.info
   data.org <<- obj$data.org
+
+  if(is.null(obj$snpRegion)){
+    dataSet$snpRegion <- F;
+  }else{
+    dataSet$snpRegion <- obj$snpRegion;
+  }
+
+  if(is.null(obj$allOrgs)){
+    dataSet$allOrgs <- data.org;
+  }else{
+    dataSet$allOrgs <- obj$allOrgs;
+  }
+
   dataSet <<- dataSet;
   CreateGraph();
   net.nm <- names(ppi.comps)[1];

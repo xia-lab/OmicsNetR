@@ -2063,6 +2063,13 @@ FilterByTissue <- function(dataSetObj=NA, type, tissue){
 #'
 FilterByPvalue <- function(pvaluecutoff){
   data <- qs::qread("PeakSet_data.qs")
+
+  if(exists("dataSet",envir = .GlobalEnv)) {
+    dataSetObj <- get("dataSet", envir = .GlobalEnv)
+  } else {
+    dataSetObj <- NA;
+  }
+
   dataSet <- .get.nSet(dataSetObj);
   all.nms <- V(overall.graph)$name;
 
@@ -2233,7 +2240,7 @@ PrepareGraph <- function(net.nm, type="", export=T){
      lbls <- omics.net$node.data[hit.inx, 1];
    }else{
      lbls <- omics.net$node.data[hit.inx, 2];
-   }  
+   }
     edge.res <- cbind(edge.res, lbls);
 
   }
@@ -2279,6 +2286,8 @@ SaveNetworkJson <- function(fileNm){
     df1 <- as.data.frame(df1);
     seed.list[[i]] <- df1;
   }
+  obj$allOrgs <- dataSet$allOrgs;
+  obj$snpRegion <- dataSet$snpRegion;
   obj$seed.genes <- seed.genes
   obj$seed.proteins <- seed.proteins
   obj$dataSet$seed <- seed.list;

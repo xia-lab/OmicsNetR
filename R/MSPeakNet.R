@@ -93,6 +93,10 @@ ImportMSPeaks <- function(PeakFile = NA) {
   return(1);
 }
 
+#' UpdateCmpdDB
+#'
+#' @param dbNM database name, KEGG, HMDB or PubChem
+#' @export
 UpdateCmpdDB <- function(dbNM){
   PeakSet <<- qs::qread(file = "PeakSet_initial.qs");
   cat("Now the db is being changed as ", dbNM, "\n")
@@ -285,22 +289,70 @@ GetFastPeak <- function(){
 #### Other internal functions
 
 .importCmpdLib <- function(DB) {
-  if(DB == "HMDB"){
-    qs::qread("../../data/lib/hmdb_lib.qs")
-  } else if(DB == "KEGG") {
-    qs::qread("../../data/lib/kegg_lib.qs")
-  } else if(DB == "Pubchem"){
-    qs::qread("../../data/lib/pubchem_lib.qs")
+
+  if(exists(".on.public.web",envir = .GlobalEnv)) {
+    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
+  } else {
+    .on.public.web <- FALSE;
+  }
+
+  if(!.on.public.web){
+    if(DB == "HMDB"){
+      file_path <- system.file('db/hmdb_lib.qs', package = "OmicsNetR")
+    } else if(DB == "KEGG") {
+      file_path <- system.file('db/kegg_lib.qs', package = "OmicsNetR")
+    } else if(DB == "Pubchem"){
+      file_path <- system.file('db/pubchem_lib.qs', package = "OmicsNetR")
+    }
+    qs::qread(file_path)
+  } else {
+    if(DB == "HMDB"){
+      qs::qread("../../data/lib/hmdb_lib.qs")
+    } else if(DB == "KEGG") {
+      qs::qread("../../data/lib/kegg_lib.qs")
+    } else if(DB == "Pubchem"){
+      qs::qread("../../data/lib/pubchem_lib.qs")
+    }
   }
 }
 .importEmpiricalRule <- function() {
+  if(exists(".on.public.web",envir = .GlobalEnv)) {
+    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
+  } else {
+    .on.public.web <- FALSE;
+  }
+  if(!.on.public.web){
+    file_path <- system.file('db/empirical_rule.qs', package = "OmicsNetR")
+    qs::qread(file_path)
+  } else {
     qs::qread("../../data/lib/empirical_rule.qs")
+  }
 }
 .importPropagationRule <- function() {
+  if(exists(".on.public.web",envir = .GlobalEnv)) {
+    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
+  } else {
+    .on.public.web <- FALSE;
+  }
+  if(!.on.public.web){
+    file_path <- system.file('db/propagation_rule.qs', package = "OmicsNetR")
+    qs::qread(file_path)
+  } else {
     qs::qread("../../data/lib/propagation_rule.qs")
+  }
 }
 .importMS2Lib <- function() {
+  if(exists(".on.public.web",envir = .GlobalEnv)) {
+    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
+  } else {
+    .on.public.web <- FALSE;
+  }
+  if(!.on.public.web){
+    file_path <- system.file('db/ms2_lib.qs', package = "OmicsNetR")
+    qs::qread(file_path)
+  } else {
     qs::qread("../../data/lib/ms2_lib.qs")
+  }
 }
 
 .prepareILPSet <- function(PeakSet) {
@@ -403,7 +455,18 @@ GetFastPeak <- function(){
   if(is.null(nodesVec)) stop("No nodes procvided!")
   if(all(is.na(nodesVec$KEGGID))) return(nodesVec)
 
-  curVec <- qs::qread("../../data/lib/currency.qs");
+  if(exists(".on.public.web",envir = .GlobalEnv)) {
+    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
+  } else {
+    .on.public.web <- FALSE;
+  }
+  if(!.on.public.web){
+    file_path <- system.file('db/currency.qs', package = "OmicsNetR")
+    curVec <- qs::qread(file_path)
+  } else {
+    curVec <- qs::qread("../../data/lib/currency.qs");
+  }
+
   res <-
     vapply(nodesVec$KEGGID, FUN = function(x){x %in% curVec$V1},
            FUN.VALUE = vector(mode = "logical",
