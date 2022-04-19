@@ -33,7 +33,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   } else {
     hit.inx <- match(nms, omics.net$node.data[,1]);
   }
-  bls <- omics.net$node.data[hit.inx, 2];
+  lbls <- omics.net$node.data[hit.inx, 2];
 
   # setup shape (gene circle, other squares)
   if("peak" %in% dataSet$type){
