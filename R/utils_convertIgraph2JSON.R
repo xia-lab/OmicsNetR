@@ -123,10 +123,10 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     if(dataSet$snpRegion & length(grep("^rs",omics.net$node.data[,2]))>0 ){
       snp.inx <- grepl("^rs[0-9]",nms)
     }else{
-      snp.inx <- nms %in% rownames(dataSet$mat[["snp"]]);
+      snp.inx <- nms %in% rownames(dataSet$seed[["snp"]]);
     }
   } else {
-    snp.inx <- nms %in% rownames(dataSet$mat[["snp"]]);
+    snp.inx <- nms %in% rownames(dataSet$seed[["snp"]]);
   }
 
   containsGP <- any(gene.nms %in% prot.nms); ## check if any overlap between gene and protein

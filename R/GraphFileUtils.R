@@ -19,7 +19,11 @@ ProcessOmicsNetJson <- function(dataSet, fileName) {
   dataSet$seeds.proteins <- obj$dataSet$seeds.proteins
   seed.expr <<- obj$seed.expr
   omics.net <- obj$omics.net
+  if(is.null(dim(obj$omics.net$node.data))){
+  node.data.df <- data.frame(Id=omics.net$node.data, Label=omics.net$node.data);
+  }else{
   node.data.df <- data.frame(Id=omics.net$node.data$Id, Label=omics.net$node.data$Label);
+  }
   node.data.df <- unique(node.data.df);
   edge.data.df <- data.frame(Source=omics.net$edge.data$Source, Target=omics.net$edge.data$Target);
   omics.net$node.data <- node.data.df
@@ -249,8 +253,6 @@ convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
   # annotation
   nms <- V(g)$name;
   lbls = nms;
-  print(V(g)$Label);
-  print("Vg");
   if(length(V(g)$Label) >0){
     lbls <- V(g)$Label;
   }else if(length(dataSet$nodeLabels) > 0){
@@ -359,7 +361,6 @@ convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
     node.colsw.exp <- ComputeColorGradient(exp.val, "white", centered);
     node.colsb.exp[bad.inx] <- "#d3d3d3";
     node.colsw.exp[bad.inx] <- "#c6c6c6";
-    # node.colsw.exp[bad.inx] <- "#99ddff";
   }else{
     node.colsb.exp <- rep("#d3d3d3",length(node.exp));
     node.colsw.exp <- rep("#c6c6c6",length(node.exp));
