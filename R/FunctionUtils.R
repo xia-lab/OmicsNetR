@@ -7,6 +7,11 @@
 LoadMotifLib<-function(){
 
   motif.path <- paste(lib.path, data.org, "/motif_set.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(motif.path);
+    download.file(motif.path, destfile = nmdb, method="libcurl", mode = "wb");
+    motif.path <- nmdb;
+  }
   motif_set<-readRDS(motif.path);
   current.mset <- motif_set$set;
   set.ids<- names(current.mset);
@@ -21,6 +26,11 @@ LoadMotifLib<-function(){
 LoadKEGGKO_lib<-function(category){
 
   kegg.rda <- paste0(lib.path, "microbiome/ko_pathways.rda");
+  if(!.on.public.web){
+    nmdb <- basename(kegg.rda);
+    download.file(kegg.rda, destfile = nmdb, method="libcurl", mode = "wb");
+    kegg.rda <- nmdb;
+  }
   load(kegg.rda);
   current.setlink <- kegg.anot$link;
   current.mset <- kegg.anot$sets$Metabolism;
@@ -55,6 +65,11 @@ LoadKEGGLib<-function(){
   kegg.path = ""
 
   kegg.path <- paste(lib.path, data.org, "/kegg1.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(kegg.path);
+    download.file(kegg.path, destfile = nmdb, method="libcurl", mode = "wb");
+    kegg.path <- nmdb;
+  }
   kegg.anot <- readRDS(kegg.path)
   if(data.org == "microbiome"){
     current.mset <- kegg.anot;
@@ -76,6 +91,11 @@ LoadKEGGLib<-function(){
 
 LoadREACTOMELib<-function(){
   reactome.path <- paste(lib.path, data.org, "/reactome.rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(reactome.path);
+    download.file(reactome.path, destfile = nmdb, method="libcurl", mode = "wb");
+    reactome.path <- nmdb;
+  }
   reactome.anot <- readRDS(reactome.path)
   current.mset <- reactome.anot$sets;
   set.ids<- names(current.mset);
@@ -160,6 +180,11 @@ LoadOtherLib<-function(onto){
 
 LoadGOLib<-function(onto){
   go.path <- paste(lib.path, data.org, "/", tolower(onto), ".rds", sep="");
+  if(!.on.public.web){
+    nmdb <- basename(go.path);
+    download.file(go.path, destfile = nmdb, method="libcurl", mode = "wb");
+    go.path <- nmdb;
+  }
   if(tolower(onto) %in% c("go_panth","go_bp")){
     go_bp <- readRDS(go.path);
 
@@ -1020,6 +1045,11 @@ LoadKEGGLibOther<-function(type){
     kegg.path <- paste(lib.path,"microbiome",  "/keggm.rds", sep="");
   }else{
     kegg.path <- paste(lib.path, data.org,"/keggm.rds", sep="");
+  }
+  if(!.on.public.web){
+    nmdb <- basename(kegg.path);
+    download.file(kegg.path, destfile = nmdb, method="libcurl", mode = "wb");
+    kegg.path <- nmdb;
   }
   kegg.anot <- readRDS(kegg.path)
   current.setlink <- " "

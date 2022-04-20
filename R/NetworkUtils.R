@@ -409,6 +409,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
   # now do the database search
   if(netw.type == "ppi" || netw.type == "gene" || netw.type == "protein"){
     table.nm = paste(data.org, db.type, sep="_");
+    message("We are going to query the data table: ", table.nm, " from ppi database..");
     res <- QueryPpiSQLite(table.nm, protein.vec, require.exp, min.score);
 
     if(dataSet$ppiZero){
