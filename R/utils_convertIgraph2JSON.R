@@ -42,7 +42,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     shapes <- rep("gene", length(nms));
   }
   itypes <- rep("circle", length(nms));
-  seeds <- rep("circle", length(nms));
 
   # get edge data
   edge.mat <- get.edgelist(g);
@@ -132,10 +131,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
 
   containsGP <- any(gene.nms %in% prot.nms); ## check if any overlap between gene and protein
 
-  genes.inx <- nms %in% rownames(dataSet$seed[["gene"]])[dataSet$gene_type_vec %in% c(1,2)];
-  tfs.inx <- nms %in% rownames(dataSet$seed[["tf"]]);
-  mirs.inx <- nms %in% rownames(dataSet$seed[["mir"]]);
-  mets.inx <- nms %in% rownames(dataSet$seed[["met"]]);
 
   topo.colsw[gene.inx] <- "#FF8484";
   topo.colsw[kncmpd.inx] <- "#00ffff";
@@ -179,11 +174,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   shapes[reg.inx] <- "reg"
   shapes[mic.inx] <- "microbe"
   shapes[snp.inx] <- "snp";
-
-  seeds[genes.inx] <- "gene";
-  seeds[tfs.inx] <- c("tf",itypes[tf.inx]);
-  seeds[mirs.inx] <- c("mir",itypes[mir.inx]);
-  seeds[mets.inx] <- c("met", itypes[met.inx]);
 
   types <- rep("", length(shapes))
   types[gene.inx] <- paste(types[gene.inx],"gene");
@@ -237,7 +227,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
       type=shapes[i],
       molType=shapes[i],
       types=types[i],
-      seed=seeds[i],
       seedArr =seed_arr[i],
       color=topo.colsb[i],
       colorb=topo.colsb[i],

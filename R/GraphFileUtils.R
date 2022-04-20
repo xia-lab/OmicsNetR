@@ -63,7 +63,7 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
   dataSet <- .get.nSet(dataSetObj);
   require("igraph");
   types_arr <<- "";
-
+  lbls <- "";
   dataSet$fileType <- fileType;
   current.msg <<- NULL;
 
@@ -118,6 +118,8 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
     }, finally = {
 
     })
+
+
   }else if(fileType == "json"){
     require("RJSONIO");
     dat <- fromJSON(fileName);
@@ -145,30 +147,13 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
     }, finally = {
 
     })
-  }else if(fileType == "jsonOmics"){
-    require("RJSONIO");
-    dat <- fromJSON(fileName);
-    dfn <- unlist(dat$elements$nodes);
-    conv <- data.frame(id1=dfn[which(names(dfn)=='data.id')], name1=dfn[which(names(dfn)=='data.name')]);
-    dfe <- unlist(dat$elements$edges);
-    dffe <- data.frame(id1=dfe[which(names(dfe) == "data.source")], id2=dfe[which(names(dfe) == "data.target")]);
-    dfint <- merge(conv, dffe, by="id1");
-    colnames(conv) <- c("id2", "name2");
-    df <- merge(conv, dfint, by="id2");
-    df <- df[,c("name1", "name2")];
-    df <- as.matrix(df);
+    nms <- V(graphX)$name
+    hit.inx <- match(nms, conv$id2);
+    lbls <- conv[hit.inx, "name2"];
+    mode(lbls) <- "character";
+    na.inx <- is.na(lbls);
+    lbls[na.inx] <- nms[na.inx];
 
-    graphX = tryCatch({
-      graph_from_edgelist(df, directed=FALSE);
-    }, warning = function(w) {
-      current.msg <<- "Wrong format, please make sure that the file is formatted correctly";
-      return(0);
-    }, error = function(e) {
-      current.msg <<- "Wrong format, please make sure that the file is formatted correctly";
-      return(0);
-    }, finally = {
-
-    })
   }else {
     current.msg <<- "Unknown format, please make sure that the file is saved in the supported formats!";
     return(0);
@@ -186,7 +171,11 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
     graphX <- set_vertex_attr(graphX, "name", value=nms);
   }
 
-  node.data <- data.frame(nms, nms);
+  if(length(lbls) == 0){
+    lbls <- nms;
+  }
+
+  node.data <- data.frame(nms, lbls);
   seed.proteins <<- nms;
   seed.genes <<- seed.proteins;
   e <- get.edgelist(graphX)
@@ -260,6 +249,8 @@ convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
   # annotation
   nms <- V(g)$name;
   lbls = nms;
+  print(V(g)$Label);
+  print("Vg");
   if(length(V(g)$Label) >0){
     lbls <- V(g)$Label;
   }else if(length(dataSet$nodeLabels) > 0){

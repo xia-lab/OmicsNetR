@@ -33,7 +33,7 @@ Init.Data<-function(){
   dataSet$ppiZero <- F;
   dataSet$min.score <- 900;
   dataSet$seeds.proteins <- vector();
-  dataSet$mat <- dataSet$exp.mat <- dataSet$seed <- dataSet$inv <- list();
+  dataSet$mat <- dataSet$exp.mat <- dataSet$seed <- list();
   dataSet$mic.thresh <- 0.8;
   dataSet$toremove <- c("Metabolic pathways",
                  "Biosynthesis of secondary metabolites",
@@ -109,16 +109,13 @@ SetCurrentDataMulti <- function(){
   return(.set.nSet(dataSet));
 }
 
-
-
 CheckQueryTypeMatch <- function(qvec, type, dbType){
-
   if(type == "snp"){
     if(length(startsWith(qvec, "rs"))>0){
-    queryType <- "rsid";
-   }else{
-   queryType <- "region"
-   }
+        queryType <- "rsid";
+    }else{
+        queryType <- "region"
+    }
   }else if(type %in% c("gene","tf")){
     queryType <- "entrez";
   }else if(type %in% c("met", "peak", "m2m")){
@@ -156,8 +153,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   dataSet$name <- type;
   dataSet$orig <- inputList;
 
-
-  netInvType <- "direct"
   current.msg <<- NULL;
   data.org <<- org;
   if(type == "gene" & exists("signature.gene")){
@@ -186,10 +181,10 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   }
 
   if(queryType == "region"){
-   dataSet$snpRegion <- TRUE
+        dataSet$snpRegion <- TRUE
    }else{
-   dataSet$snpRegion <- FALSE
-  }
+        dataSet$snpRegion <- FALSE
+   }
 
   if(sum(!na.inx) < 2){
     current.msg <<- "Less than two hits found in uniprot database. ";
@@ -198,7 +193,7 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   if(type == "met" || type == "mir" ){
     col1 <- 1;
     if(queryType == "mir_acc" || (type == "met" && queryType != "kegg")){
-    col1 <- 2;
+        col1 <- 2;
     }
     hit.inx <- match(rownames(prot.mat), GeneAnotDB[,col1]);
     if(is.null(dim(prot.mat))){
@@ -237,7 +232,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
       dataSet$mat[["gene"]] <- gene.mat;
       dataSet$exp.mat[["gene"]] <- prot.mat;
       dataSet$seed[["gene"]] <- prot.mat;
-      dataSet$inv[["gene"]] <- netInvType;
       if(type == "geneonly"){
         dataSet$gene_type_vec = rep(2, nrow(prot.mat))
       }else if (type == "protein"){
@@ -251,7 +245,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
       dataSet$mat[["gene"]] <- rbind(dataSet$mat[["gene"]], gene.mat);
       dataSet$exp.mat[["gene"]] <- rbind(dataSet$exp.mat[["gene"]], prot.mat);
       dataSet$seed[["gene"]] <- rbind(dataSet$seed[["gene"]], prot.mat);
-      dataSet$inv[["gene"]] <- netInvType;
       if(type == "geneonly"){
         dataSet$gene_type_vec = c(dataSet$gene_type_vec, rep(2, nrow(prot.mat)));
       }else if (type == "protein"){
@@ -266,7 +259,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     dataSet$mat[[type]] <- gene.mat;
     dataSet$exp.mat[[type]] <- prot.mat;
     dataSet$seed[[type]] <- prot.mat;
-    dataSet$inv[[type]] <- netInvType;
   }
 
   if(length(dataSet$type) == 1){
