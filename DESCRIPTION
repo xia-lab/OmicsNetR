@@ -14,7 +14,7 @@ Depends: R (>= 4.0)
 Imports: Rcpp, Cairo, igraph, RJSONIO, ggplot2
 Suggests: data.table, metap, RSQLite, RandomWalkRestartMH, fitdistrplus, slam,
           dplyr, ggforce, graphlayouts, httr, lpsymphony, plyr, pryr, stringr, tidyr, knitr, RColorBrewer, qs, rjson
-LinkingTo: Rcpp
+LinkingTo: Rcpp, BH
 VignetteBuilder: knitr
 BugReports: https://github.com/xia-lab/OmicsNetR/issues/new
 URL: https://github.com/xia-lab/OmicsNetR
