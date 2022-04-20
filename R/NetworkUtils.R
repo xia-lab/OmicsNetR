@@ -1602,7 +1602,7 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
     min.score = 900
   );
 
-  dataSet$seeds.proteins <- unique(seed.genes);
+  #dataSet$seeds.proteins <- unique(seed.genes);
   dataSet <<- dataSet
 
   ComputeIndSubnetStats(dataSet);
@@ -1654,7 +1654,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     }else if (inputType %in% c("mir","tf","met") && type != inputType){
       inputType <- "gene";
     }
-
+  nodes.query = "";
   if (length(edgeu.res.list) > 0) {
     for (i in 1:length(edgeu.res.list)) {
       nm <- paste0(type, "_", inputType)
@@ -1681,7 +1681,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
       inv = "inverse"
     }
 
-    if(!snpPeakMicBool && length(dataSet$exp.mat[["gene"]])>0){
+    if(!snpPeakMicBool && length(dataSet$exp.mat[["gene"]])>0 || nodes.query == ""){
       query.vec <- unique(dataSet$seeds.proteins)
     }else{
       query.vec <- unique(nodes.query)
@@ -1784,7 +1784,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     min.score = 900
   );
 
-  dataSet$seeds.proteins <- unique(seed.genes);
+  #dataSet$seeds.proteins <- unique(seed.genes);
   dataSet <<- dataSet;
   ComputeIndSubnetStats(dataSet);
 
@@ -2177,8 +2177,7 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
     nodes <- unique(unname(unlist(edge.df)))
     node.num <- length(nodes);
     query.num <- sum((unique(dataSet$seeds.proteins)) %in% nodes)
-
-
+    
     netw.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][1]
     input.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][2]
     inputName <- convertInputTypes2Names(input.type);

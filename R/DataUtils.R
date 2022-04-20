@@ -416,7 +416,7 @@ GetInputListStat <- function(listNm){
   micList <- rownames(dataSet$exp.mat[["mic"]]);
   snpList <- rownames(dataSet$seed[["snp"]]);
   koList <- rownames(dataSet$exp.mat[["ko"]]);
-  return(c(length(rownames(dataSet$exp.mat[["gene"]])[dataSet$gene_type_vec == 1]),length(rownames(dataSet$exp.mat[["gene"]])[dataSet$gene_type_vec == 3]),length(unique(tfList)),length(unique(mirList)),length(unique(metList)), length(unique(koList)), length(unique(peakList)), length(unique(micList)), length(unique(snpList))));
+  return(c(length(rownames(dataSet$exp.mat[["gene"]])),length(rownames(dataSet$exp.mat[["protein"]])),length(unique(tfList)),length(unique(mirList)),length(unique(metList)), length(unique(koList)), length(unique(peakList)), length(unique(micList)), length(unique(snpList))));
 }
 
 GetFilesToBeSaved <-function(naviString){
