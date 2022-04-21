@@ -546,7 +546,7 @@ PrepareSqliteDB <- function(sqlite_Path, onweb = TRUE) {
 
   dbNM <- basename(sqlite_Path);
   DonwloadLink <- paste0("https://www.xialab.ca/resources/sqlite/", dbNM);
-  download.file(DonwloadLink, sqlite_Path);
+  download.file(DonwloadLink, sqlite_Path, method = "curl");
   return(TRUE)
 }
 
