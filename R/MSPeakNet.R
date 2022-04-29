@@ -33,9 +33,9 @@ InitiatePeakSet <- function(ionMode = -1,
                              polarity = ionMode, # "1" is pos, "-1" is neg
                              ppm = ppm,
                              p_cutoff = p_cutoff,
-                             data.org = "ko");
+                             data.org = data.org);
     PeakSet <<- PeakSet;
-    data.org <<- "ko";
+    #data.org <<- "ko";
     return(1);
 }
 
@@ -285,8 +285,11 @@ PerformAnnotation <- function() {
 }
 
 GetFastPeak <- function(){
-    ImportMSPeaks("../../data/test/malaria_peaks.csv");
-    PeakSet <<- qs::qread("../../data/test/PeakSet_done.qs");
+    print("getPeakset");
+    ImportMSPeaks("../../data/test/ibd_peaks_p.csv");
+    PeakSetDone <<- qs::qread("../../data/test/PeakSet_done.qs");
+    PeakSet_data <- qs::qread("../../data/test/PeakSet_data.qs");
+    qs::qsave(PeakSet_data, "PeakSet_data.qs");
 }
 
 #### Other internal functions

@@ -4,59 +4,6 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
-.prepareSigProteinJSON <- function(type){
-  result.list <- .prepareListSeeds(type);
-  return(result.list);
-}
-
-.prepareListSeeds <- function(type){
-  protein.list <- list();
-  gene.list <- list();
-  # return a json array object
-  # each object for a single dataset its sig proteins
-  meta.vec <- meta.gene.vec <- meta.seed.expr <- NULL;
-
-  GeneAnotDB <- NULL;
-  if(type %in% c("gene", "geneonly", "protein1")){
-    gene.mat <- dataSet$mat[["gene"]];
-    prot.mat <- dataSet$exp.mat[["gene"]];
-  }else{
-    gene.mat<-dataSet$mat[[type]];
-    prot.mat<-dataSet$exp.mat[[type]];
-  }
-  if(length(prot.mat) == 0){
-    gene.mat <- dataSet$mat[["gene"]];
-    prot.mat <- dataSet$exp.mat[["gene"]];
-  }
-
-  meta.gene.vec <- c(meta.gene.vec, rownames(gene.mat));
-  gene.list[[dataSet$name]] <- list(gene=rownames(gene.mat),logFC=unname(gene.mat[,1]));
-  GeneAnotDB <- rbind(GeneAnotDB, dataSet$GeneAnotDB);
-  meta.seed.expr <- c(meta.seed.expr, prot.mat[,1]);
-  protein.vec <- prot.mat[,1];
-  meta.vec <- c(meta.vec, names(protein.vec));
-  if(length(protein.vec) == 1){
-    protein.vec <- as.matrix(protein.vec)
-  }
-  protein.list[[dataSet$name]] <-protein.vec
-
-  gene.list$name <- dataSet$name;
-  seed.genes <<- unique(meta.gene.vec);
-
-  meta.seed.df <- as.matrix(meta.seed.expr);
-  rownames(meta.seed.df) <- names(meta.seed.expr);
-
-  seed.expr <- RemoveDuplicates(meta.seed.df, "max", quiet=F);
-  seed.expr <<- seed.expr[,1];
-  protein.vec <- unique(meta.vec);
-
-  list(
-    gene.list = gene.list,
-    protein.list = protein.list,
-    protein.vec = protein.vec,
-    type = type
-  );
-}
 
 #' Create network from only input (seeds)
 #'
@@ -82,16 +29,17 @@ BuildSeedProteinNet <- function(dataSetObj=NA){
   edgeList <- edgeList[,1:2];
   colnames(edgeList) <- c("Source", "Target");
   fast.write.csv(edgeList, file="orig_edge_list.csv");
-  substats <- DecomposeGraph(g);
-  if(is.null(substats)){
-    return(0)
-  }else{
+  dataSet <- .decomposeGraph(dataSet, g);
+  if(!is.null(dataSet$substats)){
     # update omics.net
-    omics.net$order = 0;
-    omics.net$node.data <- nodeList;
-    omics.net$edge.data <- edgeList;
-    omics.net <<- omics.net;
+    if(.on.public.web){
+    .set.nSet(dataSet);
+    return(c(length(seed.genes),length(dataSet$seeds.proteins), nrow(nodeList), nrow(edgeList), length(ppi.comps), dataSet$substats));
+    }else{
     return(.set.nSet(dataSet));
+    }
+  }else{
+    return(c(0));
   }
 }
 
@@ -100,7 +48,8 @@ BuildSeedProteinNet <- function(dataSetObj=NA){
 #'
 #' @export
 #'
-CreateGraph <- function(){
+CreateGraph <- function(dataSetObj=NA){
+  dataSet <- .get.nSet(dataSetObj);
   require('igraph');
   node.list <- omics.net$node.data;
   edge.list <- omics.net$edge.data;
@@ -130,12 +79,14 @@ CreateGraph <- function(){
 
   overall.graph <- suppressWarnings(set.vertex.attribute(overall.graph, "abundance", index = V(overall.graph), value = expr.vals));
   overall.graph <<- overall.graph;
-  substats <- DecomposeGraph(overall.graph);
-  g <<- overall.graph
+  dataSet <- .decomposeGraph(dataSet, overall.graph);
   seed.proteins <<- seed.proteins
-  if(!is.null(substats)){
+  if(!.on.public.web){
+    return(.set.nSet(dataSet));
+  }else if(!is.null(dataSet$substats)){
+    .set.nSet(dataSet);
     message("Network Graph has been created!")
-    return(c(length(seed.genes), length(seed.proteins), net.stats$Node[1], net.stats$Edge[1], length(ppi.comps), substats));
+    return(c(length(seed.genes), length(seed.proteins), net.stats$Node[1], net.stats$Edge[1], length(ppi.comps), dataSet$substats));
   }else{
     message("Network Graph created!")
     overall.graph <<- current.overall.graph;
@@ -393,16 +344,14 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   }
 }
 
-SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
-                         min.score = 900, netInv, zero=FALSE,snpRegion=FALSE){
+SearchNetDB <- function(protein.vec, orig.input, inputType, netw.type, db.type, require.exp=TRUE,
+                        min.score = 900, netInv, zero=FALSE,snpRegion=FALSE){
 
   if(inputType == "peak"){
     netInv = "direct";
   }
 
   edge.res <-data.frame();
-  result.list <- result.listu;
-  protein.vec <- result.list$protein.vec;
 
   require("RJSONIO");
 
@@ -440,36 +389,25 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     require('RSQLite');
 
 
-
     if(db.type == "PhenoScanner"){
 
       require("tidyr");
-      if(dataSet$phesc.opt=="eqtl"){
-        if(snpRegion==FALSE){
+      if(dataSet$snp2gene$phesc.opt=="eqtl"){
+
         res <- Query.PhenoScanner(snpquery= protein.vec,catalogue="eQTL");
         fast.write.csv(res$results, file="phenoscanner.eQtl.csv",row.names=FALSE);
         res <- res$results[,c("rsid","exp_gene")];
-       }else{
-        res <- Query.PhenoScanner(regionquery= protein.vec,catalogue="eQTL");
-        fast.write.csv(res$results, file="phenoscanner.eQtl.csv",row.names=FALSE);
-        res <- unique(res$results[,c("rsid","exp_gene","region")]);
-       }
         res <- unique(res[which(!(is.na(res$exp_gene)) &res$exp_gene !=""&res$exp_gene !="-" ),]);
         colnames(res)[2] = "symbol";
         res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F));
 
       }else{
-        if(snpRegion==FALSE){
-            res <- Query.PhenoScanner(snpquery= protein.vec);
-            res <- res$snps;
-       }else{
-            res <- Query.PhenoScanner(regionquery= protein.vec);
-            res <- unique(res$results[,c("rsid","hgnc","region")]);
-            res <- unique(res[which(!(is.na(res$hgnc)) &res$hgnc !=""&res$hgnc !="-" ),]);
-       }
-       fast.write.csv(res, file="phenoscanner.nearest.csv",row.names=FALSE);
+
+        res <- Query.PhenoScanner(snpquery= protein.vec);
+        res <- res$snps;
+        fast.write.csv(res, file="phenoscanner.nearest.csv",row.names=FALSE);
         colnames(res)[which(colnames(res)=="hgnc")] = "symbol";
-         res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F))
+        res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F))
       }
 
       res$entrez = doGeneIDMapping(res$symbol,type="symbol");
@@ -477,9 +415,8 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
 
     }else if(db.type == "vep"){
 
-      if(dataSet$vep.opt=="dis"){
-
-        res <- QueryVEP(protein.vec, vepDis=dataSet$vep.dis, snpRegion = snpRegion);
+      if(dataSet$snp2gene$vep.opt=="dis"){
+        res <- QueryVEP(protein.vec, vepDis=dataSet$snp2gene$vep.dis, snpRegion = snpRegion);
         fast.write.csv(res, file="vep.map.csv",row.names=FALSE);
         res <-  unique(res[which(res$gene_symbol !="NA"),c("rsid","gene_symbol")]);
       }else{
@@ -492,14 +429,11 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
         res <- data.frame(res %>% arrange(distance) %>%
                            group_by(rsid) %>%
                            mutate(rank = rank(distance)),stringsAsFactors=F);
-        res <- res[which(res$rank<(dataSet$vep.num + 1)),];
+        res <- res[which(res$rank<(dataSet$snp2gene$vep.num + 1)),];
       }
 
       res$entrez <- doGeneIDMapping(res$gene_symbol,type="symbol")
       res$entrez[is.na(res$entrez)] <- res$gene_symbol[is.na(res$entrez)]
-      if(snpRegion){
-       res$rsid <- paste0("chr",res$rsid)
-       }
 
     }else{
       if(db.type == "admire"){
@@ -530,21 +464,12 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
 
     edge.res <- data.frame(Source=res[,"rsid"],Target=res[,colInx], stringsAsFactors=FALSE);
 
-   if(nrow(res)!=0){
+    if(nrow(res)!=0){
       row.names(edge.res) <- 1:nrow(res);
     }
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
 
-    if(db.type == "PhenoScanner" & snpRegion==TRUE){
-
-     node.ids <- c(res$region[match(edge.res$Source,res$rsid)], edge.res[,"Target"])
-    #node.ids <- c(edge.res[,"Source"], edge.res[,"Target"])
-    #protein.vec <- unique(res[,"rsid"])
-   } else{
-
     node.ids <- c(edge.res[,"Source"], edge.res[,"Target"])
-}
-
 
     #  print(node.ids)
     if(db.type == "admire"){
@@ -669,7 +594,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     prot.ids <- prot.ids[!rm.inx];
 
     if(netInv == "direct"){
-      if("peak" %in% curr.types){
+      if(!is.null(net.info$peak.ids)){
         not.gene.ids <- c(net.info$peak.ids,
                           net.info$met.ids, net.info$kncmpd.ids)
         net.info$met.ids <- c(net.info$met.ids, unique(res[,"kegg"][!res[,"kegg"] %in% not.gene.ids]));
@@ -686,7 +611,6 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     }
 
   } else if(netw.type == "peak") {
-
     net.info$met.ids <- PeakSet$mets;
     net.info$peak.ids <- PeakSet$put.mets;
     seed.genes <<- unique(c(seed.genes, PeakSet$mets));
@@ -732,8 +656,8 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     for( i in 1:length(met.ids)){
       met <- met.ids[i]
       if(length(which(edge.res$Target == met))>1){
-      met.microbe.list[[met]] <- as.vector(edge.res[which(edge.res$Target == met), 1])
-      met.microbe.score.list[[met]] <- as.vector(edge.res.score[which(edge.res.score$Target == met), 3])
+        met.microbe.list[[met]] <- as.vector(edge.res[which(edge.res$Target == met), 1])
+        met.microbe.score.list[[met]] <- as.vector(edge.res.score[which(edge.res.score$Target == met), 3])
       }
     }
     for(i in 1:nrow(res)){
@@ -750,7 +674,6 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
     micSet[["met.mic"]] <- met.microbe.list;
     micSet[["met.mic.score"]] <- met.microbe.score.list;
     micSet[["met.mic.table"]] <- mic.table;
-    print("micset");
     qs::qsave(micSet, "micSet.qs");
 
     dataSet <<- dataSet;
@@ -830,7 +753,7 @@ SearchNetDB <- function(inputType, netw.type, db.type, require.exp=TRUE,
   }
 
   if(length(edge.res)>0){
-    netw_input_type <- paste0(netw.type,"_", inputType,"_", data.org);
+    netw_input_type <- paste0(netw.type,"_", inputType,"_", data.org, "_", orig.input);
     edgeu.res.list[[netw_input_type]] <<- unique(edge.res[,c(1,2)]);
     nodeu.ids <<- c(nodeu.ids, node.ids);
     nodeu.nms <<- c(nodeu.nms, node.nms);
@@ -884,14 +807,15 @@ SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
   return(steinertrees[[which(steinertmin == min(steinertmin))[1]]])
 }
 
-FilterBipartiNet <- function(nd.type, min.dgr, min.btw){
+FilterBipartiNet <- function(dataSetObj=NA, nd.type, min.dgr, min.btw){
+  dataSet <- .get.nSet(dataSetObj);
   all.nms <- V(overall.graph)$name;
   edge.mat <- get.edgelist(overall.graph);
   dgrs <- degree(overall.graph);
   nodes2rm.dgr <- nodes2rm.btw <- NULL;
 
   if(nd.type == "gene"){
-    hit.inx <- all.nms %in% net.info$gene.ids;
+    hit.inx <- all.nms %in% c(net.info$gene.ids, net.info$protein.ids);
   }else if(nd.type=="tf"){
     hit.inx <- all.nms %in% net.info$tf.ids;
   }else if(nd.type=="mir"){
@@ -915,12 +839,17 @@ FilterBipartiNet <- function(nd.type, min.dgr, min.btw){
   nodes2rm <- unique(c(nodes2rm.dgr, nodes2rm.btw));
   overall.graph <- simplify(delete.vertices(overall.graph, nodes2rm));
   current.msg <<- paste("A total of", length(nodes2rm) , "was reduced.");
-  substats <- DecomposeGraph(overall.graph);
-  if(!is.null(substats)){
+  dataSet <- .decomposeGraph(dataSet, overall.graph);
+  if(!is.null(dataSet$substats)){
     overall.graph <<- overall.graph;
-    return(c(length(seed.genes),length(seed.proteins), vcount(overall.graph), ecount(overall.graph), length(ppi.comps), substats));
+    if(.on.public.web){
+    .set.nSet(dataSet);
+    return(c(length(seed.genes),length(seed.proteins), vcount(overall.graph), ecount(overall.graph), length(ppi.comps), dataSet$substats));
+    }else{
+    return (.set.nSet(dataSet))
+    }
   }else{
-    return(0);
+    return (.set.nSet(dataSet))
   }
 }
 
@@ -982,12 +911,12 @@ BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
   fast.write.csv(edgeList, file="orig_edge_list.csv", row.names=F);
 
   path.list <- NULL;
-  substats <<- DecomposeGraph(g);
-  if(!is.null(substats)){
+  dataSet <- .decomposeGraph(dataSet, g);
+  if(!is.null(dataSet$substats)){
     overall.graph <<- g;
     if(.on.public.web){
-      .set.nSet(dataSet)
-      return(c(length(seed.genes),length(seed.proteins), nrow(nodeList), nrow(edgeList), length(ppi.comps), substats));
+      .set.nSet(dataSet);
+      return(c(length(seed.genes),length(seed.proteins), nrow(nodeList), nrow(edgeList), length(ppi.comps), dataSet$substats));
     }else{
       return(.set.nSet(dataSet));
     }
@@ -1031,13 +960,13 @@ BuildPCSFNet <- function(dataSetObj=NA){
   fast.write.csv(edgeList, file="orig_edge_list.csv", row.names=F);
 
   path.list <- NULL;
-  substats <- DecomposeGraph(g);
-  if(!is.null(substats)){
+  dataSet <- .decomposeGraph(dataSet, g);
+  if(!is.null(dataSet$substats)){
     overall.graph <<- g;
     current.msg<<- "Steiner Forest was completed successfully";
     if(.on.public.web){
       .set.nSet(dataSet)
-      return(c(length(seed.genes),length(dataSet$seeds.proteins), nrow(nodeList), nrow(edgeList), length(ppi.comps), substats));
+      return(c(length(seed.genes),length(dataSet$seeds.proteins), nrow(nodeList), nrow(edgeList), length(ppi.comps), dataSet$substats));
     }else{
       return(.set.nSet(dataSet));
     }
@@ -1050,7 +979,8 @@ BuildPCSFNet <- function(dataSetObj=NA){
 # all the seed nodes. This is acheived by iteratively remove
 # the marginal nodes (degree = 1) that are not in the seeds
 
-DecomposeGraph <- function(gObj, minNodeNum = 2){
+.decomposeGraph <- function(dataSetObj=NA, gObj, minNodeNum = 2){
+  dataSet <- .get.nSet(dataSetObj);
   # now decompose to individual connected subnetworks
   if(uploadedGraph == "false"){
     comps <-decompose.graph(gObj, min.vertices=minNodeNum);
@@ -1069,7 +999,8 @@ DecomposeGraph <- function(gObj, minNodeNum = 2){
   }
 
   # first compute subnet stats
-  net.stats <- ComputeSubnetStats(comps);
+  dataSet <- .computeSubnetStats(dataSet, comps);
+  net.stats <- dataSet$net.stats;
   ord.inx <- order(net.stats[,1], decreasing=TRUE);
   net.stats <- net.stats[ord.inx,];
   comps <- comps[ord.inx];
@@ -1082,27 +1013,34 @@ DecomposeGraph <- function(gObj, minNodeNum = 2){
   # now record
   ppi.comps <<- comps;
   net.stats <<- net.stats;
-
-  return(sub.stats);
+  dataSet$substats <- sub.stats
+  return(dataSet);
 }
 
-ComputeSubnetStats <- function(comps){
+.computeSubnetStats <- function(dataSetObj=NA, comps){
+
+  dataSet <- .get.nSet(dataSetObj);
+  type.nums <- vector();
+  query.nums <- vector();
   net.stats <- as.data.frame(matrix(0, ncol = 3, nrow = length(comps)));
   colnames(net.stats) <- c("Node", "Edge", "Query");
   for(i in 1:length(comps)){
     g <- comps[[i]];
-    #if("mic" %in% dataSet$type){
-    #  net.stats[i,] <- c(vcount(g),ecount(g),sum((unique(net.info$met.ids)) %in% V(g)$name));
-    #}else{
+    my.stat <- GetNetStatByType(g);
+    type.nums <- c(type.nums, my.stat$node.num)
+    query.nums <- c(query.nums, my.stat$query.num);
     net.stats[i,] <- c(vcount(g),ecount(g),sum((unique(dataSet$seeds.proteins)) %in% V(g)$name));
-    #}
   }
-  return(net.stats);
+  dataSet$type.nums <- type.nums;
+  dataSet$query.nums <- query.nums;
+  dataSet$net.stats <- net.stats
+  return(dataSet);
 }
 
 UpdateSubnetStats <- function(){
   old.nms <- names(ppi.comps);
-  net.stats <- ComputeSubnetStats(ppi.comps);
+  dataSet <- .computeSubnetStats(dataSet, ppi.comps);
+  net.stats <- dataSet$net.stats;
   ord.inx <- order(net.stats[,1], decreasing=TRUE);
   net.stats <- net.stats[ord.inx,];
   rownames(net.stats) <- old.nms[ord.inx];
@@ -1117,7 +1055,6 @@ UpdateSubnetStats <- function(){
 #'
 #' @export
 FindCommunities <- function(method="infomap", use.weight=FALSE){
-
   # make sure this is the connected
   current.net <- ppi.comps[[current.net.nm]];
   g <- current.net;
@@ -1162,7 +1099,7 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
     return ("NA||Unknown method!");
   }
 
-  if(length(fc) == 0 || modularity(fc) == 0){
+  if(length(fc) == 0){
     return ("NA||No communities were detected!");
   }
 
@@ -1470,14 +1407,11 @@ initNetwork <- function(){
   nodeu.ids <<- vector()
   nodeu.nms <<- vector()
   expr.vec <<- vector()
-  result.listu <<- list();
   seed.genes <<- vector();
   ppi.comps <<- list();
   overall.graph <<- "";
   net.stats <<- "";
-  curr.types <<- vector();
   edgeu.res.list <<- list();
-  edgeu.input.vec <<- vector();
   if(exists("PeakSet",envir = .GlobalEnv)) {
     rm(PeakSet)
   }
@@ -1504,118 +1438,6 @@ SetStringParam <-function(dataSetObj=NA, require.exp=T, min.score=900){
   return(.set.nSet(dataSet));
 }
 
-#' Query database using input list to compute omics network
-#'
-#' @param dataSetObj Input the name of the created dataSetObj (see Init.Data)
-#' @param type Network type (gene, met, mir, tf, mic, peak, m2m, snp)
-#' @param dbType Database name (i.e innatedb)
-#' @param inputType Omics type of input features (gene, protein, met, tf, mic, peak, snp)
-#'
-#' @export
-#'
-QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType="gene"){
-  containMsg <- 0;
-  snpPeakMicBool <- F;
-
-  require.exp <- dataSet$require.exp;
-  min.score <- dataSet$min.score;
-  snpRegion <- dataSet$snpRegion
-
-  edge.res <- data.frame();
-  if(length(edgeu.res.list) > 0){
-    for(i in 1:length(edgeu.res.list)){
-      edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
-    }
-    nodes.query <- c(edge.res[,1], edge.res[,2])
-  }
-
-  old.edges <- edge.res;
-  query.mat <- dataSet$exp.mat[[inputType]];
-
-
-  query.vec <- rownames(dataSet$exp.mat[[inputType]]);
-  if(inputType != type){
-    inv <- "inverse";
-  }else{
-    inv <- "direct";
-  }
-  seed.genes <<- c(seed.genes, query.vec);
-
-  result.listu$protein.vec <- unique(as.character(query.vec));
-  result.listu$type <- type;
-  result.listu <<- result.listu;
-
-  if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
-    if(type != "peak"){
-        current.msg<<- paste("Please make sure correct interaction type is selected!")
-        containMsg <- 1;
-        print("Please make sure correct interaction type is selected!");
-    }
-  }
-
-  if(type == "m2m" && exists("PeakSet")) {
-    result.listu$protein.vec <- PeakSet[["nodes.df"]][["Id"]];
-    result.listu$type <- "m2m";
-    result.listu <<- result.listu;
-  }
-
-  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE, snpRegion);
-
-  node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
-
-  edge.res <- data.frame();
-  if(length(edgeu.res.list) > 0){
-    for(i in 1:length(edgeu.res.list)){
-      edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
-    }
-  }
-
-  if(type == "m2m" && inputType == "peak") {
-    # to remove the useless expansion
-    resclean <- redundancyClean(node.res, edge.res)
-    node.res <- resclean$node.res
-    edge.res <- resclean$edge.res
-  }
-
-  if(length(edge.res)>0 && length(old.edges)>0){
-    if(all(dim(edge.res) == dim(old.edges))){
-      current.msg<<- paste("No interactions have been detected!")
-      containMsg <- 1;
-      return(c(0, 0, containMsg));
-    }else{
-      curr.types <<- unique(c(curr.types, type));
-      containMsg <- 0;
-    }
-  }else{
-    curr.types <<- unique(c(curr.types, type));
-    containMsg <- 0;
-  }
-
-  omics.net <<- list(
-    netw.type="abc",
-    order=1,
-    seeds=" ",
-    table.nm=" ",
-    node.data = node.res,
-    edge.data = edge.res,
-    require.exp = F,
-    min.score = 900
-  );
-
-  #dataSet$seeds.proteins <- unique(seed.genes);
-  dataSet <<- dataSet
-
-  ComputeIndSubnetStats(dataSet);
-
-  if(.on.public.web){
-    .set.nSet(dataSet);
-    return(c(nrow(node.res), nrow(edge.res), containMsg));
-  }else{
-    message("Network building with type of ", type, " has been finsihed!")
-    return(.set.nSet(dataSet));
-  }
-}
-
 #' Query database using input list or previously computed network
 #'
 #' @param dataSetObj Input the name of the created dataSetObj (see Init.Data)
@@ -1626,13 +1448,11 @@ QueryNetMulti<- function(dataSetObj=NA, type="gene", dbType="default", inputType
 #' @export
 #'
 QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="gene"){
-
   dataSet <- .get.nSet(dataSetObj);
 
   orig.inputType <- inputType
 
   containMsg <- 0;
-  snpPeakMicBool <- F;
 
   require.exp <- dataSet$require.exp
   min.score <- dataSet$min.score
@@ -1640,108 +1460,79 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   snpRegion <- dataSet$snpRegion
   edge.res <- data.frame();
 
-  if("mic" %in% curr.types && type == "mic"){
-    initNetwork();
+
+  #setting input type so it's displayed correctly on db selection page
+  if(type ==  "m2m" ){
+    inputType <- "met";
+  }else if(inputType %in% c("mic") && type !=  inputType || inputType %in% c("peak") && type !=  "peak" ){
+    inputType <- "met";
+  }else if(inputType == "snp" && type != "snp"){
+    inputType <- "gene";
+  }else if (inputType %in% c("mir","tf","met") && type != inputType){
+    inputType <- "gene";
   }
 
-    #setting input type so it's displayed correctly on db selection page
-    if(type ==  "m2m" ){
-      inputType <- "met";
-    }else if(inputType %in% c("mic") && type !=  inputType || inputType %in% c("peak") && type !=  "peak" ){
-      inputType <- "met";
-    }else if(inputType == "snp" && type != "snp"){
-      inputType <- "gene";
-    }else if (inputType %in% c("mir","tf","met") && type != inputType){
-      inputType <- "gene";
-    }
   nodes.query = "";
   if (length(edgeu.res.list) > 0) {
+    nm <- paste0(type, "_", inputType, "_", data.org, "_", orig.inputType);
+
     for (i in 1:length(edgeu.res.list)) {
-      nm <- paste0(type, "_", inputType)
-      if (names(edgeu.res.list)[i] != nm) {
-        edge.res <- rbind(edge.res, edgeu.res.list[[i]])
+      curr.nm <- names(edgeu.res.list)[i];
+      curr.orig.input <- strsplit(curr.nm, "_")[[1]][4];
+      curr.type <- strsplit(curr.nm, "_")[[1]][1];
+      # to make sure network expansion only uses nodes from primary network depending on input type
+      if (curr.nm != nm && curr.orig.input == orig.inputType && .matchInputToPrimaryNet(orig.inputType, curr.type)) {
+        edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
       }
     }
-    nodes.query <- c(edge.res[, 1], edge.res[, 2])
+    if(length(edge.res) > 0){
+      nodes.query <- c(edge.res[, 1], edge.res[, 2]);
+    }
   }
 
   old.edges <- edge.res;
-  query.mat <- dataSet$exp.mat[[type]];
+  if(orig.inputType == type || orig.inputType %in% c("gene","protein")){
+    query.mat <- dataSet$exp.mat[[inputType]];
+  }else{
+    query.mat <- data.frame();
+  }
 
   if (length(query.mat) == 0) {
-    inv = "inverse"
-    types.vec <- c("peak", "snp");
-    for(i in 1:length(types.vec)){
-      typeVal <- types.vec[i];
-      if(length(dataSet$exp.mat[[typeVal]]) > 0){
-        snpPeakMicBool <- T;
-      }
-    }
-    if(length(dataSet$exp.mat[["snp"]]) > 0){
-      inv = "inverse"
-    }
 
-    if(!snpPeakMicBool && length(dataSet$exp.mat[["gene"]])>0 || nodes.query == ""){
-      query.vec <- unique(dataSet$seeds.proteins)
+    if(.matchInputToPrimaryNet(orig.inputType, type)){
+      query.vec <- unique(dataSet$seeds.proteins);
     }else{
-      query.vec <- unique(nodes.query)
+      query.vec <- unique(nodes.query);
     }
 
-    if(any(types.vec %in% names(dataSet$exp.mat))){
-      if(type %in% c("mir", "tf", "met")){
-        inv = "inverse"
-      }else{
-        inv = "direct"
-      }
-    }
 
     if(length(query.vec) == 0 && length(dataSet$exp.mat[["gene"]])>0){
       query.vec <- rownames(dataSet$exp.mat[["gene"]])
-      inv = "inverse";
       seed.genes <<- c(seed.genes, query.vec);
     }else if(length(query.vec) == 0 && length(dataSet$exp.mat[["ko"]])>0){
       query.vec <- rownames(dataSet$exp.mat[["ko"]])
-      inv = "inverse";
       seed.genes <<- c(seed.genes, query.vec);
     }
 
   } else {
-
-    query.vec <- rownames(dataSet$exp.mat[[type]]);
-    inv <- "direct";
+    query.vec <- rownames(dataSet$exp.mat[[inputType]]);
     seed.genes <<- c(seed.genes, query.vec);
   }
 
-  result.listu$protein.vec <- unique(as.character(query.vec));
-  result.listu$type <- type;
-  result.listu <<- result.listu;
+  protein.vec <- unique(as.character(query.vec));
 
-  if(!CheckQueryTypeMatch(result.listu$protein.vec, type, dbType)){
-    if(type != "peak"){
-        current.msg<<- paste("Please make sure correct interaction type is selected!")
-        containMsg <- 1;
-        print("Please make sure correct interaction type is selected!");
-    }
+  if(length(protein.vec) == 0){
+    protein.vec <- rownames(dataSet$exp.mat[[inputType]]);
   }
 
   if(type == "m2m" && exists("PeakSet")) {
-    result.listu$protein.vec <- PeakSet[["nodes.df"]][["Id"]];
-    result.listu$type <- "m2m";
-    result.listu <<- result.listu;
+    protein.vec <- PeakSet[["nodes.df"]][["Id"]];
   }
 
-  if("mic" %in% curr.types && type %in% c("met")){ #m2p after mic is direct
-    inv = "direct";
-  }
+  inv <- .getQueryDir(inputType, type);
 
-  if("peak" == orig.inputType && type == "met"){ #m2p after peak is direct
-    inv = "direct";
-  }
-
-  if(inputType == type){
-    inv = "direct";
-  }
-  SearchNetDB(inputType, type, dbType, require.exp, min.score, inv, FALSE,snpRegion);
+  cat(inputType, type, dbType, require.exp, min.score, inv, FALSE,snpRegion, "\n");
+  SearchNetDB(protein.vec, orig.inputType, inputType, type, dbType, require.exp, min.score, inv, FALSE,snpRegion);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
 
@@ -1754,24 +1545,18 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
 
   if(type == "m2m" && orig.inputType == "peak") {
     # to remove the useless expansion
-    resclean <- redundancyClean(node.res, edge.res)
-    node.res <- resclean$node.res
-    edge.res <- resclean$edge.res
+    resclean <- redundancyClean(node.res, edge.res);
+    node.res <- resclean$node.res;
+    edge.res <- resclean$edge.res;
   }
 
-  if(length(edge.res)>0 && length(old.edges)>0){
-    if(all(dim(edge.res) == dim(old.edges))){
-      current.msg<<- paste("No interactions have been detected!")
-      containMsg <- 1;
-      return(c(0, 0, containMsg));
-    }else{
-      curr.types <<- unique(c(curr.types, type));
-      containMsg <- 0;
-    }
-  }else{
-    curr.types <<- unique(c(curr.types, type));
-    containMsg <- 0;
+  #if(length(edge.res)>0 && length(old.edges)>0){
+  if(all(dim(edge.res) == dim(old.edges))){
+    current.msg <<- paste("No interactions have been detected! Please make sure correct interaction type has been selected!")
+    containMsg <- 1;
+    return(c(0, 0, containMsg));
   }
+  #}
 
   omics.net <<- list(
     netw.type="abc",
@@ -1784,8 +1569,10 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     min.score = 900
   );
 
-  #dataSet$seeds.proteins <- unique(seed.genes);
+  dataSet$seeds.proteins <- unique(c(dataSet$seeds.proteins, seed.genes));
+
   dataSet <<- dataSet;
+
   ComputeIndSubnetStats(dataSet);
 
   if(.on.public.web){
@@ -1839,8 +1626,8 @@ PlotDegreeHistogram <- function(imgNm, netNm = "NA", dpi=72, format="png"){
                        trans = "log10") +
     ggtitle("Degree Distribution (log-log)") +
     theme_bw()  +
-    theme(plot.title = element_text(hjust = 0.5))
-  print(p)
+    theme(plot.title = element_text(hjust = 0.5));
+  print(p);
   dev.off();
 }
 
@@ -1861,9 +1648,9 @@ PlotBetweennessHistogram <- function(imgNm, netNm = "NA",dpi=72, format="png"){
   if(netNm != "NA"){
     overall.graph <- ppi.comps[[netNm]];
   }
-  G.degrees <- betweenness(overall.graph)
-  G.degree.histogram <- as.data.frame(table(G.degrees))
-  G.degree.histogram[,1] <- as.numeric(G.degree.histogram[,1])
+  G.degrees <- betweenness(overall.graph);
+  G.degree.histogram <- as.data.frame(table(G.degrees));
+  G.degree.histogram[,1] <- as.numeric(G.degree.histogram[,1]);
 
   p <- ggplot(G.degree.histogram, aes(x = G.degrees, y = Freq)) +
     geom_point() +
@@ -1875,19 +1662,25 @@ PlotBetweennessHistogram <- function(imgNm, netNm = "NA",dpi=72, format="png"){
                        trans = "log10") +
     ggtitle("Betweenness Distribution (log-log)") +
     theme_bw()  +
-    theme(plot.title = element_text(hjust = 0.5))
-  print(p)
+    theme(plot.title = element_text(hjust = 0.5));
+  print(p);
   dev.off();
 }
 
+#' PreparePeaksNetwork
+#'
+#' @param dataSetObj dataSetObj
+#' @export
+
 PreparePeaksNetwork <- function(dataSetObj=NA){
   dataSet <- .get.nSet(dataSetObj);
-  if(exists("PeakSet",envir = .GlobalEnv)) {
-    PeakSet <- get("PeakSet", envir = .GlobalEnv)
+  if(exists("PeakSetDone",envir = .GlobalEnv)) {
+    PeakSet <- get("PeakSetDone", envir = .GlobalEnv);
+  } else if(exists("PeakSet",envir = .GlobalEnv)) {
+    PeakSet <- get("PeakSet", envir = .GlobalEnv);
   } else {
-    return(0)
+    return(0);
   }
-
   nodes <- PeakSet$nodes;
   edges <- PeakSet$edges;
   met.kg.ids <- nodes$KEGGID;
@@ -1922,7 +1715,7 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   rownames(dataSet$seed[["peak"]]) <- PeakSet$mets;
   dataSet$exp.mat[["peak"]] <- data.frame(rep(0, length(PeakSet$NetID_output$peak_id)));
   rownames(dataSet$exp.mat[["peak"]]) <- paste0(PeakSet$NetID_output$peak_id,"_", PeakSet$NetID_output$medMz);
-    saveRDS(PeakSet, "peakset.rds");
+  saveRDS(PeakSet, "peakset.rds");
 
   cmp.nms <- PrepareInputList(dataSet, rownames(dataSet$seed[["peak"]]), data.org, "peak", "kegg");
 
@@ -1936,23 +1729,17 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   edges.df2 <- merge(edges.df1, conv2, by = "to");
   PeakSet$edges.df <- data.frame(Source=edges.df2$Source, Target=edges.df2$Target);
   PeakSet <<- PeakSet;
-
   dataSet <<- dataSet;
   if(.on.public.web){
-    .set.nSet(dataSet)
+    .set.nSet(dataSet);
     return(1);
   }else{
-    return(.set.nSet(dataSet))
+    return(.set.nSet(dataSet));
   }
 }
 
-SetMicExcludeOpt <- function(opt){
-  dataSet$mic.exclude.opt <<- opt;
-}
 
-SetMicThresh <- function(thresh){
-  dataSet$mic.thresh <<- thresh
-}
+
 
 #' Guilt-by-association analysis using Random Walk With Restart
 #'
@@ -1961,7 +1748,6 @@ SetMicThresh <- function(thresh){
 #' @param nodeids The IDs of nodes set as seed nodes "; " separated.
 #'
 #' @export
-
 DoGba <- function(fileNm="NA", method="rwr", nodeids){
   require("RandomWalkRestartMH")
   require("igraph")
@@ -1976,9 +1762,9 @@ DoGba <- function(fileNm="NA", method="rwr", nodeids){
 
   RWR_PPI_Results <- Random.Walk.Restart.Multiplex(AdjMatrixNorm_PPI,
                                                    PPI_MultiplexObject,seeds);
-  resObj <- RWR_PPI_Results$RWRM_Results
+  resObj <- RWR_PPI_Results$RWRM_Results;
   if(nrow(resObj) > 100){
-    resObj <- resObj[c(1:100),]
+    resObj <- resObj[c(1:100),];
   }
   require("RJSONIO");
   sink(fileNm);
@@ -1988,11 +1774,10 @@ DoGba <- function(fileNm="NA", method="rwr", nodeids){
   csvNm <- paste0(gsub(".json", "", fileNm), ".csv");
   fast.write.csv(RWR_PPI_Results$RWRM_Results, file=csvNm);
   if(.on.public.web){
-    return(1)
+    return(1);
   }else{
-    return(RWR_PPI_Results$RWRM_Results)
+    return(RWR_PPI_Results$RWRM_Results);
   }
-
 }
 
 #' FilterByTissue
@@ -2028,18 +1813,13 @@ FilterByTissue <- function(dataSetObj=NA, type, tissue){
   colnames(edgeList) <- c("Source", "Target");
   fast.write.csv(edgeList, file="orig_edge_list.csv");
 
-  # update omics.net
-  omics.net$order <- 1;
-  omics.net$node.data <- nodeList;
-  omics.net$edge.data <- edgeList;
-  omics.net <<- omics.net;
   overall.graph <- g
-  substats <- DecomposeGraph(overall.graph);
-  if(!is.null(substats)){
+  dataSet <- .decomposeGraph(dataSet, g);
+  if(!is.null(dataSet$substats)){
     overall.graph <<- overall.graph;
     if(.on.public.web){
       .set.nSet(dataSet);
-      return(c(length(seed.genes),length(seed.proteins), vcount(overall.graph), ecount(overall.graph), length(ppi.comps), substats));
+      return(c(length(seed.genes),length(seed.proteins), vcount(overall.graph), ecount(overall.graph), length(ppi.comps), dataSet$substats));
     }else{
       return(.set.nSet(dataSet));
     }
@@ -2072,7 +1852,7 @@ FilterByPvalue <- function(pvaluecutoff){
   nodes2rm <- nms_ori[nonsigPeaks];
   nodes2rm <- nodes2rm[nodes2rm != "Unknown"];
   res <- vapply(all.nms, function(x){x %in% nodes2rm}, FUN.VALUE = logical(length = 1));
-  nodes2rm <- all.nms[res]
+  nodes2rm <- all.nms[res];
 
   g <- simplify(delete.vertices(overall.graph, nodes2rm));
 
@@ -2090,17 +1870,13 @@ FilterByPvalue <- function(pvaluecutoff){
   #fast.write.csv(edgeList, file="orig_edge_list.csv");
 
   # update omics.net
-  omics.net$order <- 1;
-  omics.net$node.data <- nodeList;
-  omics.net$edge.data <- edgeList;
-  omics.net <<- omics.net;
-  overall.graph <- g
-  substats <- DecomposeGraph(overall.graph);
-  if(!is.null(substats)){
+  overall.graph <- g;
+  dataSet <- .decomposeGraph(dataSet, g);
+  if(!is.null(dataSet$substats)){
     overall.graph <<- overall.graph;
     if(.on.public.web){
       .set.nSet(dataSet);
-      return(c(length(seed.genes),length(seed.proteins), vcount(overall.graph), ecount(overall.graph), length(ppi.comps), substats));
+      return(c(length(seed.genes),length(seed.proteins), vcount(overall.graph), ecount(overall.graph), length(ppi.comps), dataSet$substats));
     }else{
       return(.set.nSet(dataSet));
     }
@@ -2109,10 +1885,15 @@ FilterByPvalue <- function(pvaluecutoff){
   }
 }
 
+#' queryFilterDB
+#'
+#' @param type database type
+#' @param org organism key
+#' @export
 queryFilterDB <- function(type, org){
   require('RSQLite');
   if(!PrepareSqliteDB(paste(sqlite.path, "tissue_filter.sqlite", sep=""), .on.public.web)){
-      stop("Sqlite database is missing, please check your internet connection!");
+    stop("Sqlite database is missing, please check your internet connection!");
   }
   conv.db <- dbConnect(SQLite(), paste(sqlite.path, "tissue_filter.sqlite", sep=""));
   db.map <- dbReadTable(conv.db, paste0(data.org,"_",type));
@@ -2121,45 +1902,34 @@ queryFilterDB <- function(type, org){
   return(db.map)
 }
 
-
-SetMicExcludeOpt <- function(opt){
-  dataSet$mic.exclude.opt <<- opt;
-}
-SetCurrExclude <- function(opt){
-  dataSet$currExclude <<- opt;
-}
-SetUniExclude <- function(opt){
-  dataSet$uniExclude <<- opt;
-}
-SetOrphExclude <- function(opt){
-  dataSet$orphExclude <<- opt;
-}
-
-SetPhescOpt <- function(opt){
-  dataSet$phesc.opt <<- opt;
-}
-SetVepOpt <- function(opt){
-  dataSet$vep.opt <<- opt;
+#' SetSnp2GeneOpts
+#' @param snpDBType snpDBType
+#' @param phescOpt phescOpt
+#' @param vepOpt vepOpt
+#' @param vepNum vepNum
+#' @param vepDis vepDis
+#' @export
+SetSnp2GeneOpts <- function(snpDBType, phescOpt, vepOpt, vepNum,vepDis){
+    if(snpDBType=="PhenoScanner"){
+        dataSet$snp2gene$phesc.opt <<- phescOpt;
+    }else if(snpDBType=="vep"){
+        dataSet$snp2gene$vep.opt <<- vepOpt;
+        dataSet$snp2gene$vep.num <<- vepNum;
+        dataSet$snp2gene$vep.dis <<- vepDis;
+    }
 }
 
-SetPhenoPs <- function(opt){
-  dataSet$phenoPs <<- opt;
-}
-
-SetPhenoEq <- function(opt){
-  dataSet$phenoEq <<- opt;
-}
-
-SetVepNum <- function(opt){
-  dataSet$vep.num <<- as.numeric(opt);
-}
-
-SetVepDis <- function(opt){
-  dataSet$vep.dis <<- opt;
-}
-
-SetMicThresh <- function(thresh){
-  dataSet$mic.thresh <<- thresh
+#' SetMetPotentialOpts
+#' @param metPotentialThresh metPotentialThresh
+#' @param currExclude currExclude
+#' @param uniExclude uniExclude
+#' @param orphExclude orphExclude
+#' @export
+SetMetPotentialOpts <- function(metPotentialThresh, currExclude, uniExclude,orphExclude){
+    dataSet$mic.thresh <<- metPotentialThresh;
+    dataSet$currExclude <<- currExclude;
+    dataSet$uniExclude <<- uniExclude;
+    dataSet$orphExclude <<- orphExclude;
 }
 
 #for computing individual networks before merging
@@ -2173,13 +1943,12 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
 
   for(i in 1:length(edgeu.res.list)){
     edge.df <- edgeu.res.list[[i]];
-    edge.num <- dim(edge.df)[1]
-    nodes <- unique(unname(unlist(edge.df)))
+    edge.num <- dim(edge.df)[1];
+    nodes <- unique(unname(unlist(edge.df)));
     node.num <- length(nodes);
-    query.num <- sum((unique(dataSet$seeds.proteins)) %in% nodes)
-    
-    netw.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][1]
-    input.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][2]
+    query.num <- sum((unique(dataSet$seeds.proteins)) %in% nodes);
+    netw.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][1];
+    input.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][2];
     inputName <- convertInputTypes2Names(input.type);
     interactionName <- convertInteraction2Names(netw.type);
     net.stats[i,] <- c(inputName, interactionName, node.num,edge.num,query.num, names(edgeu.res.list)[i]);
@@ -2187,16 +1956,13 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
   saveRDS(dataSet$seeds.proteins, "seeds.rds");
 
   dataSet$ind.net.stats <- net.stats;
-  dataSet <<- dataSet;
-  .set.nSet(dataSet);
-  return(1);
+  return(.set.nSet(dataSet));
 }
 
 DeleteIndNet <- function(netNm){
   inx <- which(names(edgeu.res.list) == netNm);
 
-  edgeu.input.vec <<- edgeu.input.vec[-inx]
-  edgeu.res.list <<- edgeu.res.list[-inx]
+  edgeu.res.list <<- edgeu.res.list[-inx];
   resetNetwork();
 
   edge.res <- data.frame();
@@ -2205,13 +1971,18 @@ DeleteIndNet <- function(netNm){
       edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
     }
   }
-  omics.net$edge.data <- edge.res
-  omics.net <<- omics.net
+  omics.net$edge.data <- edge.res;
+  omics.net <<- omics.net;
   return(1)
 }
 
-#type: subnetwork (networkbuilder page) or ind (database selection page)
+#' PrepareGraph
+#' @param net.nm net.nm
+#' @param type type
+#' @param export export
+#' @export
 PrepareGraph <- function(net.nm, type="", export=T){
+  #type: subnetwork (networkbuilder page) or ind (database selection page)
   require("igraph");
   if(type == "subnetwork"){
     g <- ppi.comps[[net.nm]];
@@ -2220,19 +1991,19 @@ PrepareGraph <- function(net.nm, type="", export=T){
     net.value <- net.nm;
     net.nm <- paste0("network_", net.nm);
   }
-  file.nm <- paste(net.nm, ".csv", sep="")
+  file.nm <- paste(net.nm, ".csv", sep="");
   edge.res <- as.data.frame(get.edgelist(g))
 
   for(i in 1:ncol(edge.res)){
-    nms <- edge.res[,i]
+    nms <- edge.res[,i];
     hit.inx <- match(nms, omics.net$node.data[,1]);
 
-   if(length(which(is.na(hit.inx)))>0){
-     hit.inx <- match(nms, omics.net$node.data[,2]);
-     lbls <- omics.net$node.data[hit.inx, 1];
-   }else{
-     lbls <- omics.net$node.data[hit.inx, 2];
-   }
+    if(length(which(is.na(hit.inx)))>0){
+      hit.inx <- match(nms, omics.net$node.data[,2]);
+      lbls <- omics.net$node.data[hit.inx, 1];
+    }else{
+      lbls <- omics.net$node.data[hit.inx, 2];
+    }
     edge.res <- cbind(edge.res, lbls);
 
   }
@@ -2246,8 +2017,7 @@ PrepareGraph <- function(net.nm, type="", export=T){
     dataSet$viewTable[[net.value]] <- edge.res;
     dataSet <<- dataSet;
   }
-  #write.graph(g, file=file.nm, format="edgelist", name=V(g)$names);
-  #print(file.nm);
+
   return(file.nm);
 }
 
@@ -2285,12 +2055,194 @@ SaveNetworkJson <- function(fileNm){
   obj$dataSet$seed <- seed.list;
   obj$dataSet$seeds.expr <- dataSet$seeds.expr;
   obj$dataSet$seeds.proteins <- dataSet$seeds.proteins;
-  obj$net.info <- net.info
-  obj$omics.net <- omics.net
-  obj$data.org <- data.org
+  obj$dataSet$type.nums <- dataSet$type.nums;
+  obj$dataSet$query.nums <- dataSet$query.nums;
+  obj$net.info <- net.info;
+  obj$omics.net <- omics.net;
+  obj$data.org <- data.org;
 
   require("rjson");
   sink(fileNm);
   cat(toJSON(obj));
   sink();
+}
+
+#gene, met, mir, tf, mic, peak, m2m, snp
+.matchInputToPrimaryNet <- function(inputType, netType){
+  bool <- F;
+  if(inputType == "protein"){
+    bool <- netType == "gene";
+  }else{
+    bool <- netType == inputType;
+  }
+  return(bool);
+}
+
+.getQueryDir <- function(inputType, netType){
+  if(inputType == netType){
+    direction <- "direct";
+  }else{
+    direction <- "inverse";
+  }
+  return(direction);
+}
+
+
+#' SanityCheckSelection
+#'
+#' @param dataSetObj dataSetObj
+#' @export
+SanityCheckSelection <- function(dataSetObj=NA){
+  dataSet <- .get.nSet(dataSet);
+  type.vec <- names(dataSet$exp.mat);
+  computed.ok <- 1; #check if every input type has computed for network at least once
+  overlap.ok <- 0; #check if there is any overlap between omics networks
+
+  #check compute
+  input.from.net.vec <- vector();
+  for(i in 1:length(edgeu.res.list)){
+    curr.nm <- names(edgeu.res.list)[i];
+    curr.orig.input <- strsplit(curr.nm, "_")[[1]][4];
+    input.from.net.vec <- c(input.from.net.vec, curr.orig.input);
+  }
+
+  input.from.net.vec <- unique(input.from.net.vec);
+
+  for(i in 1:length(type.vec)){
+    curr.type <- type.vec[i];
+    if(!curr.type %in% input.from.net.vec){
+      computed.ok <- 0;
+    }
+  }
+
+  #check overlap
+  e.list.len <- length(edgeu.res.list);
+  if(length(type.vec) > 1 && e.list.len>1){
+    node.res.list <- lapply(edgeu.res.list, function(x){
+      unique(unlist(x))
+    })
+    num.vec <- seq.int(e.list.len);
+    cat(e.list.len, "==elen");
+    if(e.list.len==2){
+      res <- intersect(node.res.list[[1]], node.res.list[[2]])
+      cat("length=====", length(res));
+
+      if(length(res)>0){
+        overlap.ok <- 1;
+      }
+    }else{
+      pairs <- t(combn(num.vec,2));
+      for(i in 1:nrow(pairs)){
+        pair <- pairs[i,];
+        res <- intersect(node.res.list[[ pair[1] ]], node.res.list[[ pair[2] ]]);
+        cat("length=====", length(res));
+        if(length(res)>0){
+          overlap.ok <- 1;
+        }
+      }
+    }
+  }else{
+    overlap.ok <- 1;
+  }
+  if(!.on.public.web){
+    return(.set.nSet(dataSet));
+  }else{
+    return(c(computed.ok,overlap.ok));
+  }
+}
+
+getNodeTypesByNetType <- function(type){
+    if(type == "gene"){
+        ndTypes <- c("gene")
+    }else if(type == "tf"){
+        ndTypes <- c("gene", "tf")
+    }else if(type == "mir"){
+        ndTypes <- c("gene", "mir")
+    }else if(type == "met"){
+        ndTypes <- c("gene", "met")
+    }else if(type == "mic"){
+        ndTypes <- c("mic", "met")
+    }else if(type == "peak"){
+        ndTypes <- c("putative_met", "met")
+    }else if(type == "snp"){
+        ndTypes <- c("gene", "snp")
+    }
+}
+
+# generate subnetwork stats with node type information
+GetNetStatByType <- function(g){
+  nd.queries <- V(g)$name;
+  uniq.ins <- unique(dataSet$seeds.proteins);
+  sd.queries <- uniq.ins[uniq.ins %in% nd.queries];
+
+  #check compute
+  net.type.vec <- vector();
+
+  if(length(edgeu.res.list) == 0){
+    my.stat <- list(
+      node.num = vcount(g),
+      query.num = sum((unique(dataSet$seeds.proteins)) %in% V(g)$name)
+    );
+    return(my.stat);
+  }
+
+  for(i in 1:length(edgeu.res.list)){
+    curr.nm <- names(edgeu.res.list)[i];
+    curr.net.type <- strsplit(curr.nm, "_")[[1]][1];
+    curr.node.types <- getNodeTypesByNetType(curr.net.type);
+    net.type.vec <- c(net.type.vec, curr.node.types);
+  }
+
+    vec <- net.type.vec
+    vec <- unique(unlist(vec))
+    sd.res <- "";
+    nd.res <- "";
+    for( i in 1:length(vec)){
+      if(vec[i] == "mir"){
+        nms = net.info$mir.ids
+        lbl = "miRNA"
+      }else if(vec[i] == "gene"){
+        nms = c(net.info$gene.ids, net.info$protein.ids)
+        lbl = "Gene/protein";
+      }else if(vec[i] == "tf"){
+        nms = net.info$tf.ids
+        lbl = "TF";
+      }else if(vec[i] == "mic"){
+        nms = net.info$mic.ids
+        lbl = "Taxon";
+      }else if(vec[i] == "met"){
+        nms = net.info$met.ids
+        lbl = "Metabolite";
+      }else if(vec[i] == "snp"){
+        nms = net.info$snp.ids
+        lbl = "SNP";
+      }else if(vec[i] == "putative_met"){
+        nms = net.info$peak.ids;
+        lbl = "Putative metabolite";
+      }
+
+      nms <- unique(nms);
+      if(sum(nms %in% nd.queries)>0 && !grepl(lbl, nd.res)){
+        nd.res <- paste0(lbl,": ", sum(nms %in% nd.queries), "; ", nd.res)
+      }
+      if(sum(nms %in% sd.queries)>0){
+        sd.res <- paste0(lbl,": ", sum(nms %in% sd.queries), "; ", sd.res)
+      }
+    }
+    my.stat <- list(
+      node.num = nd.res,
+      query.num = sd.res
+    );
+
+  return(my.stat);
+}
+
+## subnetwork seed node type and number
+GetQueryNum <-function(){
+  return(dataSet$query.nums)
+}
+
+## subnetwork overall node type and number
+GetTypeNum <-function(){
+  return(dataSet$type.nums)
 }

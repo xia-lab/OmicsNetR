@@ -1,7 +1,7 @@
 
 #color shape layout important
 my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3){
-
+  
   if(exists("lbls",envir = .GlobalEnv)) {
     lbls <- get("lbls", envir = .GlobalEnv)
   } else {
@@ -22,17 +22,8 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
 
   nms <- V(g)$name;
   #save(omics.net,g, file = "omics.net___checking.rda")
-  if(!is.null(dataSet$snpRegion)){
-    if(dataSet$snpRegion & length(grep("^rs",omics.net$node.data[,2]))>0 ){
-      omics.net$node.data[,3] <- omics.net$node.data[,1]
-      omics.net$node.data[grepl("^chr",omics.net$node.data[,3]),3] <- omics.net$node.data[grepl("^chr",omics.net$node.data[,3]),2];
-      hit.inx <- match(nms, omics.net$node.data[,3]);
-    } else {
-      hit.inx <- match(nms, omics.net$node.data[,1]);
-    }
-  } else {
+
     hit.inx <- match(nms, omics.net$node.data[,1]);
-  }
   lbls <- omics.net$node.data[hit.inx, 2];
 
   # setup shape (gene circle, other squares)
@@ -118,16 +109,8 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   met.inx <- nms %in% net.info$met.ids;
   reg.inx <- nms %in% net.info$reg.ids;
   mic.inx <- nms %in% net.info$mic.ids;
-
-  if(!is.null(dataSet$snpRegion)){
-    if(dataSet$snpRegion & length(grep("^rs",omics.net$node.data[,2]))>0 ){
-      snp.inx <- grepl("^rs[0-9]",nms)
-    }else{
-      snp.inx <- nms %in% rownames(dataSet$seed[["snp"]]);
-    }
-  } else {
-    snp.inx <- nms %in% rownames(dataSet$seed[["snp"]]);
-  }
+  snp.inx <- nms %in% rownames(dataSet$seed[["snp"]]);
+  
 
   containsGP <- any(gene.nms %in% prot.nms); ## check if any overlap between gene and protein
 
@@ -142,7 +125,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   topo.colsw[met.inx] <- "#ffff00";
   topo.colsw[reg.inx] <- "#ff9900";
   topo.colsw[mic.inx] <- "#39FF14";
-  topo.colsw[snp.inx] <- "#ff9900";
+  topo.colsw[snp.inx] <- "#4B0082";
 
   topo.colsb <- topo.colsw;
 
@@ -150,9 +133,9 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     inx <- nms %in% gene.nms
     topo.colsb[inx] <- "#D3D3D3";
     topo.colsw[inx] <- "#D3D3D3";
-    color.vec <- c("#D3D3D3", "#FF8484", "#39FF14","#00f6ff", "#D3D3D3", "#00ffff", "#ffff00", "#ff9900", "#39FF14");
+    color.vec <- c("#D3D3D3", "#FF8484", "#39FF14","#00f6ff", "#D3D3D3", "#00ffff", "#ffff00", "#4B0082", "#39FF14");
   }else{
-    color.vec <- c("#FF8484", "#FF8484", "#39FF14","#00f6ff", "#D3D3D3", "#00ffff", "#ffff00", "#ff9900", "#39FF14");
+    color.vec <- c("#FF8484", "#FF8484", "#39FF14","#00f6ff", "#D3D3D3", "#00ffff", "#ffff00", "#4B0082", "#39FF14");
   }
   names(color.vec) <- c("gene", "protein", "tf", "mir", "peak", "kncmpd", "met", "reg", "mic");
 
@@ -276,16 +259,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   nd.tbl <- nd.tbl[ord.inx, ];
   fast.write.csv(nd.tbl, file="node_table.csv", row.names=FALSE);
 
-  # covert to json
-  require(RJSONIO);
-  db.path <- paste(lib.path,data.org,"/entrez.rds", sep="");
-  if(!.on.public.web){
-    nmdb <- basename(db.path);
-    download.file(db.path, destfile = nmdb, method="libcurl", mode = "wb");
-    db.path <- nmdb;
-  }
-  conv <- readRDS(db.path)
-  netData <- list(nodes=nodes,typeVec=dataSet$gene_type_vec, edges=edge.mat, modules=modules, conv = conv, prot.nms=prot.nms,gene.nms=gene.nms, containsGP=containsGP, middleLayerType = middleLayerType);
+  netData <- list(nodes=nodes,typeVec=dataSet$gene_type_vec, edges=edge.mat, modules=modules, prot.nms=prot.nms,gene.nms=gene.nms, containsGP=containsGP, middleLayerType = middleLayerType);
 
 
   if(exists("PeakSet",envir = .GlobalEnv)) {
@@ -294,7 +268,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     netData[["peakEdges"]] <- PeakSet$edges;
   }
 
-  if("mic" %in% dataSet$type ){
+  if(file.exists("micSet.qs")){
     micSet <- qs::qread("micSet.qs");
     inx = names(micSet$met.mic) %in% nms;
     netData[["metMic"]] <- micSet$met.mic[inx];
@@ -315,7 +289,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     netData[["snpTable"]] <- snpTable;
     netData[["snpTableConsequence"]] <- snpTableConsequence;
   }
-
 
   netData[["colorVec"]] <- color.vec;
   dataSet$jsonNms$network <<- filenm

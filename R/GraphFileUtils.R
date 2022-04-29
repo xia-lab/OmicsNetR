@@ -47,13 +47,13 @@ ProcessOmicsNetJson <- function(dataSet, fileName) {
   }
 
   dataSet <<- dataSet;
-  CreateGraph();
+  CreateGraph(dataSet);
   net.nm <- names(ppi.comps)[1];
   net.nmu <<- net.nm;
   current.net.nm <<- net.nm;
   g <- ppi.comps[[net.nm]];
 
-  net.stats <- ComputeSubnetStats(ppi.comps);
+  dataSet <- .computeSubnetStats(dataSet, ppi.comps);
   return(.set.nSet(dataSet));
 }
 
@@ -197,7 +197,7 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
     edge.data = edge.data
   );
 
-  CreateGraph();
+  CreateGraph(dataSet);
   net.nm <- names(ppi.comps)[1];
   net.nmu <<- net.nm;
   current.net.nm <<- net.nm;
@@ -206,7 +206,7 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
   if(fileType == "json"){
     dataSet$nodeLabels <- conv
   }
-  net.stats <- ComputeSubnetStats(ppi.comps);
+  dataSet <- .computeSubnetStats(dataSet, ppi.comps);
   return(.set.nSet(dataSet));
 }
 

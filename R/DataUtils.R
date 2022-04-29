@@ -47,12 +47,12 @@ Init.Data<-function(){
 
   dataSet$mic.exclude.opt <- "currency";
   dataSet$currExclude <- "true";
-  dataSet$phenoPs <- dataSet$orphExclude <- dataSet$uniExclude <- "TRUE";
-  dataSet$phesc.opt <- "eqtl";
-  dataSet$vep.opt <- "dis";
-  dataSet$vep.num <- "1";
-  dataSet$vep.dis <- "5";
-  dataSet$phenoEq <- "FALSE";
+  dataSet$orphExclude <- dataSet$uniExclude <- "TRUE";
+  dataSet$snp2gene$phesc.opt <- "eqtl";
+  dataSet$snp2gene$vep.opt <- "dis";
+  dataSet$snp2gene$vep.num <- 1;
+  dataSet$snp2gene$vep.dis <- 5;
+
 
   dataSet <<- dataSet;
 
@@ -109,31 +109,6 @@ SetCurrentDataMulti <- function(){
   return(.set.nSet(dataSet));
 }
 
-CheckQueryTypeMatch <- function(qvec, type, dbType){
-  if(type == "snp"){
-    if(length(startsWith(qvec, "rs"))>0){
-        queryType <- "rsid";
-    }else{
-        queryType <- "region"
-    }
-  }else if(type %in% c("gene","tf")){
-    queryType <- "entrez";
-  }else if(type %in% c("met", "peak", "m2m")){
-    queryType <- "kegg";
-  }else if(type == "mic"){
-    queryType <- mic.taxa;
-  }else if(type == "mir"){
-    queryType <- "mir_acc";
-  }
-  GeneAnotDB <-doProteinIDMapping(qvec, queryType, dbType);
-
-  if(is.null(nrow(GeneAnotDB)) && GeneAnotDB == 0){
-    return(FALSE);
-  }else{
-    na.inx <- is.na(GeneAnotDB[,1]) | is.na(GeneAnotDB[,2]);
-    return(sum(!na.inx)>0);
-  }
-}
 
 #' Process input list
 #'
@@ -180,11 +155,13 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     dataSet$ko <- GeneAnotDB;
   }
 
-  if(queryType == "region"){
-        dataSet$snpRegion <- TRUE
-   }else{
-        dataSet$snpRegion <- FALSE
-   }
+  if(type == "snp"){
+    if(queryType == "region"){
+          dataSet$snpRegion <- TRUE
+     }else{
+          dataSet$snpRegion <- FALSE
+     }
+  }
 
   if(sum(!na.inx) < 2){
     current.msg <<- "Less than two hits found in uniprot database. ";
@@ -546,7 +523,7 @@ PrepareSqliteDB <- function(sqlite_Path, onweb = TRUE) {
 
   dbNM <- basename(sqlite_Path);
   DonwloadLink <- paste0("https://www.xialab.ca/resources/sqlite/", dbNM);
-  download.file(DonwloadLink, sqlite_Path, method = "curl");
+  download.file(DonwloadLink, sqlite_Path);
   return(TRUE)
 }
 
