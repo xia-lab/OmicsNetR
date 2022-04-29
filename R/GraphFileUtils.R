@@ -457,7 +457,7 @@ convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
   }
   partialToBeSaved <<- c(partialToBeSaved, c(filenm));
   sink(filenm);
-  cat(toJSON(netData));
+  cat(RJSONIO::toJSON(netData));
   sink();
 }
 

@@ -1,7 +1,7 @@
 
 #color shape layout important
 my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3){
-  
+
   if(exists("lbls",envir = .GlobalEnv)) {
     lbls <- get("lbls", envir = .GlobalEnv)
   } else {
@@ -110,7 +110,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   reg.inx <- nms %in% net.info$reg.ids;
   mic.inx <- nms %in% net.info$mic.ids;
   snp.inx <- nms %in% rownames(dataSet$seed[["snp"]]);
-  
+
 
   containsGP <- any(gene.nms %in% prot.nms); ## check if any overlap between gene and protein
 
@@ -294,7 +294,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   dataSet$jsonNms$network <<- filenm
   partialToBeSaved <<- c(partialToBeSaved, c(filenm))
   sink(filenm);
-  cat(toJSON(netData));
+  cat(RJSONIO::toJSON(netData));
   sink();
   return(.set.nSet(dataSet));
 }

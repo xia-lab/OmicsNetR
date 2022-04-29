@@ -1191,7 +1191,7 @@ UpdateNetworkLayout3D <- function(algo, filenm){
   require("RJSONIO");
   netData <- list(nodes=nodes);
   sink(filenm);
-  cat(toJSON(netData));
+  cat(RJSONIO::toJSON(netData));
   sink();
   return(filenm);
 }
@@ -1214,7 +1214,7 @@ UpdateNetworkLayout <- function(algo, filenm, focus){
   require("RJSONIO");
   netData <- list(nodes=nodes);
   sink(filenm);
-  cat(toJSON(netData));
+  cat(RJSONIO::toJSON(netData));
   sink();
   return(filenm);
 }
