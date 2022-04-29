@@ -4,7 +4,7 @@
 \alias{CreateGraph}
 \title{Create igraph object from edgelist created from database selection and decompose into connected subnetworks}
 \usage{
-CreateGraph()
+CreateGraph(dataSetObj = NA)
 }
 \description{
 Create igraph object from edgelist created from database selection and decompose into connected subnetworks
