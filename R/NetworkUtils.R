@@ -1003,6 +1003,8 @@ BuildPCSFNet <- function(dataSetObj=NA){
   net.stats <- dataSet$net.stats;
   ord.inx <- order(net.stats[,1], decreasing=TRUE);
   net.stats <- net.stats[ord.inx,];
+  dataSet$type.nums <- dataSet$type.nums[ord.inx]
+  dataSet$query.nums <- dataSet$query.nums[ord.inx]
   comps <- comps[ord.inx];
   names(comps) <- rownames(net.stats) <- paste("subnetwork", 1:length(comps), sep="");
 
@@ -1043,6 +1045,8 @@ UpdateSubnetStats <- function(){
   net.stats <- dataSet$net.stats;
   ord.inx <- order(net.stats[,1], decreasing=TRUE);
   net.stats <- net.stats[ord.inx,];
+  dataSet$type.nums <- dataSet$type.nums[ord.inx]
+  dataSet$query.nums <- dataSet$query.nums[ord.inx]
   rownames(net.stats) <- old.nms[ord.inx];
   net.stats <<- net.stats;
 }
