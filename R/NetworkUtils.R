@@ -573,9 +573,9 @@ SearchNetDB <- function(protein.vec, orig.input, inputType, netw.type, db.type, 
     if(nrow(res)==0){ return(c(0,0)); }
 
     if(db.type =="keggp"){ # project to kegg
-      res1 = res[which(res$entrez %in% c(dataSet$seeds.proteins)),];
-      res2 = res[which(res$kegg %in% c(dataSet$seeds.proteins)),];
-      res = rbind(res1, res2);
+      #res1 = res[which(res$entrez %in% c(dataSet$seeds.proteins)),];
+      #res2 = res[which(res$kegg %in% c(dataSet$seeds.proteins)),];
+      #res = rbind(res1, res2);
     }
 
     edge.res <- data.frame(Source=res[,"kegg"],
@@ -611,9 +611,10 @@ SearchNetDB <- function(protein.vec, orig.input, inputType, netw.type, db.type, 
     }
 
   } else if(netw.type == "peak") {
+    PeakSet <- qs:::qread("PeakSet_net.qs");
     net.info$met.ids <- PeakSet$mets;
     net.info$peak.ids <- PeakSet$put.mets;
-    seed.genes <<- unique(c(seed.genes, PeakSet$mets));
+    seed.genes <<- unique(c(seed.genes, PeakSet$mets));    
     node.ids <- PeakSet$nodes.df[,1];
     node.nms <- PeakSet$nodes.df[,2];
     edge.res <- PeakSet$edges.df;
@@ -700,7 +701,7 @@ SearchNetDB <- function(protein.vec, orig.input, inputType, netw.type, db.type, 
     res <- extendMetPeakNetwork(table.nm);
     if(is.list(res)) {
       edge.res <- res$edge.res;
-      net.info <- res$net.info;
+      #net.info <- res$net.info;
     } else {
       edge.res <- NULL;
     }
@@ -738,16 +739,16 @@ SearchNetDB <- function(protein.vec, orig.input, inputType, netw.type, db.type, 
 
     if(netInv == "direct"){
       if("peak" %in% dataSet$type){
-        not.kncmpd.ids <- c(net.info$peak.ids, net.info$met.ids);
-        net.info$kncmpd.ids <- c(net.info$kncmpd.ids, node.ids[!node.ids %in% not.kncmpd.ids]);
+        #not.kncmpd.ids <- c(net.info$peak.ids, net.info$met.ids);
+        #net.info$kncmpd.ids <- c(net.info$kncmpd.ids, node.ids[!node.ids %in% not.kncmpd.ids]);
       }else{
-        net.info$met.ids <- unique(protein.vec);
-        net.info$kncmpd.ids <- c(net.info$kncmpd.ids, node.ids[!node.ids %in% protein.vec]);
+        #net.info$met.ids <- unique(protein.vec);
+        #net.info$kncmpd.ids <- c(net.info$kncmpd.ids, node.ids[!node.ids %in% protein.vec]);
       }
     }else{
-      net.info$met.ids <- node.ids[!node.ids %in% protein.vec];
+      #net.info$met.ids <- node.ids[!node.ids %in% protein.vec];
       if(!zero){
-        net.info$kncmpd.ids <- c(net.info$kncmpd.ids, unique(protein.vec));
+        #net.info$kncmpd.ids <- c(net.info$kncmpd.ids, unique(protein.vec));
       }
     }
   }
@@ -1005,6 +1006,9 @@ BuildPCSFNet <- function(dataSetObj=NA){
   net.stats <- net.stats[ord.inx,];
   dataSet$type.nums <- dataSet$type.nums[ord.inx]
   dataSet$query.nums <- dataSet$query.nums[ord.inx]
+  dataSet$query.nums[dataSet$query.nums == ""] <- net.stats$Query[dataSet$query.nums == ""]
+  dataSet$type.nums[dataSet$type.nums == ""] <- net.stats$Node[dataSet$type.nums == ""]
+
   comps <- comps[ord.inx];
   names(comps) <- rownames(net.stats) <- paste("subnetwork", 1:length(comps), sep="");
 
@@ -1020,7 +1024,6 @@ BuildPCSFNet <- function(dataSetObj=NA){
 }
 
 .computeSubnetStats <- function(dataSetObj=NA, comps){
-
   dataSet <- .get.nSet(dataSetObj);
   type.nums <- vector();
   query.nums <- vector();
@@ -1398,7 +1401,7 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
 convertIgraph2JSON <- function(dataSetObj=NA, net.nm, filenm, thera="FALSE", dim=3){
   dataSet <- .get.nSet(dataSetObj);
   if(!exists("my.convert.igraph")){ # public web on same user dir
-    compiler::loadcmp("../../rscripts/omicsnetr/_utils_convertIgraph2JSON.Rc");
+    compiler::loadcmp("../../rscripts/OmicsNetR/R/_utils_convertIgraph2JSON.Rc");
   }
   return(my.convert.igraph(dataSet, net.nm, filenm, thera, dim));
 }
@@ -1529,14 +1532,11 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     protein.vec <- rownames(dataSet$exp.mat[[inputType]]);
   }
 
-  if(type == "m2m" && exists("PeakSet")) {
-    protein.vec <- PeakSet[["nodes.df"]][["Id"]];
-  }
 
   inv <- .getQueryDir(inputType, type);
 
   cat(inputType, type, dbType, require.exp, min.score, inv, FALSE,snpRegion, "\n");
-  SearchNetDB(protein.vec, orig.inputType, inputType, type, dbType, require.exp, min.score, inv, FALSE,snpRegion);
+  SearchNetDB(protein.vec, orig.inputType, inputType, type, dbType, require.exp, min.score, inv, FALSE, snpRegion);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
 
@@ -1714,14 +1714,7 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   PeakSet$put.mets <- PeakSet$nodes$KEGGID[which(PeakSet$nodes$class == "Putative metabolite")];
   PeakSet$mets.ids <- PeakSet$nodes$name[which(PeakSet$nodes$class == "Metabolite")];
   PeakSet$put.mets.ids <- PeakSet$nodes$name[which(PeakSet$nodes$class == "Putative metabolite")];
-  dataSet$seed[["peak"]] <- data.frame(rep(0, length(PeakSet$mets)));
 
-  rownames(dataSet$seed[["peak"]]) <- PeakSet$mets;
-  dataSet$exp.mat[["peak"]] <- data.frame(rep(0, length(PeakSet$NetID_output$peak_id)));
-  rownames(dataSet$exp.mat[["peak"]]) <- paste0(PeakSet$NetID_output$peak_id,"_", PeakSet$NetID_output$medMz);
-  saveRDS(PeakSet, "peakset.rds");
-
-  cmp.nms <- PrepareInputList(dataSet, rownames(dataSet$seed[["peak"]]), data.org, "peak", "kegg");
 
   PeakSet$nodes.df <- data.frame(Id=met.ids, Label=lbls)
   edges.df0 <- data.frame(from=edges[,1], to=edges[,2])
@@ -1732,7 +1725,31 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   edges.df1 <- merge(edges.df02, conv1, by = "from");
   edges.df2 <- merge(edges.df1, conv2, by = "to");
   PeakSet$edges.df <- data.frame(Source=edges.df2$Source, Target=edges.df2$Target);
-  PeakSet <<- PeakSet;
+
+    if(length(which(grepl("HMDB", PeakSet$mets)))/length(PeakSet$mets) > 0){
+      PeakSet$mets <- doHMDB2KEGGMapping(PeakSet$mets);
+      PeakSet$nodes.df[,1] <- doHMDB2KEGGMapping(PeakSet$nodes.df[,1]);
+      PeakSet$edges.df[,1] <- doHMDB2KEGGMapping(PeakSet$edges.df[,1]);
+      PeakSet$edges.df[,2] <- doHMDB2KEGGMapping(PeakSet$edges.df[,2]);
+
+    }
+    if(length(which(grepl("PBCM", PeakSet$mets)))/length(PeakSet$mets) > 0){
+      PeakSet$mets <- doPubchem2KEGGMapping(PeakSet$mets);
+      PeakSet$nodes.df[,1] <- doPubchem2KEGGMapping(PeakSet$nodes.df[,1]);
+      PeakSet$edges.df[,1] <- doPubchem2KEGGMapping(PeakSet$edges.df[,1]);
+      PeakSet$edges.df[,2] <- doPubchem2KEGGMapping(PeakSet$edges.df[,2]);
+
+    }
+
+  dataSet$seed[["peak"]] <- data.frame(rep(0, length(unique(PeakSet$mets))));
+
+  rownames(dataSet$seed[["peak"]]) <-unique(PeakSet$mets);
+  dataSet$exp.mat[["peak"]] <- data.frame(rep(0, length(PeakSet$NetID_output$peak_id)));
+  rownames(dataSet$exp.mat[["peak"]]) <- paste0(PeakSet$NetID_output$peak_id,"_", PeakSet$NetID_output$medMz);
+
+  cmp.nms <- PrepareInputList(dataSet, rownames(dataSet$seed[["peak"]]), data.org, "peak", "kegg");
+
+  qs:::qsave(PeakSet, "PeakSet_net.qs");
   dataSet <<- dataSet;
   if(.on.public.web){
     .set.nSet(dataSet);
@@ -2201,6 +2218,7 @@ GetNetStatByType <- function(g){
     vec <- unique(unlist(vec))
     sd.res <- "";
     nd.res <- "";
+    print(vec);
     for( i in 1:length(vec)){
       if(vec[i] == "mir"){
         nms = net.info$mir.ids

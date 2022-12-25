@@ -285,7 +285,6 @@ PerformAnnotation <- function() {
 }
 
 GetFastPeak <- function(){
-    print("getPeakset");
     ImportMSPeaks("../../data/test/ibd_peaks_p.csv");
     PeakSetDone <<- qs::qread("../../data/test/PeakSet_done.qs");
     PeakSet_data <- qs::qread("../../data/test/PeakSet_data.qs");

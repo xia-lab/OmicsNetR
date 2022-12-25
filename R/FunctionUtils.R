@@ -40,13 +40,24 @@ LoadEnrLib <- function(type, subtype){
     names(res) <- c("link", "term", "sets");
   }
   set <- readRDS(path)
-  current.geneset <- set$sets;
+
+  #some sets list do not have names
+  if("sets" %in% names(set)){
+    setsInx <- which(names(set) == "sets");
+    termInx <- which(names(set) == "term");
+    linkInx <- which(names(set) == "link");
+  }else{
+    setsInx <- 3;
+    termInx <- 2;
+    linkInx <- 1;
+  }
+  current.geneset <- set[[setsInx]];
 
   set.ids<- names(current.geneset);
-  names(current.geneset) <- set$term;
+  names(current.geneset) <- set[[termInx]];
   current.geneset <<- current.geneset
 
-  current.setlink <<- set$link;
+  current.setlink <<- set[[linkInx]];
   current.setids <<- set.ids;
   current.universe <<- unique(unlist(current.geneset));
 }
@@ -76,8 +87,6 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs){
   # prepare query
   ora.vec <- NULL;
   idtype <- "entrez"
-  ora.vec <- unlist(strsplit(IDs, "; "));
-  names(ora.vec) <- ora.vec;
   ora.vec <- unlist(strsplit(IDs, "; "));
   names(ora.vec) <- ora.vec;
   if(fun.type %in% c("trrust", "encode", "jaspar", "mirnet", "met", "drugbank")){
@@ -191,6 +200,7 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
   cat(json.mat);
   sink();
 
+  resTable1$Features = hits.gene
   # write csv
   csv.nm <- paste(file.nm, ".csv", sep="");
   fast.write.csv(resTable1, file=csv.nm, row.names=F);
@@ -376,10 +386,12 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     if(!PrepareSqliteDB(path, .on.public.web)){
       stop("Sqlite database is missing, please check your internet connection!");
     }
+
     mir.db <- dbConnect(SQLite(), path);
     query <- paste (shQuote(q.vec),collapse=",");
     table.nm <- data.org
-    statement <- paste("SELECT * FROM ", table.nm, " WHERE ", type," IN (",query,")", sep="");
+    statement <- paste("SELECT * FROM ", table.nm, " WHERE ", type," COLLATE NOCASE IN (",query,")", sep="");
+
     mirtable <- dbSendQuery(mir.db, statement);
     mir.dic <- fetch(mirtable, n=-1);
     if(nrow(mir.dic) == 0){
@@ -390,7 +402,6 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     rownames(entrezs) = seq.int(nrow(entrezs));
     entrezs <- data.frame(lapply(entrezs, as.character), stringsAsFactors=FALSE)
     colnames(entrezs) = c("gene_id", "accession");
-
   }else if(type == "symbol"){
     db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
 
@@ -456,7 +467,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     entrezs <- res[hit.inx, ];
     entrezs = res[c(1,2)];
   }else {
-    if(type == "genbank"){
+    if(type == "gb"){
       # note, some ID can have version number which is not in the database
       # need to strip it off NM_001402.5 => NM_001402
       q.mat <- do.call(rbind, strsplit(q.vec, "\\."));
@@ -466,13 +477,13 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
       q.mat <- do.call(rbind, strsplit(q.vec, "\\."));
       q.vec <- q.mat[,1];
       db.path <- paste(lib.path, data.org, "/entrez_refseq.rds", sep="");
-    }else if(type == "emblgene"){
+    }else if(type == "embl_gene"){
       db.path <- paste(lib.path, data.org, "/entrez_embl_gene.rds", sep="");
-    }else if(type == "embltranscript"){
+    }else if(type == "embl_transcript"){
       db.path <- paste(lib.path, data.org, "/entrez_embl_transcript.rds", sep="");
-    }else if(type == "emblprotein"){
+    }else if(type == "embl_protein"){
       db.path <- paste(lib.path, data.org, "/entrez_embl_protein.rds", sep="");
-    }else if(type == "orfid"){ # only for yeast
+    }else if(type == "orf"){ # only for yeast
       db.path <- paste(lib.path, data.org, "/entrez_orf.rds", sep="");
     }else if(type == "string"){
       db.path <- paste(lib.path, data.org, "/entrez_string.rds", sep="")
@@ -539,17 +550,17 @@ doGeneIDMapping <- function(q.vec, type){
     # need to strip it off NM_001402.5 => NM_001402
     q.mat <- do.call(rbind, strsplit(q.vec, "\\."));
     q.vec <- q.mat[,1];
-    if(type == "genbank"){
+    if(type == "gb"){
       db.path <- paste(lib.path, data.org, "/entrez_gb.rds", sep="");
     }else if(type == "refseq"){
       db.path <- paste(lib.path, data.org, "/entrez_refseq.rds", sep="");
-    }else if(type == "emblgene"){
+    }else if(type == "embl_gene"){
       db.path <- paste(lib.path, data.org, "/entrez_embl_gene.rds", sep="");
-    }else if(type == "embltranscript"){
+    }else if(type == "embl_transcript"){
       db.path <- paste(lib.path, data.org, "/entrez_embl_transcript.rds", sep="");
-    }else if(type == "emblprotein"){
+    }else if(type == "embl_protein"){
       db.path <- paste(lib.path, data.org, "/entrez_embl_protein.rds", sep="");
-    }else if(type == "orfid"){ # only for yeast
+    }else if(type == "orf"){ # only for yeast
       db.path <- paste(lib.path, data.org, "/entrez_orf.rds", sep="");
     }else{
       print("Unknown data type2");
@@ -667,8 +678,8 @@ doHMDB2KEGGMapping <- function(entrez.vec){
   symbols <- gene.map[hit.inx, "kegg_id"];
   symbols <- as.character(symbols);
   # if not gene symbol, use id by itself
-  symbols <- symbols[symbols != ""];
-  symbols <- symbols[!is.na(symbols)];
+  symbols[is.na(symbols)] <- entrez.vec[is.na(symbols)];
+  symbols[symbols == ""] <- entrez.vec[symbols == ""];
   return(symbols)
 }
 
@@ -705,8 +716,8 @@ doPubchem2KEGGMapping <- function(entrez.vec){
   }
   symbols <- c(symbols2, symbols1)
   # if not gene symbol, use id by itself
-  symbols <- symbols[symbols != ""];
-  symbols <- symbols[!is.na(symbols)];
+  symbols[is.na(symbols)] <- entrez.vec[is.na(symbols)];
+  symbols[symbols == ""] <- entrez.vec[symbols == ""];
   return(symbols);
 }
 

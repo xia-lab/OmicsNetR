@@ -172,7 +172,7 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     if(queryType == "mir_acc" || (type == "met" && queryType != "kegg")){
         col1 <- 2;
     }
-    hit.inx <- match(rownames(prot.mat), GeneAnotDB[,col1]);
+    hit.inx <- match(tolower(rownames(prot.mat)), tolower(GeneAnotDB[,col1]));
     if(is.null(dim(prot.mat))){
       prot.mat <- matrix(prot.mat);
     }
@@ -250,6 +250,7 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   dataSet$seeds.proteins <- unique(dataSet$seeds.proteins)
   dataSet$seeds.expr <- as.matrix(dataSet$prot.mat);
   message(paste0("Preparing input list with the type of ", type, " completed."))
+  print(seed.proteins);
   if(.on.public.web){
     .set.nSet(dataSet);
     return (seed.proteins);
@@ -523,7 +524,7 @@ PrepareSqliteDB <- function(sqlite_Path, onweb = TRUE) {
 
   dbNM <- basename(sqlite_Path);
   DonwloadLink <- paste0("https://www.xialab.ca/resources/sqlite/", dbNM);
-  download.file(DonwloadLink, sqlite_Path, method = "curl");
+  download.file(DonwloadLink, sqlite_Path);
   return(TRUE)
 }
 
