@@ -1,6 +1,6 @@
 ##################################################
 ## R scripts for OmicsNet
-## Description: Data IO functions
+## Description: Data I/O functions
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
