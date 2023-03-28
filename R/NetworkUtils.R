@@ -1118,6 +1118,7 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
   gene.community <- NULL;
   qnum.vec <- NULL;
   pval.vec <- NULL;
+  psize.vec <- vector();
   rowcount <- 0;
   nms <- V(g)$name;
   hit.inx <- match(nms, omics.net$node.data[,1]);
@@ -1143,7 +1144,7 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
     com.mat <- cbind(path.ids, path.sybls, rep(i, length(path.ids)));
     gene.community <- rbind(gene.community, com.mat);
     qnum.vec <- c(qnum.vec, qnums);
-
+    psize.vec <- c(psize.vec, psize);
     # calculate p values (comparing in- out- degrees)
     subgraph <- induced.subgraph(g, path.ids);
     in.degrees <- degree(subgraph);
@@ -1157,10 +1158,11 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
     com.vec[[rowcount]] <- path.ids
   }
 
-  ord.inx <- order(pval.vec, decreasing=F);
-  community.vec <- community.vec[ord.inx];
-  qnum.vec <- qnum.vec[ord.inx];
-  ord.inx <- order(qnum.vec, decreasing=T);
+  #ord.inx <- order(pval.vec, decreasing=F);
+  #community.vec <- community.vec[ord.inx];
+  #qnum.vec <- qnum.vec[ord.inx];
+  ord.inx <- order(psize.vec, decreasing=T);
+  print(ord.inx);
   community.vec <- community.vec[ord.inx];
 
   all.communities <- paste(community.vec, collapse="||");
