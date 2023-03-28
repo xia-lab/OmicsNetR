@@ -1062,6 +1062,7 @@ UpdateSubnetStats <- function(){
 #'
 #' @export
 FindCommunities <- function(method="infomap", use.weight=FALSE){
+  set.seed(1);
   # make sure this is the connected
   current.net <- ppi.comps[[current.net.nm]];
   g <- current.net;
@@ -2223,7 +2224,6 @@ GetNetStatByType <- function(g){
     vec <- unique(unlist(vec))
     sd.res <- "";
     nd.res <- "";
-    print(vec);
     for( i in 1:length(vec)){
       if(vec[i] == "mir"){
         nms = net.info$mir.ids
