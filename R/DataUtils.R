@@ -18,9 +18,9 @@
 #' @export
 Init.Data<-function(){
 
-  if(exists("dataSet")){
-    return(1)
-  }
+  #if(exists("dataSet")){
+  #  return(1)
+  #}
   if(!exists(".on.public.web")){
     .on.public.web <<- FALSE;
   }

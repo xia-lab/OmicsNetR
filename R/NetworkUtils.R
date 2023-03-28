@@ -1480,6 +1480,11 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   }
 
   nodes.query = "";
+
+  if(!exists('edgeu.res.list')){
+    edgeu.res.list <<- list();
+  }
+
   if (length(edgeu.res.list) > 0) {
     nm <- paste0(type, "_", inputType, "_", data.org, "_", orig.inputType);
 
