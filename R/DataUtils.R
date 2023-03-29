@@ -18,9 +18,9 @@
 #' @export
 Init.Data<-function(){
 
-  if(exists("dataSet")){
-    return(1)
-  }
+  #if(exists("dataSet")){
+  #  return(1)
+  #}
   if(!exists(".on.public.web")){
     .on.public.web <<- FALSE;
   }
@@ -250,7 +250,7 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   dataSet$seeds.proteins <- unique(dataSet$seeds.proteins)
   dataSet$seeds.expr <- as.matrix(dataSet$prot.mat);
   message(paste0("Preparing input list with the type of ", type, " completed."))
-  print(seed.proteins);
+
   if(.on.public.web){
     .set.nSet(dataSet);
     return (seed.proteins);

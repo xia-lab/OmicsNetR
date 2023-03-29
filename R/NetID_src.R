@@ -2003,7 +2003,7 @@ Score_structure_propagation = function(StructureSet_df,
       
       # Update structure_propagation
       structure_propagation = suppressMessages(structure_propagation %>%
-                                                 full_join(structure_propagation_target, all = T) %>%
+                                                 full_join(structure_propagation_target) %>%
                                                  arrange(-score_propagation) %>%
                                                  distinct(struct_set_id, .keep_all = T))
     }
