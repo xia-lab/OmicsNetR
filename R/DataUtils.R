@@ -496,6 +496,7 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
         edgeu.res.list[[table.nm]] <- edgeu.res.list[[table.nm]][!hits,]
         edgeu.res.list <<- edgeu.res.list;
         }
+        UpdateModifiedTable();
         fast.write.csv(dataSet$viewTable[[table.nm]], file="omicsnet_edgelist.csv", row.names=FALSE);
         return(row.ids);
     }else{
@@ -503,7 +504,7 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
     }
 }
 
-UpdateModifiedTable <- function(type) {
+UpdateModifiedTable <- function() {
   edge.res <- data.frame();
   if(length(edgeu.res.list) > 0){
     for(i in 1:length(edgeu.res.list)){
