@@ -199,6 +199,11 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   long.inx <- which(stringr:::str_length(lbls) > 32);
   displayedLabel[long.inx] <- paste0(strtrim(lbls[long.inx],  rep(32, length(lbls[long.inx]))), "..." )
 
+  moltypes <- shapes;
+  moltypes[nms %in% gene.nms] <- "gene";
+  moltypes[nms %in% prot.nms] <- "protein";
+  moltypes[(nms %in% prot.nms) & (nms %in% gene.nms)] <- "gene/protein";
+  print(moltypes)
   for(i in 1:length(node.sizes)){
     nodes[[i]] <- list(
       id=nms[i],
@@ -208,7 +213,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
       size=node.sizes[i],
       size2d=node.sizes2d[i],
       type=shapes[i],
-      molType=shapes[i],
+      molType=moltypes[i],
       types=types[i],
       seedArr =seed_arr[i],
       color=topo.colsb[i],
@@ -244,7 +249,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     }
   }
 
-  V(g)$layers <- as.numeric(as.factor(shapes));
+  V(g)$layers <- as.numeric(as.factor(moltypes));
   ppi.comps[[net.nm]] <<- g;
 
   summary = vector(mode="list");
