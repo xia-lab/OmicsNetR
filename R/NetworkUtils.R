@@ -344,9 +344,10 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   }
 }
 
-SearchNetDB <- function(protein.vec, orig.input, inputType, netw.type, db.type, require.exp=TRUE,
+SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.type, db.type, require.exp=TRUE,
                         min.score = 900, netInv, zero=FALSE,snpRegion=FALSE){
-
+  
+  dataSet <- .get.nSet(dataSetObj);
   if(inputType == "peak"){
     netInv = "direct";
   }
@@ -362,8 +363,22 @@ SearchNetDB <- function(protein.vec, orig.input, inputType, netw.type, db.type, 
     res <- QueryPpiSQLite(table.nm, protein.vec, require.exp, min.score);
 
     if(dataSet$ppiZero){
-      hit.inx1 <- res[,1] %in% protein.vec;
-      hit.inx2 <- res[,2] %in% protein.vec;
+    print(inputType)
+    print(orig.input);
+      if(inputType == "gene"){
+        print(1)
+        universe.vec <- c(protein.vec,rownames(dataSet$exp.mat$protein))
+      }else if(inputType == "protein"){
+        print(2)
+
+        universe.vec <- c(protein.vec,rownames(dataSet$exp.mat$gene))
+      }else{
+        universe.vec <- protein.vec;
+      }
+
+
+      hit.inx1 <- res[,1] %in% universe.vec;
+      hit.inx2 <- res[,2] %in% universe.vec;
       res <- res[(hit.inx1 & hit.inx2),];
       n.ids <- c(res[,1], res[,2])
     }
@@ -1544,7 +1559,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   inv <- .getQueryDir(inputType, type);
 
   cat(inputType, type, dbType, require.exp, min.score, inv, FALSE,snpRegion, "\n");
-  SearchNetDB(protein.vec, orig.inputType, inputType, type, dbType, require.exp, min.score, inv, FALSE, snpRegion);
+  SearchNetDB(dataSet, protein.vec, orig.inputType, inputType, type, dbType, require.exp, min.score, inv, FALSE, snpRegion);
 
   node.res <- data.frame(Id=nodeu.ids, Label=nodeu.nms);
 
@@ -1969,13 +1984,14 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
   }
   net.stats <- as.data.frame(matrix(0, ncol = 6, nrow = length(edgeu.res.list)));
   colnames(net.stats) <- c("Input", "Network","Node", "Edge", "Query", "NetworkValue");
-
   for(i in 1:length(edgeu.res.list)){
+    seed.type <- strsplit(names(edgeu.res.list)[i], "_")[[1]][2];
+    seeds <- unique(rownames(dataSet$exp.mat[[seed.type]]));
     edge.df <- edgeu.res.list[[i]];
     edge.num <- dim(edge.df)[1];
     nodes <- unique(unname(unlist(edge.df)));
     node.num <- length(nodes);
-    query.num <- sum((unique(dataSet$seeds.proteins)) %in% nodes);
+    query.num <- sum(seeds %in% nodes);
     netw.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][1];
     input.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][2];
     inputName <- convertInputTypes2Names(input.type);

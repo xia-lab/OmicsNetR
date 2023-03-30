@@ -486,16 +486,19 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
     }
 
     if(action == "keep"){
-        hits = !hits;
+        hits = !hits; 
     }
 
     if(sum(hits) > 0){
         row.ids <- rownames(dataSet$viewTable[[table.nm]])[hits];
         dataSet$viewTable[[table.nm]] <<- dataSet$viewTable[[table.nm]][!hits,];
-        if(table.type == "ind"){
+        #if(table.type == "ind"){
+        print(edgeu.res.list[[table.nm]][!hits,]);
+        print(!hits);
+
         edgeu.res.list[[table.nm]] <- edgeu.res.list[[table.nm]][!hits,]
         edgeu.res.list <<- edgeu.res.list;
-        }
+        #}
         UpdateModifiedTable();
         fast.write.csv(dataSet$viewTable[[table.nm]], file="omicsnet_edgelist.csv", row.names=FALSE);
         return(row.ids);
@@ -511,7 +514,9 @@ UpdateModifiedTable <- function() {
       edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
     }
   }
-  omics.net$edge.data <<- unique(edge.res);
+  omics.net$edge.data <- unique(edge.res);
+  print(edge.res);
+  omics.net <<- omics.net;
   return(1)
 }
 
