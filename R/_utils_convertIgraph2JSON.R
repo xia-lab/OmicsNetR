@@ -203,7 +203,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   moltypes[nms %in% gene.nms] <- "gene";
   moltypes[nms %in% prot.nms] <- "protein";
   moltypes[(nms %in% prot.nms) & (nms %in% gene.nms)] <- "gene/protein";
-  print(moltypes)
   for(i in 1:length(node.sizes)){
     nodes[[i]] <- list(
       id=nms[i],
