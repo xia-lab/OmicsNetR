@@ -344,7 +344,7 @@ GetInputNames <- function(dataSetObj=NA){
     if(!containsGene && nm == "Gene"){
         nm <- "Protein";
     }else if(containsProtein && nm == "Gene"){
-        nm <- "Gene/protein";
+        nm <- "mRNA/Protein";
     }
     nms.and.size.vec[i] <- paste0(nm, " (", length.vec[i], ")");
   }
@@ -355,7 +355,7 @@ GetInputNames <- function(dataSetObj=NA){
 
 convertInputTypes2Names <- function(types){
   typesCol <- c("gene","protein", "tf", "mir", "met", "peak", "mic", "snp", "ko");
-  namesCol <- c("Gene","Protein", "Transcription factor", "miRNA", "Metabolite", "LC-MS peak", "Microbial taxa", "SNP", "KO");
+  namesCol <- c("mRNA","Protein", "Transcription factor", "miRNA", "Metabolite", "LC-MS peak", "Microbial taxa", "SNP", "KO");
   db.map <- data.frame(type=typesCol, name=namesCol);
   hit.inx <- match(types, db.map[, "type"]);
   names <- db.map[hit.inx, "name"];
