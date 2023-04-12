@@ -2248,7 +2248,7 @@ GetNetStatByType <- function(g){
         lbl = "miRNA"
       }else if(vec[i] == "gene"){
         nms = c(net.info$gene.ids, net.info$protein.ids)
-        lbl = "Gene/protein";
+        lbl = "mRNA/protein";
       }else if(vec[i] == "tf"){
         nms = net.info$tf.ids
         lbl = "TF";
