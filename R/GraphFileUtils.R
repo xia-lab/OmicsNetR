@@ -84,6 +84,8 @@ ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
   if(fileType == "jsonOmicsnet"){
     res <- ProcessOmicsNetJson(dataSet, fileName);
     return(res);
+  }else if(fileType == "jsonGraph"){
+    return(.set.nSet(dataSet));
   }else if(fileType == "graphml"){
     graphX = tryCatch({
       read_graph(fileName, format = "graphml")
