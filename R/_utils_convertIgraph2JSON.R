@@ -126,6 +126,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   topo.colsw[reg.inx] <- "#ff9900";
   topo.colsw[mic.inx] <- "#39FF14";
   topo.colsw[snp.inx] <- "#4B0082";
+  topo.colsw[nms %in% gene.nms] <- "#d3d3d3";
 
   topo.colsb <- topo.colsw;
 
@@ -202,7 +203,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   moltypes <- shapes;
   moltypes[nms %in% gene.nms] <- "gene";
   moltypes[nms %in% prot.nms] <- "protein";
-  moltypes[(nms %in% prot.nms) & (nms %in% gene.nms)] <- "gene_protein";
+  #moltypes[(nms %in% prot.nms) & (nms %in% gene.nms)] <- "gene_protein";
   for(i in 1:length(node.sizes)){
     nodes[[i]] <- list(
       id=nms[i],
