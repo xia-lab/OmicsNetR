@@ -103,6 +103,7 @@ CreateGraph <- function(dataSetObj=NA){
 #' @export
 #'
 PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
+  require("igraph");
   dataSet <- .get.nSet(dataSetObj);
 
   if(is.null(net.nm)){
@@ -129,6 +130,7 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
 }
 
 PrepareMinNetwork <- function(dataSetObj=NA, net.nm, json.nm){
+  require("igraph");
   dataSet <- .get.nSet(dataSetObj);
   my.ppi <-SteinerTree_cons(seed.genes_entrez, ppi.comps[[net.nm]],2);
   ppi.comps$minimumNet <<- my.ppi;
