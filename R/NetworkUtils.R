@@ -772,7 +772,9 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
 
   if(length(edge.res)>0){
     netw_input_type <- paste0(netw.type,"_", inputType,"_", data.org, "_", orig.input);
-    edgeu.res.list[[netw_input_type]] <<- unique(edge.res[,c(1,2)]);
+    edgeu.res.list[[netw_input_type]]$table <- unique(edge.res[,c(1,2)]);
+    edgeu.res.list[[netw_input_type]]$database <- makeReadable(db.type);
+    edgeu.res.list <<- edgeu.res.list;
     nodeu.ids <<- c(nodeu.ids, node.ids);
     nodeu.nms <<- c(nodeu.nms, node.nms);
   }
@@ -1079,6 +1081,7 @@ UpdateSubnetStats <- function(){
 #'
 #' @export
 FindCommunities <- function(method="infomap", use.weight=FALSE){
+  library(igraph);
   set.seed(1);
   # make sure this is the connected
   current.net <- ppi.comps[[current.net.nm]];
@@ -1514,7 +1517,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
       curr.type <- strsplit(curr.nm, "_")[[1]][1];
       # to make sure network expansion only uses nodes from primary network depending on input type
       if (curr.nm != nm && curr.orig.input == orig.inputType && .matchInputToPrimaryNet(orig.inputType, curr.type)) {
-        edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
+        edge.res <- rbind(edge.res, edgeu.res.list[[i]]$table);
       }
     }
     if(length(edge.res) > 0){
@@ -1568,7 +1571,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
   edge.res <- data.frame();
   if(length(edgeu.res.list) > 0){
     for(i in 1:length(edgeu.res.list)){
-      edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
+      edge.res <- rbind(edge.res, edgeu.res.list[[i]]$table);
     }
   }
 
@@ -1791,10 +1794,11 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
 #'
 #' @param fileNm Input file name for exporting result table as .csv
 #' @param method Method name, only "rwr" is supported
+#' @param queryType seeds or highlighted nodes for report saving purposes
 #' @param nodeids The IDs of nodes set as seed nodes "; " separated.
 #'
 #' @export
-DoGba <- function(fileNm="NA", method="rwr", nodeids){
+DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids){
   require("RandomWalkRestartMH")
   require("igraph")
 
@@ -1819,6 +1823,16 @@ DoGba <- function(fileNm="NA", method="rwr", nodeids){
 
   csvNm <- paste0(gsub(".json", "", fileNm), ".csv");
   fast.write.csv(RWR_PPI_Results$RWRM_Results, file=csvNm);
+
+  #record table for report
+  type = "gba";
+  dataSet$imgSet$enrTables[[type]] <- list();
+  dataSet$imgSet$enrTables[[type]]$table <- RWR_PPI_Results$RWRM_Results;
+  dataSet$imgSet$enrTables[[type]]$library <- "";
+  dataSet$imgSet$enrTables[[type]]$query <- queryType; 
+  dataSet$imgSet$enrTables[[type]]$algo <- "Random walk with restart";
+  dataSet <<- dataSet;
+
   if(.on.public.web){
     return(1);
   }else{
@@ -1989,7 +2003,7 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
   for(i in 1:length(edgeu.res.list)){
     seed.type <- strsplit(names(edgeu.res.list)[i], "_")[[1]][2];
     seeds <- unique(rownames(dataSet$exp.mat[[seed.type]]));
-    edge.df <- edgeu.res.list[[i]];
+    edge.df <- edgeu.res.list[[i]]$table;
     edge.num <- dim(edge.df)[1];
     nodes <- unique(unname(unlist(edge.df)));
     node.num <- length(nodes);
@@ -1997,7 +2011,7 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
     netw.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][1];
     input.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][2];
     inputName <- convertInputTypes2Names(input.type);
-    interactionName <- convertInteraction2Names(netw.type);
+    interactionName <- paste0(convertInteraction2Names(netw.type), " (", edgeu.res.list[[i]]$database ,")");
     net.stats[i,] <- c(inputName, interactionName, node.num,edge.num,query.num, names(edgeu.res.list)[i]);
   }
   saveRDS(dataSet$seeds.proteins, "seeds.rds");
@@ -2015,7 +2029,7 @@ DeleteIndNet <- function(netNm){
   edge.res <- data.frame();
   if(length(edgeu.res.list) > 0){
     for(i in 1:length(edgeu.res.list)){
-      edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
+      edge.res <- rbind(edge.res, edgeu.res.list[[i]]$table);
     }
   }
   omics.net$edge.data <- edge.res;
@@ -2034,7 +2048,7 @@ PrepareGraph <- function(net.nm, type="", export=T){
   if(type == "subnetwork"){
     g <- ppi.comps[[net.nm]];
   }else{
-    g <- simplify(graph.data.frame(edgeu.res.list[[net.nm]], directed=FALSE));
+    g <- simplify(graph.data.frame(edgeu.res.list[[net.nm]]$table, directed=FALSE));
     net.value <- net.nm;
     net.nm <- paste0("network_", net.nm);
   }
@@ -2166,7 +2180,7 @@ SanityCheckSelection <- function(dataSetObj=NA){
   e.list.len <- length(edgeu.res.list);
   if(length(type.vec) > 1 && e.list.len>1){
     node.res.list <- lapply(edgeu.res.list, function(x){
-      unique(unlist(x))
+      unique(unlist(x$table))
     })
     num.vec <- seq.int(e.list.len);
     cat(e.list.len, "==elen");
