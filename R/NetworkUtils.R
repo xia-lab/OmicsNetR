@@ -1338,12 +1338,7 @@ PerformLayOut <- function(net.nm, algo, focus){
 # Adapted from PCSF
 # https://github.com/IOR-Bioinformatics/PCSF
 Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dummies){
-  ppi <<- ppi;
-  terminals <<- terminals;
-  w <<- 2;
-  b <<- 1;
-  mu <<- 0.0005;
-  save.image("pcsf.RData");
+
   # Gather the terminal genes to be analyzed, and their scores
   terminal_names <- names(terminals)
   terminal_values <- as.numeric(terminals)
