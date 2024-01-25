@@ -828,6 +828,7 @@ SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
 }
 
 FilterBipartiNet <- function(dataSetObj=NA, nd.type, min.dgr, min.btw){
+  library(igraph);
   dataSet <- .get.nSet(dataSetObj);
   all.nms <- V(overall.graph)$name;
   edge.mat <- get.edgelist(overall.graph);
@@ -953,6 +954,7 @@ BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
 #' @export
 #'
 BuildPCSFNet <- function(dataSetObj=NA){
+  library(igraph);
   dataSet <- .get.nSet(dataSetObj);
   edg <- as.data.frame(get.edgelist(overall.graph));
   edg$V3 <- rep(1, nrow(edg));
@@ -1336,7 +1338,12 @@ PerformLayOut <- function(net.nm, algo, focus){
 # Adapted from PCSF
 # https://github.com/IOR-Bioinformatics/PCSF
 Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dummies){
-
+  ppi <<- ppi;
+  terminals <<- terminals;
+  w <<- 2;
+  b <<- 1;
+  mu <<- 0.0005;
+  save.image("pcsf.RData");
   # Gather the terminal genes to be analyzed, and their scores
   terminal_names <- names(terminals)
   terminal_values <- as.numeric(terminals)
@@ -1387,10 +1394,10 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
   ## Feed the input into the PCSF algorithm
   if(.on.public.web){
     #XiaLabCppLib is required here, but load before
-    output <- call_sr(from,to,cost,node_names,node_prizes)
+    output <- XiaLabCppLib::call_sr(from,to,cost,node_names,node_prizes)
   } else {
     #For R package, this function has already been included internally
-    output <- call_sr(from,to,cost,node_names,node_prizes)
+    output <- XiaLabCppLib::call_sr(from,to,cost,node_names,node_prizes)
   }
 
 
@@ -1411,7 +1418,7 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
     v <- data.frame(output[[4]], output[[5]], type)
     names(v) <- c("terminals", "prize", "type")
     subnet <- graph.data.frame(e,vertices=v,directed=F)
-    E(subnet)$weight <- as.numeric(output[[3]])
+    #E(subnet)$weight <- as.numeric(output[[3]])
     subnet <- delete_vertices(subnet, "DUMMY")
     subnet <- delete_vertices(subnet, names(which(degree(subnet)==0)));
     return(subnet);
