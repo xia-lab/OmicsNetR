@@ -26,6 +26,7 @@ Init.Data<-function(){
   }
 
   dataSet <- list();
+  dataSet$imgSet <- list();
   dataSet$snpRegion <- F;
   dataSet$allOrgs <- "";
   dataSet$viewTable <- list();
@@ -348,7 +349,7 @@ GetInputNames <- function(dataSetObj=NA){
     }
     nms.and.size.vec[i] <- paste0(nm, " (", length.vec[i], ")");
   }
-
+  dataSet$inputInfo <- nms.and.size.vec;
   dataSet <<- dataSet
   return(nms.and.size.vec);
 }
@@ -492,7 +493,7 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
     if(sum(hits) > 0){
         row.ids <- rownames(dataSet$viewTable[[table.nm]])[hits];
         dataSet$viewTable[[table.nm]] <- dataSet$viewTable[[table.nm]][!hits,];
-        edgeu.res.list[[table.nm]] <-  dataSet$viewTable[[table.nm]]
+        edgeu.res.list[[table.nm]]$table <-  dataSet$viewTable[[table.nm]]
         UpdateModifiedTable(edgeu.res.list);
         fast.write.csv(dataSet$viewTable[[table.nm]], file="omicsnet_edgelist.csv", row.names=FALSE);
         .set.nSet(dataSet);
@@ -507,7 +508,7 @@ UpdateModifiedTable <- function(edgeu.res.list) {
 
   if(length(edgeu.res.list) > 0){
     for(i in 1:length(edgeu.res.list)){
-      edge.res <- rbind(edge.res, edgeu.res.list[[i]]);
+      edge.res <- rbind(edge.res, edgeu.res.list[[i]]$table);
     }
   } 
 

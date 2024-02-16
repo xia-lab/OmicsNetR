@@ -205,6 +205,14 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
   csv.nm <- paste(file.nm, ".csv", sep="");
   fast.write.csv(resTable1, file=csv.nm, row.names=F);
 
+  #record table for report
+  type = "regNetwork";
+  dataSet$imgSet$enrTables[[type]] <- list()
+  dataSet$imgSet$enrTables[[type]]$table <- resTable1;
+  dataSet$imgSet$enrTables[[type]]$library <- fun.type
+  dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"
+  dataSet <<- dataSet
+
   return(1);
 }
 
@@ -309,6 +317,14 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
   sink(json.nm)
   cat(json.mat);
   sink();
+
+  #record table for report
+  type = "network";
+  dataSet$imgSet$enrTables[[type]] <- list()
+  dataSet$imgSet$enrTables[[type]]$table <- resTable;
+  dataSet$imgSet$enrTables[[type]]$library <- fun.type
+  dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"
+  dataSet <<- dataSet
 
   # write csv
   csv.nm <- paste(file.nm, ".csv", sep="");
