@@ -273,22 +273,38 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     netData[["peakEdges"]] <- PeakSet$edges;
   }
 
-  if(file.exists("micSet.qs")){
-    micSet <- qs::qread("micSet.qs");
-    inx = names(micSet$met.mic) %in% nms;
-    netData[["metMic"]] <- micSet$met.mic[inx];
-    netData[["metMicScore"]] <- micSet$met.mic.score[inx];
-    micTbl <- list();
-    j = 1;
-    for(i in 1:length(micSet$met.mic.table)){
-      if(micSet$met.mic.table[[i]]["KEGG"] %in% nms){
-        micTbl[[j]] <- micSet$met.mic.table[[i]]
-        j = j + 1;
-      }
+
+if(file.exists("micSet.qs")){
+  micSet <- qs::qread("micSet.qs");
+  inx = names(micSet$met.mic) %in% nms;
+  netData[["metMic"]] <- micSet$met.mic[inx];
+  netData[["metMicScore"]] <- micSet$met.mic.score[inx];
+  micTbl <- list();
+  j = 1;
+  for(i in 1:length(micSet$met.mic.table)){
+    if(micSet$met.mic.table[[i]]["KEGG"] %in% nms){
+      micTbl[[j]] <- micSet$met.mic.table[[i]]
+      j = j + 1;
     }
-    netData[["metMicTable"]] <- micTbl
-    netData[["micThresh"]] <- dataSet$mic.thresh;
   }
+  netData[["metMicTable"]] <- micTbl
+  netData[["micThresh"]] <- dataSet$mic.thresh;
+  
+  # Convert the list of vectors into a data frame
+  df <- do.call(rbind, lapply(micSet$met.mic.table, function(x) {
+    as.data.frame(t(unlist(x)), stringsAsFactors = FALSE)
+  }))
+  
+  # Assign column names based on the keys of the first item in the list
+  colnames(df) <- names(micSet$met.mic.table[[1]])
+  
+  # Convert character columns back to numeric as necessary
+  numeric_cols <- c("potential", "ExcluUni", "AbundPred")
+  df[numeric_cols] <- lapply(df[numeric_cols], function(x) as.numeric(as.character(x)))
+  df$ExcluUni <- NULL;
+  qs::qsave(df, "met_prediction.qs")
+  fast.write.csv(df, "met_prediction.csv",row.names=F);
+}
 
   if(any(dataSet$gene_type_vec == 4)){
     netData[["snpTable"]] <- snpTable;
@@ -301,5 +317,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   sink(filenm);
   cat(RJSONIO::toJSON(netData));
   sink();
+  dataSet <<- dataSet
   return(.set.nSet(dataSet));
 }
