@@ -173,9 +173,7 @@ ShowMemoryUse <- function(..., n=30) {
 }
 
 CleanMemory <- function(){
-    for (i in 1:10){
-        gc(reset = T);
-    }
+   gc();
 }
 
 # need to obtain the full path to convert (from imagemagik) for cropping images
