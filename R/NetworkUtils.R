@@ -1465,9 +1465,8 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
 }
 
 convertIgraph2JSON <- function(dataSetObj=NA, net.nm, filenm, thera="FALSE", dim=3){
-  dataSet <- .get.nSet(dataSetObj);
   if(!exists("my.convert.igraph")){ # public web on same user dir
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/_utils_convertIgraph2JSON.Rc");
+    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_convertIgraph2JSON.Rc");
   }
   return(my.convert.igraph(dataSet, net.nm, filenm, thera, dim));
 }
