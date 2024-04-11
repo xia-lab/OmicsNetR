@@ -1191,10 +1191,51 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
   community.vec <- community.vec[ord.inx];
 
   all.communities <- paste(community.vec, collapse="||");
+  df <- convertModuleToDF(all.communities);
+  df <- df[,-c(3,5)];
+  
+  #record table for report
+  type = "module";
+  dataSet$imgSet$enrTables[[type]] <- list()
+  dataSet$imgSet$enrTables[[type]]$table <- df;
+  dataSet$imgSet$enrTables[[type]]$library <- "";
+  dataSet$imgSet$enrTables[[type]]$algo <- method;
+  dataSet <<- dataSet;
   colnames(gene.community) <- c("Id", "Label", "Module");
   fast.write.csv(gene.community, file="module_table.csv", row.names=F);
   return(all.communities);
 }
+
+convertModuleToDF <- function(dataString) {
+  # Split the string into lines based on the '||' separator
+  lines <- strsplit(dataString, "\\|\\|")[[1]]
+  
+  # Initialize an empty list to store each row's data
+  rows <- list()
+  
+  # Iterate over each line and split further by ';' to extract individual fields
+    i <- 1;
+  for (line in lines) {
+    parts <- strsplit(line, ";")[[1]]
+    if (length(parts) >= 4) {  # Ensure there are enough parts to form a complete row
+      # Extract and store the data for this row
+      rows[[length(rows) + 1]] <- list(
+        Module = paste0("Module ", i),
+        Size = parts[1],
+        Name = as.numeric(parts[2]),
+        `P-value` = as.numeric(parts[3]),
+        IDs = parts[4]
+      )
+    i = i +1;
+    }
+  }
+  
+  # Convert the list of rows into a dataframe
+  df <- do.call(rbind, lapply(rows, function(row) as.data.frame(row, stringsAsFactors = FALSE)))
+  # Column names are already set via the list names, so this line is actually redundant
+  return(df)
+}
+
 
 community.significance.test <- function(graph, vs, ...) {
   subgraph <- induced.subgraph(graph, vs)
@@ -1427,9 +1468,8 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
 }
 
 convertIgraph2JSON <- function(dataSetObj=NA, net.nm, filenm, thera="FALSE", dim=3){
-  dataSet <- .get.nSet(dataSetObj);
   if(!exists("my.convert.igraph")){ # public web on same user dir
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/_utils_convertIgraph2JSON.Rc");
+    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_convertIgraph2JSON.Rc");
   }
   return(my.convert.igraph(dataSet, net.nm, filenm, thera, dim));
 }
