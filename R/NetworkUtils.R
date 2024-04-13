@@ -332,7 +332,7 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   UpdateSubnetStats();
 
   module.count <<- module.count
-  if(uploadedGraph == "false"){
+  if(uploadedGraph){
     convertIgraph2JSONFromFile(module.nm, filenm, dim);
   }else{
     convertIgraph2JSON(dataSet, module.nm, filenm, FALSE, dim);
