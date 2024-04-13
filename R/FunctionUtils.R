@@ -6,7 +6,7 @@
 
 LoadLib <- function(fun.type){
   fun.type <- tolower(fun.type);
-  if(fun.type %in% c("kegg", "reactome", "motif", "bp", "cc", "mf","panth_mf", "go_bp", "go_cc", "go_panthbp", "go_panthcc", "go_panthmf","mirfamily", "mircluster", "mirdisease","mirtissue", "mirfunction")){
+  if(fun.type %in% c("kegg", "reactome", "motif", "bp", "cc", "mf","panth_mf", "go_bp", "go_cc","go_mf",  "go_panthbp", "go_panthcc", "go_panthmf","mirfamily", "mircluster", "mirdisease","mirtissue", "mirfunction")){
     LoadEnrLib("standard", fun.type);
   }else if(fun.type == 'integ'){
     LoadKEGGLibOther("integ");
