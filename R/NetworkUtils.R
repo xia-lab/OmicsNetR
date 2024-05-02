@@ -283,6 +283,7 @@ scoreClusters <- function(clust_2_protein,prot_meas){
 #' @export
 #'
 ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
+  library(igraph);
   dim = as.numeric(dim);
   set.seed(8574);
   nodes <- strsplit(nodeids, ";")[[1]];
