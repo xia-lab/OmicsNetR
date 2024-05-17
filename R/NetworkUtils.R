@@ -1617,7 +1617,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
 
   #if(length(edge.res)>0 && length(old.edges)>0){
   if(all(dim(edge.res) == dim(old.edges))){
-    current.msg <<- paste("No interactions have been detected! Please make sure correct interaction type has been selected!")
+    current.msg <<- paste("No interactions detected. Please make sure to select correct interaction type and apply in appropriate order!")
     containMsg <- 1;
     return(c(0, 0, containMsg));
   }
