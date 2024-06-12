@@ -77,6 +77,8 @@ Init.Data<-function(){
     sqlite.path <<- "/home/zgy/sqlite/"; #zgy local
   }else if(file.exists("/home/ly/sqlite/")){
     sqlite.path <<- "/home/ly/sqlite/"; #ly local
+  }else if(file.exists("/home/fiona/sqlite")){
+    sqlite.path <<- "/home/fiona/sqlite/"; #fiona local
   }else if(file.exists("/Users/lzy/sqlite")){
     sqlite.path <<- "/Users/lzy/sqlite/"; #luyao local
   }else{
@@ -485,9 +487,9 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
     }
 
     if(action == "keep"){
-        hits = !hits; 
+        hits = !hits;
     }
-    
+
     if(sum(hits) > 0){
         row.ids <- rownames(dataSet$viewTable[[table.nm]])[hits];
         dataSet$viewTable[[table.nm]] <- dataSet$viewTable[[table.nm]][!hits,];
@@ -508,7 +510,7 @@ UpdateModifiedTable <- function(edgeu.res.list) {
     for(i in 1:length(edgeu.res.list)){
       edge.res <- rbind(edge.res, edgeu.res.list[[i]]$table);
     }
-  } 
+  }
 
   omics.net$edge.data <- unique(edge.res);
   omics.net <<- omics.net;
@@ -534,3 +536,66 @@ PrepareSqliteDB <- function(sqlite_Path, onweb = TRUE) {
 #importFrom("grDevices", "col2rgb", "colorRampPalette", "dev.off","hsv", "rainbow")
 #importFrom("stats", "aggregate", "complete.cases", "dnorm", "filter","formula", "lm", "median", "na.omit", "p.adjust", "phyper","quantile", "wilcox.test")
 #importFrom("utils", "capture.output", "install.packages","installed.packages", "object.size", "read.csv","read.table", "sessionInfo", "write.csv")
+
+
+SetFunctionByDbVersion <- function(db_version) {
+  # Defined according to DB update
+  func_names <- list(
+    'mir2gene.sqlite' = c('doProteinIDMapping', 'QueryMirSQLite'),
+    'omicsnet_met.sqlite' = c('QueryMetSQLiteNet', 'QueryM2mSQLiteNet', 'QueryMicM2mSQLiteNet'),
+    'ppi.sqlite' = c('QueryPpiSQLite'),
+    'tf2gene.sqlite' = c('QueryTFSQLite')
+  )
+  version_suffix <- '_2022'
+
+  for (db_name in names(func_names)) {
+    funcs <- func_names[[db_name]]
+    for (func in funcs) {
+      if (db_version == "previousDB") {
+        SetToCurrent(func, db_name, version_suffix)
+      } else {
+        SetToPrevious(func, db_name, version_suffix)
+      }
+    }
+  }
+}
+
+SetToCurrent <- function(func_name, db_name, version_suffix) {
+  db_name_versioned <- sub("(\\.sqlite)$", paste0(version_suffix, "\\1"), db_name)
+
+  original_func <- get(func_name, envir = .GlobalEnv)
+  original_body <- body(original_func)
+
+  modified_body <- lapply(original_body, function(line) {
+    if (is.call(line) && any(grepl(db_name_versioned, deparse(line)))) {
+      modified_line <- gsub(db_name_versioned, db_name, deparse(line))
+      return(parse(text = modified_line)[[1]])
+    } else {
+      return(line)
+    }
+  })
+
+  modified_func <- original_func
+  body(modified_func) <- as.call(modified_body)
+  assign(func_name, modified_func, envir = .GlobalEnv)
+}
+
+SetToPrevious <- function(func_name, db_name, version_suffix) {
+  db_name_versioned <- sub("(\\.sqlite)$", paste0(version_suffix, "\\1"), db_name)
+
+  original_func <- get(func_name, envir = .GlobalEnv)
+  original_body <- body(original_func)
+
+  modified_body <- lapply(original_body, function(line) {
+    if (is.call(line) && any(grepl(db_name, deparse(line)))) {
+      modified_line <- gsub(db_name, db_name_versioned, deparse(line))
+      return(parse(text = modified_line)[[1]])
+    } else {
+      return(line)
+    }
+  })
+
+  modified_func <- original_func
+  body(modified_func) <- as.call(modified_body)
+  assign(func_name, modified_func, envir = .GlobalEnv)
+}

@@ -1573,7 +1573,6 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
       query.vec <- unique(nodes.query);
     }
 
-
     if(length(query.vec) == 0 && length(dataSet$exp.mat[["gene"]])>0){
       query.vec <- rownames(dataSet$exp.mat[["gene"]])
       seed.genes <<- c(seed.genes, query.vec);
@@ -1617,7 +1616,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
 
   #if(length(edge.res)>0 && length(old.edges)>0){
   if(all(dim(edge.res) == dim(old.edges))){
-    current.msg <<- paste("No interactions have been detected! Please make sure correct interaction type has been selected!")
+    current.msg <<- paste("No interactions detected. Please make sure to start with a database containing the molecule type of the current queries!")
     containMsg <- 1;
     return(c(0, 0, containMsg));
   }
