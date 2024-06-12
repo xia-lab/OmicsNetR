@@ -283,6 +283,7 @@ scoreClusters <- function(clust_2_protein,prot_meas){
 #' @export
 #'
 ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
+  library(igraph);
   dim = as.numeric(dim);
   set.seed(8574);
   nodes <- strsplit(nodeids, ";")[[1]];
@@ -332,7 +333,7 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   UpdateSubnetStats();
 
   module.count <<- module.count
-  if(uploadedGraph == "false"){
+  if(uploadedGraph){
     convertIgraph2JSONFromFile(module.nm, filenm, dim);
   }else{
     convertIgraph2JSON(dataSet, module.nm, filenm, FALSE, dim);
@@ -1297,29 +1298,19 @@ PerformLayOut <- function(net.nm, algo, focus){
   g <- ppi.comps[[net.nm]];
   vc <- vcount(g);
   if(algo == "Default"){
-    if(vc > 3000) {
-      pos.xy <- layout.lgl(g, maxiter = 100);
-    }else if(vc > 2000) {
-      pos.xy <- layout.lgl(g, maxiter = 150);
-    }else if(vc > 1000) {
-      pos.xy <- layout.lgl(g, maxiter = 200);
+    if(vc > 5000) {
+      pos.xy <- layout_with_lgl(g);
     }else if(vc < 150){
-      pos.xy <- layout.kamada.kawai(g);
+      pos.xy <- layout_with_kk(g);
     }else{
-      pos.xy <- layout.fruchterman.reingold(g);
+      pos.xy <- layout_with_fr(g);
     }
   }else if(algo == "FrR"){
-    pos.xy <- layout.fruchterman.reingold(g);
+    pos.xy <- layout_with_fr(g, area=34*vc^2);
   }else if(algo == "random"){
-    pos.xy <- layout.random(g);
+    pos.xy <- layout_randomly (g);
   }else if(algo == "lgl"){
-    if(vc > 3000) {
-      pos.xy <- layout.lgl(g, maxiter = 100);
-    }else if(vc > 2000) {
-      pos.xy <- layout.lgl(g, maxiter = 150);
-    }else {
-      pos.xy <- layout.lgl(g, maxiter = 200);
-    }
+    pos.xy <- layout_with_lgl(g);
   }else if(algo == "gopt"){
     # this is a slow one
     if(vc > 3000) {
@@ -1331,7 +1322,7 @@ PerformLayOut <- function(net.nm, algo, focus){
     }else{
       maxiter <- 500;
     }
-    pos.xy <- layout.graphopt(g, niter=maxiter);
+    pos.xy <- layout_with_graphopt(g, niter=maxiter);
   }else if(algo == "fr"){
     pos.xy <- layout_with_fr(g, dim=3, niter=500)
   }else if(algo == "kk"){
@@ -1585,7 +1576,6 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
       query.vec <- unique(nodes.query);
     }
 
-
     if(length(query.vec) == 0 && length(dataSet$exp.mat[["gene"]])>0){
       query.vec <- rownames(dataSet$exp.mat[["gene"]])
       seed.genes <<- c(seed.genes, query.vec);
@@ -1629,7 +1619,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
 
   #if(length(edge.res)>0 && length(old.edges)>0){
   if(all(dim(edge.res) == dim(old.edges))){
-    current.msg <<- paste("No interactions have been detected! Please make sure correct interaction type has been selected!")
+    current.msg <<- paste("No interactions detected. Please make sure to start with a database containing the molecule type of the current queries!")
     containMsg <- 1;
     return(c(0, 0, containMsg));
   }

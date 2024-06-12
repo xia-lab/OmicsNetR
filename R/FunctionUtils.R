@@ -510,9 +510,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     }else if(type == "flybase"){
       db.path <- paste(lib.path, data.org, "/entrez_flybase.rds", sep="")
     }else{
-      print(type);
-      print("Unknown data type1");
-      return(0);
+      db.path <- paste(lib.path, data.org, "/entrez_",type, ".rds", sep="")
     }
 
     if(!.on.public.web){
