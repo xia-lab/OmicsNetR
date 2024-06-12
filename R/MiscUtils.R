@@ -80,33 +80,49 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
 
 generate_breaks = function(x, n, center = F){
     if(center){
-        m = max(abs(c(min(x, na.rm = T), max(x, na.rm = T))))
-        res = seq(-m, m, length.out = n + 1)
-    }
-    else{
-        res = seq(min(x, na.rm = T), max(x, na.rm = T), length.out = n + 1)
+        m = max(abs(c(min(x, na.rm = T), max(x, na.rm = T))));
+        res = seq(-m, m, length.out = n + 1);
+    } else {
+        res = seq(min(x, na.rm = T), max(x, na.rm = T), length.out = n + 1);
     }
     return(res)
 }
 
-ComputeColorGradient <- function(nd.vec, background="black", centered){
-    require("RColorBrewer");
-    minval = min(nd.vec, na.rm=TRUE);
-    maxval = max(nd.vec, na.rm=TRUE);
-    res = maxval-minval;
-
-    if(res == 0){
-        return(rep("#0b6623", length(nd.vec)));
-    }
-
-    #if(sum(nd.vec<0, na.rm=TRUE) > 0){
-    #    centered <- T;
-    #}else{
-    #    centered <- F;
-    #}
-    color <- GetColorGradient(background, centered);
-    breaks <- generate_breaks(nd.vec, length(color), center = centered);
-    return(scale_vec_colours(nd.vec, col = color, breaks = breaks));
+ComputeColorGradient <- function(nd.vec, background = "black", centered = FALSE) {
+  require("RColorBrewer")
+  
+  # Check if the input is a list of vectors or a vector
+  if (is.list(nd.vec) && all(sapply(nd.vec, is.numeric))) {
+    # Flatten the list of vectors into a single numerical vector
+    flat_vec <- unlist(nd.vec)
+  } else if (is.numeric(nd.vec)) {
+    flat_vec <- nd.vec
+  } else {
+    stop("Input must be a vector or a list of numeric vectors")
+  }
+  
+  # Compute min and max values
+  minval <- min(flat_vec, na.rm = TRUE)
+  maxval <- max(flat_vec, na.rm = TRUE)
+  res <- maxval - minval
+  
+  # Handle the case where all values are the same
+  if (res == 0) {
+    return(rep("#0b6623", length(flat_vec)))
+  }
+  
+  # Generate the color gradient
+  color <- GetColorGradient(background, centered)
+  breaks <- generate_breaks(flat_vec, length(color), center = centered)
+  color_vec <- scale_vec_colours(flat_vec, col = color, breaks = breaks)
+  
+  # If input was a list of vectors, map the colors back to the original list structure
+  if (is.list(nd.vec) && all(sapply(nd.vec, is.numeric))) {
+    color_list <- split(color_vec, ceiling(seq_along(color_vec) / 2))
+    return(color_list)
+  } else {
+    return(color_vec)
+  }
 }
 
 

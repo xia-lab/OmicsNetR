@@ -15,10 +15,11 @@ ProcessOmicsNetJson <- function(dataSet, fileName) {
     seed[[i]] <- df1;
   }
   dataSet$seed <- seed;
-  dataSet$seeds.expr <- obj$dataSet$seeds.expr
-  dataSet$seeds.proteins <- obj$dataSet$seeds.proteins
-  seed.expr <<- obj$seed.expr
-  omics.net <- obj$omics.net
+  dataSet$seeds.expr <- obj$dataSet$seeds.expr;
+  dataSet$seeds.proteins <- obj$dataSet$seeds.proteins;
+
+  seed.expr <<- obj$seed.expr;
+  omics.net <- obj$omics.net;
   if(is.null(dim(obj$omics.net$node.data))){
   node.data.df <- data.frame(Id=omics.net$node.data, Label=omics.net$node.data);
   }else{
