@@ -87,6 +87,8 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   }else{
     node.colsb.exp <- rep("#D3D3D3",length(node.dgr));
     node.colsw.exp <- rep("#C6C6C6",length(node.dgr));
+    node.cols.pie <- rep("#D3D3D3",length(node.dgr));
+
   }
 
   gene.nms <- rownames(dataSet$seed[["gene"]] )
