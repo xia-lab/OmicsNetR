@@ -229,8 +229,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
       x2d = pos.xy[i,1],
       y2d = pos.xy[i,2],
       user =network_prop[[i]],
-      exp2 = exp2[[i]],
-      expcolpie = node.cols.pie[[i]],
       attributes=list(
         degree=node.dgr[i],
         between=node.btw[i],
@@ -240,6 +238,11 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
       )
     );
   }
+
+    if(containsGP){
+      nodes[[i]]$exp2 = exp2[[i]];
+      nodes[[i]]$expcolpie = node.cols.pie[[i]];
+    }
 
   middleLayerType <- unique(shapes)[1]
 
@@ -313,7 +316,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
 parse_expression_data <- function(dataSet, exp, nms) {
   # Create an empty list to store the parsed data
   parsed_data <- list()
-
+  print(dataSet$exp.mat);
   # Loop through each name in nms
   for (i in seq_along(nms)) {
     nm <- nms[i]
