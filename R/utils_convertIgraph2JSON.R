@@ -316,7 +316,6 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
 parse_expression_data <- function(dataSet, exp, nms) {
   # Create an empty list to store the parsed data
   parsed_data <- list()
-  print(dataSet$exp.mat);
   # Loop through each name in nms
   for (i in seq_along(nms)) {
     nm <- nms[i]
