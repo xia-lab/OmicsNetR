@@ -1,7 +1,7 @@
 
 #color shape layout important
 my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3){
-
+  save.image("igraph.RData");
   if(exists("lbls",envir = .GlobalEnv)) {
     lbls <- get("lbls", envir = .GlobalEnv)
   } else {
@@ -54,7 +54,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   exp <-as.vector(get.vertex.attribute(g, name="abundance", index = V(g)));
   exp[is.na(exp)] <- 0;
   node.exp <- as.numeric(exp);
-
+  exp2 <- parse_expression_data(dataSet, exp,nms);
 
   # node size to degree values
   if(vcount(g)>500){
@@ -81,11 +81,14 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     exp.val <- node.exp;
     node.colsb.exp <- ComputeColorGradient(exp.val, "black", centered);
     node.colsw.exp <- ComputeColorGradient(exp.val, "white", centered);
+    node.cols.pie <- ComputeColorGradient(exp2, "black", centered);
     node.colsb.exp[bad.inx] <- "#d3d3d3";
     node.colsw.exp[bad.inx] <- "#c6c6c6";
   }else{
     node.colsb.exp <- rep("#D3D3D3",length(node.dgr));
     node.colsw.exp <- rep("#C6C6C6",length(node.dgr));
+    node.cols.pie <- rep("#D3D3D3",length(node.dgr));
+
   }
 
   gene.nms <- rownames(dataSet$seed[["gene"]] )
@@ -236,6 +239,11 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
     );
   }
 
+    if(containsGP){
+      nodes[[i]]$exp2 = exp2[[i]];
+      nodes[[i]]$expcolpie = node.cols.pie[[i]];
+    }
+
   middleLayerType <- unique(shapes)[1]
 
   for(i in 1:length(unique(shapes))){
@@ -302,4 +310,36 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   cat(RJSONIO::toJSON(netData));
   sink();
   return(.set.nSet(dataSet));
+}
+
+# Define the function
+parse_expression_data <- function(dataSet, exp, nms) {
+  # Create an empty list to store the parsed data
+  parsed_data <- list()
+  # Loop through each name in nms
+  for (i in seq_along(nms)) {
+    nm <- nms[i]
+    
+    # Initialize a vector to store the values
+    values <- numeric(2)
+    
+    # Get the expression value
+    values[1] <- exp[i]
+    
+    # Find the corresponding value in the dataSet$exp.mat matrices
+    for (name in names(dataSet$exp.mat)) {
+      mat <- dataSet$exp.mat[[name]]
+      if (nm %in% rownames(mat)) {
+        values[2] <- mat[nm, 1]
+      } else {
+        values[2] <- 0
+      }
+    }
+    
+    # Add the vector to the parsed_data list
+    parsed_data[[i]] <- values
+  }
+  
+  # Return the parsed data
+  return(parsed_data)
 }

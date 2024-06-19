@@ -966,10 +966,13 @@ BuildPCSFNet <- function(dataSetObj=NA){
   E(ppi)$weight <- as.numeric(edg[,3])
   ppi <- simplify(ppi)
 
-  if(sum(expr.vec) == 0){ # make sure weights are not 0?!
-    expr.vec <- expr.vec +1
-  }
-  expr.vec <- abs(expr.vec)
+  #if(sum(expr.vec) == 0){ # make sure weights are not 0?!
+    hit.inx <- unique(names(expr.vec)) %in% V(overall.graph)$name;
+    my.seeds = names(expr.vec)[hit.inx];
+    print(my.seeds);
+    expr.vec <- setNames(rep(5, length(my.seeds)), my.seeds)
+  #}
+  #expr.vec <- abs(expr.vec)
 
   g <- Compute.SteinerForest(ppi, expr.vec, w = 5, b = 100, mu = 0.0005);
 
