@@ -552,9 +552,9 @@ SetFunctionByDbVersion <- function(db_version) {
     funcs <- func_names[[db_name]]
     for (func in funcs) {
       if (db_version == "previousDB") {
-        SetToCurrent(func, db_name, version_suffix)
-      } else {
         SetToPrevious(func, db_name, version_suffix)
+      } else {
+        SetToCurrent(func, db_name, version_suffix)
       }
     }
   }
