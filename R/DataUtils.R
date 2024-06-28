@@ -542,14 +542,11 @@ SetFunctionByDbVersion <- function(db_version) {
   funcs <- c('Init.Data', 'PrepareSqliteDB')
   version_suffix <- '_2022'
 
-  for (db_name in names(func_names)) {
-    funcs <- func_names[[db_name]]
-    for (func in funcs) {
-      if (db_version == "previousDB") {
-        SetToPrevious(func, db_name, version_suffix)
-      } else {
-        SetToCurrent(func, db_name, version_suffix)
-      }
+  for (func in funcs) {
+    if (db_version == "previousDB") {
+      SetToPrevious(func, version_suffix)
+    } else {
+      SetToCurrent(func, version_suffix)
     }
   }
 }
