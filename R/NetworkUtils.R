@@ -348,7 +348,7 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
 }
 
 SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.type, db.type, require.exp=TRUE,
-                        min.score = 900, netInv, zero=FALSE,snpRegion=FALSE){
+                        min.score = 900, netInv, zero=FALSE, snpRegion=FALSE){
   
   dataSet <- .get.nSet(dataSetObj);
   if(inputType == "peak"){
@@ -366,19 +366,13 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     res <- QueryPpiSQLite(table.nm, protein.vec, require.exp, min.score);
 
     if(dataSet$ppiZero){
-    print(inputType)
-    print(orig.input);
       if(inputType == "gene"){
-        print(1)
         universe.vec <- c(protein.vec,rownames(dataSet$exp.mat$protein))
       }else if(inputType == "protein"){
-        print(2)
-
         universe.vec <- c(protein.vec,rownames(dataSet$exp.mat$gene))
       }else{
         universe.vec <- protein.vec;
       }
-
 
       hit.inx1 <- res[,1] %in% universe.vec;
       hit.inx2 <- res[,2] %in% universe.vec;
@@ -387,12 +381,14 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     }
 
     # no hits
-    if(nrow(res)==0){ return(c(0,0)); }
-    edge.res <- data.frame(Source=res$id1,Target=res$id2, stringsAsFactors=FALSE);
-    if(nrow(res)!=0){
-      row.names(edge.res) <- 1:nrow(res);
+    if(nrow(res)==0){ 
+        return(c(0,0)); 
     }
+    
+    edge.res <- data.frame(Source=res$id1,Target=res$id2, stringsAsFactors=FALSE);
+    row.names(edge.res) <- 1:nrow(res);
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
+
     node.ids <- c(res[,1], res[,2])
     node.nms <- c(res[,3], res[,4])
 
@@ -403,125 +399,17 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     }else{
       net.info$snp.ids <- c(net.info$snp.ids, unique(node.ids));
     }
+
   } else if(netw.type == "snp"){
-    require('RSQLite');
-
-
-    if(db.type == "PhenoScanner"){
-
-      require("tidyr");
-      if(dataSet$snp2gene$phesc.opt=="eqtl"){
-
-        res <- Query.PhenoScanner(snpquery= protein.vec,catalogue="eQTL");
-        fast.write.csv(res$results, file="phenoscanner.eQtl.csv",row.names=FALSE);
-        res <- res$results[,c("rsid","exp_gene")];
-        res <- unique(res[which(!(is.na(res$exp_gene)) &res$exp_gene !=""&res$exp_gene !="-" ),]);
-        colnames(res)[2] = "symbol";
-        res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F));
-
-      }else{
-
-        res <- Query.PhenoScanner(snpquery= protein.vec);
-        res <- res$snps;
-        fast.write.csv(res, file="phenoscanner.nearest.csv",row.names=FALSE);
-        colnames(res)[which(colnames(res)=="hgnc")] = "symbol";
-        res <- unique(data.frame(tidyr::separate_rows(res,symbol,sep =";"),stringsAsFactors = F))
-      }
-
-      res$entrez = doGeneIDMapping(res$symbol,type="symbol");
-      res$entrez[is.na(res$entrez)] = res$symbol[is.na(res$entrez)];
-
-    }else if(db.type == "vep"){
-
-      if(dataSet$snp2gene$vep.opt=="dis"){
-        res <- QueryVEP(protein.vec, vepDis=dataSet$snp2gene$vep.dis, snpRegion = snpRegion);
-        fast.write.csv(res, file="vep.map.csv",row.names=FALSE);
-        res <-  unique(res[which(res$gene_symbol !="NA"),c("rsid","gene_symbol")]);
-      }else{
-        require("dplyr")
-        res<- QueryVEP(protein.vec, vepDis=50,snpRegion = snpRegion)
-        fast.write.csv(res, file="vep.map.csv",row.names=FALSE);
-        res$distance[which(res$distance=="NA")] = 0;
-        res <- unique(res[!(is.na(res$gene_symbol)),c("gene_symbol","rsid","distance")]);
-        res <- unique(res[!(duplicated(res$gene_symbol,res$rsid)),]);
-        res <- data.frame(res %>% arrange(distance) %>%
-                           group_by(rsid) %>%
-                           mutate(rank = rank(distance)),stringsAsFactors=F);
-        res <- res[which(res$rank<(dataSet$snp2gene$vep.num + 1)),];
-      }
-
-      res$entrez <- doGeneIDMapping(res$gene_symbol,type="symbol")
-      res$entrez[is.na(res$entrez)] <- res$gene_symbol[is.na(res$entrez)]
-
-    }else{
-      if(db.type == "admire"){
-        file.nm <- "snp2mir";
-      }else{
-        file.nm <- "snp2tfbs";
-      }
-      db.path <- paste(sqlite.path, file.nm, sep="");
-      table.nm <- "hsa";
-      col.nm <- "rsid";
-      res <- Query.snpDB(db.path, protein.vec, table.nm, col.nm);
+  
+    if(!exists("my.snp.query")){ # public web on same user dir
+        compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_snp.Rc");
     }
-
-    if(db.type == "admire"){
-      targetColNm <- "MIRNA_Name";
-    }else if(db.type == "PhenoScanner"){
-      targetColNm <- "entrez";
-    }else if(db.type == "vep"){
-      targetColNm <- "entrez";
-    }else{
-      targetColNm <- "entrez";
-    }
-    colInx <- which(colnames(res) == targetColNm);
-
-    snp.list <- list();
-    snp.type.list <- list();
-    snpTable <<- snp.list;
-
-    edge.res <- data.frame(Source=res[,"rsid"],Target=res[,colInx], stringsAsFactors=FALSE);
-
-    if(nrow(res)!=0){
-      row.names(edge.res) <- 1:nrow(res);
-    }
-    fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
-
-    node.ids <- c(edge.res[,"Source"], edge.res[,"Target"])
-
-    #  print(node.ids)
-    if(db.type == "admire"){
-      symb <- res[,"MIRNA_Acc"];
-    }else if(db.type == "PhenoScanner"){
-      symb <- res[,"symbol"];
-    }else if(db.type == "vep"){
-      symb <- res[,"gene_symbol"];
-    }else{
-      symb <- doEntrez2SymbolMapping(res[,"entrez"]);
-    }
-    node.nms <- c(res[,"rsid"], symb);
-
-    if(netInv == "direct"){
-      targetIds <- unique(c(net.info$gene.ids, node.ids[!node.ids %in% protein.vec]));
-      net.info$snp.ids <- unique(protein.vec);
-    }else{
-      net.info$snp.ids <- unique(res[,"rsid"]);
-      if(!zero){
-        targetIds <- c(unique(protein.vec));
-      }
-    }
-
-    if(db.type == "admire"){
-      net.info$mir.ids <- targetIds;
-    }else if(db.type == "snp2tfbs"){
-      net.info$tf.ids <- targetIds;
-    }else if(db.type == "PhenoScanner"){
-      net.info$gene.ids <- targetIds;
-    }else{
-      net.info$gene.ids <- targetIds;
-    }
-
-    net.info$snpi.ids <- unique(node.ids);
+    res <- my.snp.query(dataSet, protein.vec, db.type, netInv, zero, snpRegion)
+    edge.res <- res$edge.res;
+    net.info <- res$net.info;
+    node.ids <- res$node.ids;
+    node.nms <- res$node.nms;
 
   } else if (netw.type == "tf") {
 
