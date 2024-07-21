@@ -129,7 +129,7 @@ PerformDataProcessing <- function() {
   if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv)
   } else {
-    return(0)
+    return(0L)
   }
   cat("Start preparing node set...")
   NodeSet <- Initiate_nodeset(PeakSet)
@@ -179,7 +179,7 @@ PerformDataProcessing <- function() {
   PeakSet$EdgeSet_all <- EdgeSet_all;
   PeakSet <<- PeakSet;
   message("Peak data processing completed!");
-  return(1)
+  return(1L)
 }
 
 #' PerformPropagation
@@ -190,7 +190,7 @@ PerformPropagation <- function() {
   if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv)
   } else {
-    return(0)
+    return(0L)
   }
   cat("Start Propagating from seeds...\n")
   StructureSet <- Propagate_structureset(PeakSet,
@@ -209,7 +209,7 @@ PerformPropagation <- function() {
   cat("done!\n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
   message("Peak data constructing propagation completed!");
-  return(1);
+  return(1L);
 }
 
 #' PerformGlobalOptimization

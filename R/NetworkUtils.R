@@ -1634,7 +1634,7 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   } else if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv);
   } else {
-    return(0);
+    return(0L);
   }
   nodes <- PeakSet$nodes;
   edges <- PeakSet$edges;
@@ -1704,7 +1704,7 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
   dataSet <<- dataSet;
   if(.on.public.web){
     .set.nSet(dataSet);
-    return(1);
+    return(1L);
   }else{
     return(.set.nSet(dataSet));
   }
