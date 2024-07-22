@@ -188,15 +188,15 @@ GetIndInteractionNames <- function(){
 }
 
 GetIndNetsEdgeNum <- function(){
-  as.numeric(dataSet$ind.net.stats$Edge);
+  as.integer(dataSet$ind.net.stats$Edge);
 }
 
 GetIndNetsNodeNum <- function(){
-  as.numeric(dataSet$ind.net.stats$Node);
+  as.integer(dataSet$ind.net.stats$Node);
 }
 
 GetIndNetsQueryNum <- function(){
-  as.numeric(dataSet$ind.net.stats$Query);
+  as.integer(dataSet$ind.net.stats$Query);
 }
 
 #' Compute the shortest path between two nodes
