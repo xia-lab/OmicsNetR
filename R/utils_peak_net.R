@@ -56,6 +56,7 @@ my.peak.net <- function(dataSetObj=NA){
       PeakSet$edges.df[,2] <- doHMDB2KEGGMapping(PeakSet$edges.df[,2]);
 
     }
+
     if(length(which(grepl("PBCM", PeakSet$mets)))/length(PeakSet$mets) > 0){
       PeakSet$mets <- doPubchem2KEGGMapping(PeakSet$mets);
       PeakSet$nodes.df[,1] <- doPubchem2KEGGMapping(PeakSet$nodes.df[,1]);

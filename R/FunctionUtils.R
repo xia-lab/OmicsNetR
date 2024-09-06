@@ -611,18 +611,19 @@ doPubchem2KEGGMapping <- function(entrez.vec){
   hit.inx <- match(entrez.vec, full.map[, "accession"]);
   symbols1 <- full.map[hit.inx, "KEGG"];
   symbols1 <- as.character(symbols1);
-  if(any(symbols1 == "")){
-    pcms <- entrez.vec[symbols1 == ""];
+  if(any(symbols1 == "" | is.na(symbols1))){
+    pcms <- entrez.vec[(symbols1 == "" | is.na(symbols1))];
     entrez.vec2 <- gsub("PBCM0+","",pcms);
     hit.inx <- match(entrez.vec2, gene.map[, "pubchem_id"]);
     symbols2 <- gene.map[hit.inx, "kegg_id"];
     symbols2 <- as.character(symbols2);
+    idxx <- which(symbols1 == "" | is.na(symbols1))
+    symbols1[idxx] <- symbols2
   }
-  symbols <- c(symbols2, symbols1)
   # if not gene symbol, use id by itself
-  symbols[is.na(symbols)] <- entrez.vec[is.na(symbols)];
-  symbols[symbols == ""] <- entrez.vec[symbols == ""];
-  return(symbols);
+
+  symbols1[(is.na(symbols1) | symbols1=="")] <- entrez.vec[(is.na(symbols1) | symbols1=="")];
+  return(symbols1);
 }
 
 # note, entrez.vec could contain NA/null, cannot use rownames
