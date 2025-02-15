@@ -101,10 +101,10 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs){
 PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType){
     if(!exists("my.reg.enrich")){ # public web on same user dir
         compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_reg_enrich.Rc");
-    }
+  }
     res <- my.reg.enrich(file.nm, fun.type, ora.vec, netInv, idType);
     return(res);
-}
+    }
 
 # note: hit.query, resTable must synchronize
 # ora.vec should contains entrez ids, named by their gene symbols
@@ -338,7 +338,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     cmpd.map <- readRDS(db.path)
     q.type <- type;
     cmpd.vec <- q.vec
-
+  
     if(q.type == "hmdb"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$hmdb_id));
     }else if(q.type == "kegg"){
@@ -349,12 +349,17 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$chebi_id));
     }else if(q.type == "reactome"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$reactome));
+    }else if(q.type == "name"){
+       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$name));
+ 
     }else{
       print("No support for this compound database");
       return(0);
     }
-
-    if(q.type != "kegg"){
+ 
+    if(q.type == "name"){
+       res_entrez <-  cmpd.map[hit.inx, c("kegg_id", type)];
+    }else if(q.type != "kegg"){
       typ = paste0(q.type, "_id")
       res_entrez <-  cmpd.map[hit.inx, c("kegg_id", typ)];
     }else{
@@ -372,6 +377,10 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     hit.inx <- match(q.vec, res[, "accession"]);
     entrezs <- res[hit.inx, ];
     entrezs = res[c(1,2)];
+  }else if(type == "NA"){
+   
+    entrezs <- data.frame(gene_id=q.vec,accession=q.vec)
+    rownames(entrezs) <- q.vec;
   }else {
     if(type == "gb"){
       # note, some ID can have version number which is not in the database
@@ -413,7 +422,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     hit.inx <- match(q.vec, db.map[, "accession"]);
     entrezs <- db.map[hit.inx, ];
   }
-
+ 
   return(entrezs);
 }
 

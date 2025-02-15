@@ -254,6 +254,12 @@ cleanMem <- function(n=10) { for (i in 1:n) gc() }
   }
 }
 
+ReadList <- function(dataSetObj=NA, fullPath, fileNm){
+    fullUrl <- url(paste0(fullPath,"/", fileNm))
+    all_str <- paste0(readLines(fullUrl),collapse="\n");
+    return(all_str);
+}
+
 
 makeReadable <- function(str){
     result <- switch(str,
