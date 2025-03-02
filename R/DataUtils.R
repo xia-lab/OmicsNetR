@@ -119,8 +119,7 @@ SetCurrentDataMulti <- function(){
 #'
 #' @export
 PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
-  print(c(type,queryType))
-
+  
   if(!exists("dataSet")){
     Init.Data();
   }
@@ -250,7 +249,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   dataSet$seeds.proteins <- unique(dataSet$seeds.proteins)
   dataSet$seeds.expr <- as.matrix(dataSet$prot.mat);
   message(paste0("Preparing input list with the type of ", type, " completed."))
-
   if(.on.public.web){
     .set.nSet(dataSet);
     return (seed.proteins);
