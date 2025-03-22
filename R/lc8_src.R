@@ -5,7 +5,7 @@
 
 
 
-my_calculate_formula = function(Formula1,Formula2,sign = 1, Valid_formula = FALSE){
+my_calculate_formula <- function(Formula1,Formula2,sign = 1, Valid_formula = FALSE){
   formula2_ls = list()
   for(i in 1:length(Formula2)){
     formula2 = Formula2[i]

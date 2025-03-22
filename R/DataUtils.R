@@ -77,8 +77,6 @@ Init.Data<-function(){
     sqlite.path <<- "/home/zgy/sqlite/"; #zgy local
   }else if(file.exists("/home/ly/sqlite/")){
     sqlite.path <<- "/home/ly/sqlite/"; #ly local
-  }else if(file.exists("/home/fiona/sqlite")){
-    sqlite.path <<- "/home/fiona/sqlite/"; #fiona local
   }else if(file.exists("/Users/lzy/sqlite")){
     sqlite.path <<- "/Users/lzy/sqlite/"; #luyao local
   }else{
@@ -121,7 +119,7 @@ SetCurrentDataMulti <- function(){
 #'
 #' @export
 PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
-
+  
   if(!exists("dataSet")){
     Init.Data();
   }
@@ -251,7 +249,6 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   dataSet$seeds.proteins <- unique(dataSet$seeds.proteins)
   dataSet$seeds.expr <- as.matrix(dataSet$prot.mat);
   message(paste0("Preparing input list with the type of ", type, " completed."))
-
   if(.on.public.web){
     .set.nSet(dataSet);
     return (seed.proteins);
@@ -265,19 +262,22 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
 # parse out return the a matrix containing the logFc, with rows named by gene ID
 # if no 2nd col (logFC), the value will be padded by 0s
 .parseListInput <- function(geneIDs, IDtype){
-
-
+ 
   lines <- unlist(strsplit(geneIDs, "\r|\n|\r\n")[1]);
   if(substring(lines[1],1,1)=="#"){
     lines <- lines[-1];
   }
   if(IDtype == "meta" || IDtype == "name"){
     gene.lists <- lines;
+    if(!is.list(gene.lists)){
+    gene.lists <- strsplit(lines, "\\s+");
+     gene.lists <- lapply(gene.lists, function(x) paste(x,collapse = " "));
+   }
   }else{
     gene.lists <- strsplit(lines, "\\s+");
   }
   gene.mat <- do.call(rbind, gene.lists);
-
+ 
   if(dim(gene.mat)[2] == 1){ # add 0
     gene.mat <- cbind(gene.mat, rep(0, nrow(gene.mat)));
     current.msg <- "Only one column found in the list. Abundance will be all zeros. ";
@@ -285,17 +285,17 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     gene.mat <- gene.mat[,1:2];
     current.msg <- "More than two columns found in the list. Only first two columns will be used. ";
   }
-
+ 
   rownames(gene.mat) <- gene.mat[,1];
   gene.mat <- gene.mat[,-1, drop=F];
   gene.mat <- RemoveDuplicates(gene.mat, "mean", quiet=T);
   good.inx <- !is.na(gene.mat[,1]);
   gene.mat <- gene.mat[good.inx, , drop=F];
-
+ 
   if(IDtype %in% c("class", "family","order" ,"genus","species","strain", "phylum")){
     rownames(gene.mat) <- gsub("_", " ", rownames(gene.mat));
   }
-
+ 
   return(gene.mat);
 }
 
@@ -489,9 +489,9 @@ UpdateEdgeTableEntries <- function(table.nm,table.type, col.id, method, value, a
     }
 
     if(action == "keep"){
-        hits = !hits;
+        hits = !hits; 
     }
-
+    
     if(sum(hits) > 0){
         row.ids <- rownames(dataSet$viewTable[[table.nm]])[hits];
         dataSet$viewTable[[table.nm]] <- dataSet$viewTable[[table.nm]][!hits,];
@@ -512,7 +512,7 @@ UpdateModifiedTable <- function(edgeu.res.list) {
     for(i in 1:length(edgeu.res.list)){
       edge.res <- rbind(edge.res, edgeu.res.list[[i]]$table);
     }
-  }
+  } 
 
   omics.net$edge.data <- unique(edge.res);
   omics.net <<- omics.net;

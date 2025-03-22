@@ -129,7 +129,7 @@ PerformDataProcessing <- function() {
   if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv)
   } else {
-    return(0)
+    return(0L)
   }
   cat("Start preparing node set...")
   NodeSet <- Initiate_nodeset(PeakSet)
@@ -178,8 +178,8 @@ PerformDataProcessing <- function() {
   PeakSet$StructureSet <- StructureSet;
   PeakSet$EdgeSet_all <- EdgeSet_all;
   PeakSet <<- PeakSet;
-  message("Peak data processing completed!");
-  return(1)
+  print("Peak data processing completed!");
+  return(1L)
 }
 
 #' PerformPropagation
@@ -190,7 +190,7 @@ PerformPropagation <- function() {
   if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv)
   } else {
-    return(0)
+    return(0L)
   }
   cat("Start Propagating from seeds...\n")
   StructureSet <- Propagate_structureset(PeakSet,
@@ -208,8 +208,8 @@ PerformPropagation <- function() {
   PeakSet$StructureSet_df <- StructureSet_df;
   cat("done!\n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
-  message("Peak data constructing propagation completed!");
-  return(1);
+  print("Peak data constructing propagation completed!");
+  return(1L);
 }
 
 #' PerformGlobalOptimization
@@ -220,15 +220,15 @@ PerformGlobalOptimization <- function() {
   if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv);
   } else {
-    return(0);
+    return(0L);
   }
   cat("Start Preparing ILP Set for optimization...\n")
   PeakSet$ILPSet <- .prepareILPSet(PeakSet);
   PeakSet <- .networkConstruct(PeakSet);
   cat("Global done!\n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
-  message("Global optimization completed!");
-  return(1);
+  print("Global optimization completed!");
+  return(1L);
 }
 
 #' PerformAnnotation
@@ -239,7 +239,7 @@ PerformAnnotation <- function() {
     if(exists("PeakSet",envir = .GlobalEnv)) {
         PeakSet <- get("PeakSet", envir = .GlobalEnv)
     } else {
-        return(0)
+        return(0L)
     }
     cat("Start Perform Network Annotation...\n")
     ResSet <- path_annotation(PeakSet$ILPSet,
@@ -280,8 +280,8 @@ PerformAnnotation <- function() {
     PeakSet <<- PeakSet <- .cleanPeakSet(PeakSet);
     qs::qsave(PeakSet, file = "PeakSet_done.qs");
     cat("Annotation done!\n Time consumed this step: ", Sys.time() - t0, "\n")
-    message("Peak annotation completed!");
-    return(1)
+    print("Peak annotation completed!");
+    return(1L)
 }
 
 GetFastPeak <- function(){

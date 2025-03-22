@@ -102,126 +102,12 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs){
 }
 
 PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType){
-  require("plyr")
-  ora.nms <- names(ora.vec);
-  # prepare for the result table
-  set.size<-100;
-
-  if (fun.type %in% c("chea", "encode", "jaspar", "trrust")){
-    table.nm <- paste(data.org, fun.type, sep="_");
-    res <- QueryTFSQLite(table.nm, ora.vec, netInv);
-    # no hits
-    if(nrow(res)==0){ return(c(0,0)); }
-    edge.res <- data.frame(gene=res[,"entrez"], symbol=res[,"symbol"],id=res[,"tfid"], name=res[,"tfname"]);
-    node.ids <- c(res[,"entrez"], res[,"tfid"]);
-    node.nms <- c(res[,"symbol"], res[,"tfname"]);
-
-  }else if(fun.type == "mirnet"){ # in miRNA, table name is org code, colname is id type
-    table.nm <- data.org
-    res <- QueryMirSQLite(table.nm, "entrez", ora.vec, "inverse", data.org);
-    if(nrow(res)==0){ return(c(0,0)); }
-    edge.res <- data.frame(gene=res[,"entrez"], symbol=res[,"symbol"], id=res[,"mir_acc"], name=res[,"mir_id"] );
-    node.ids <- c(res[,"entrez"], res[,"mir_acc"])
-    node.nms <- c(res[,"symbol"], res[,"mir_id"]);
-
-  }else if(fun.type == "met"){
-    table.nm <- paste(data.org, "kegg", sep="_");
-    res <- QueryMetSQLiteNet(table.nm, ora.vec, "inverse");
-    if(nrow(res)==0){ return(c(0,0)); }
-    edge.res <- data.frame(gene=res[,"entrez"], symbol=res[,"symbol"], id=res[,"kegg"], name=res[,"met"] );
-    node.ids <- c(res[,"entrez"], res[,"kegg"])
-    node.nms <- c(res[,"symbol"], res[,"met"]);
-
-  }else{
-    table.nm <- paste("drug", data.org, sep="_");
-    ora.vec <- doEntrez2UniprotMapping(ora.vec);
-    res <- QueryDrugSQLite(ora.vec);
-    if(nrow(res)==0){ return(c(0,0)); }
-    edge.res <- data.frame(gene=doUniprot2EntrezMapping(res[,"upid"]), symbol=res[,"symbol"], id=res[,"dbid"], name=res[,"dbname"] );
-    node.ids <- c(doUniprot2EntrezMapping(res[,"upid"]), res[,"dbid"])
-    node.nms <- c(res[,"symbol"], res[,"dbname"]);
+    if(!exists("my.reg.enrich")){ # public web on same user dir
+        compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_reg_enrich.Rc");
   }
-
-  edge.res$mix <- paste0(edge.res[,1], edge.res[,3]);
-  edge.res <- edge.res[!duplicated(edge.res$mix),];
-
-  row.names(edge.res) <- 1:nrow(edge.res);
-  fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
-
-  hit.freq <- count(edge.res, 'id')
-  hit.freq <- hit.freq[order(hit.freq$freq, decreasing = TRUE),]
-  hit.freqnm <- count(edge.res, 'name')
-  hit.freqnm <- hit.freqnm[order(hit.freqnm$freq, decreasing = TRUE),]
-  hit.freq$name <- hit.freqnm$name
-  hits.gene <- list()
-
-  if(idType == "uniprot"){
-    for(i in 1:nrow(hit.freq)){
-      df <- edge.res[which(edge.res$id == hit.freq$id[i]),];
-      gene.vec <- as.vector(df$gene);
-      gene.vec <- doEntrez2UniprotMapping(gene.vec)
-      hits.gene[[i]] <- gene.vec;
+    res <- my.reg.enrich(file.nm, fun.type, ora.vec, netInv, idType);
+    return(res);
     }
-  } else if(idType == "entrez") {
-    for(i in 1:nrow(hit.freq)){
-      df <- edge.res[which(edge.res$id == hit.freq$id[i]),];
-      gene.vec <- as.vector(df$gene);
-      hits.gene[[i]] <- gene.vec;
-    }
-  }else {
-    for(i in 1:nrow(hit.freq)){
-      df <- edge.res[which(edge.res$id == hit.freq$id[i]),];
-      gene.vec <- as.vector(df$gene);
-      gene.vec <- doEntrez2EmblProteinMapping(gene.vec)
-      hits.gene[[i]] <- gene.vec;
-    }
-  }
-  names(hits.gene) = hit.freq$name;
-
-  resTable1 = data.frame(hit.freq$id, hit.freq$name, hit.freq$freq)
-  colnames(resTable1) = c("Id", "Name", "Hits")
-  resTable1 = resTable1[order(-resTable1$Hits),]
-  current.msg <<- "Regulatory element enrichment analysis was completed";
-
-  if(regBool == "true"){
-    resTable1 <- resTable1[which(resTable1$Hits == regCount),]
-  }
-  # write json
-  require("RJSONIO");
-  fun.ids <- resTable1[,1];
-  fun.nms <- resTable1[,2];
-  fun.hits <- resTable1[,3];
-  json1.res <- list(
-    fun.ids = fun.ids,
-    fun.nms = fun.nms,
-    fun.hits = fun.hits,
-    fun.genes = hits.gene
-  );
-  json.mat <- toJSON(json1.res);
-  json.nm <- paste(file.nm, ".json", sep="");
-  sink(json.nm)
-  cat(json.mat);
-  sink();
-
-  resTable1$Features = hits.gene
-
-  type = "regNetwork";
-  # write csv
-  csv.nm <- paste(file.nm, ".csv", sep="");
-  fast.write.csv(resTable1, file=csv.nm, row.names=F);
-  fast.write.csv(resTable1, file=paste0(type, "_enr_table.csv"), row.names=F);
-
-  #record table for report
-  dataSet$imgSet$enrTables[[type]] <- list()
-  dataSet$imgSet$enrTables[[type]]$table <- resTable1;
-  dataSet$imgSet$enrTables[[type]]$res.mat <- resTable1[,3, drop=F];
-
-  dataSet$imgSet$enrTables[[type]]$library <- fun.type
-  dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"
-  dataSet <<- dataSet
-
-  return(1);
-}
 
 # note: hit.query, resTable must synchronize
 # ora.vec should contains entrez ids, named by entrez ids ASWELL
@@ -483,7 +369,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     cmpd.map <- readRDS(db.path)
     q.type <- type;
     cmpd.vec <- q.vec
-
+  
     if(q.type == "hmdb"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$hmdb_id));
     }else if(q.type == "kegg"){
@@ -494,12 +380,17 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$chebi_id));
     }else if(q.type == "reactome"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$reactome));
+    }else if(q.type == "name"){
+       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$name));
+ 
     }else{
       print("No support for this compound database");
       return(0);
     }
-
-    if(q.type != "kegg"){
+ 
+    if(q.type == "name"){
+       res_entrez <-  cmpd.map[hit.inx, c("kegg_id", type)];
+    }else if(q.type != "kegg"){
       typ = paste0(q.type, "_id")
       res_entrez <-  cmpd.map[hit.inx, c("kegg_id", typ)];
     }else{
@@ -517,6 +408,10 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     hit.inx <- match(q.vec, res[, "accession"]);
     entrezs <- res[hit.inx, ];
     entrezs = res[c(1,2)];
+  }else if(type == "NA"){
+   
+    entrezs <- data.frame(gene_id=q.vec,accession=q.vec)
+    rownames(entrezs) <- q.vec;
   }else {
     if(type == "gb"){
       # note, some ID can have version number which is not in the database
@@ -558,7 +453,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     hit.inx <- match(q.vec, db.map[, "accession"]);
     entrezs <- db.map[hit.inx, ];
   }
-
+ 
   return(entrezs);
 }
 
@@ -756,18 +651,19 @@ doPubchem2KEGGMapping <- function(entrez.vec){
   hit.inx <- match(entrez.vec, full.map[, "accession"]);
   symbols1 <- full.map[hit.inx, "KEGG"];
   symbols1 <- as.character(symbols1);
-  if(any(symbols1 == "")){
-    pcms <- entrez.vec[symbols1 == ""];
+  if(any(symbols1 == "" | is.na(symbols1))){
+    pcms <- entrez.vec[(symbols1 == "" | is.na(symbols1))];
     entrez.vec2 <- gsub("PBCM0+","",pcms);
     hit.inx <- match(entrez.vec2, gene.map[, "pubchem_id"]);
     symbols2 <- gene.map[hit.inx, "kegg_id"];
     symbols2 <- as.character(symbols2);
+    idxx <- which(symbols1 == "" | is.na(symbols1))
+    symbols1[idxx] <- symbols2
   }
-  symbols <- c(symbols2, symbols1)
   # if not gene symbol, use id by itself
-  symbols[is.na(symbols)] <- entrez.vec[is.na(symbols)];
-  symbols[symbols == ""] <- entrez.vec[symbols == ""];
-  return(symbols);
+
+  symbols1[(is.na(symbols1) | symbols1=="")] <- entrez.vec[(is.na(symbols1) | symbols1=="")];
+  return(symbols1);
 }
 
 # note, entrez.vec could contain NA/null, cannot use rownames
