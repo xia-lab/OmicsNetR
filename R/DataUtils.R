@@ -313,6 +313,8 @@ SetAllOrgs <- function(orgs){
 }
 
 GetAllOrgs <- function(){
+  print(dataSet$allOrgs);
+  print("allOrgs");
   return(dataSet$allOrgs);
 }
 

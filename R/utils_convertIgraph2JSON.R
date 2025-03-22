@@ -1,7 +1,7 @@
 
 #color shape layout important
 my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3){
-  save.image("igraph.RData");
+  #save.image("igraph.RData");
   if(exists("lbls",envir = .GlobalEnv)) {
     lbls <- get("lbls", envir = .GlobalEnv)
   } else {
@@ -17,7 +17,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   }else{
     g <- ppi.comps[[net.nm]];
   }
-
+  current.net.nm <<- net.nm;
   modules = "NA"
 
   nms <- V(g)$name;
@@ -266,14 +266,15 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
 
   # save node table
 
-  nd.tbl <- data.frame(Id=nms, Label=lbls, Degree=node.dgr, Betweenness=round(node.btw,2));
+
+  nd.tbl <- data.frame(Id=nms, Label=lbls, Degree=node.dgr, Betweenness=round(node.btw,2), Expression = node.exp, Closeness=node.clo, Eigenvalue=node.eig);
   # order
   ord.inx <- order(nd.tbl[,3], nd.tbl[,4], decreasing = TRUE)
   nd.tbl <- nd.tbl[ord.inx, ];
-  fast.write.csv(nd.tbl, file="node_table.csv", row.names=FALSE);
 
   netData <- list(nodes=nodes,typeVec=dataSet$gene_type_vec, edges=edge.mat, modules=modules, prot.nms=prot.nms,gene.nms=gene.nms, containsGP=containsGP, middleLayerType = middleLayerType);
 
+  dataSet$imgSet$node_table <- nd.tbl;
 
   if(exists("PeakSet",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSet", envir = .GlobalEnv)
@@ -304,11 +305,13 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   }
 
   netData[["colorVec"]] <- color.vec;
-  dataSet$jsonNms$network <<- filenm
+  dataSet$jsonNms$network <- filenm
   partialToBeSaved <<- c(partialToBeSaved, c(filenm))
   sink(filenm);
   cat(RJSONIO::toJSON(netData));
   sink();
+
+  dataSet <<- dataSet;
   return(.set.nSet(dataSet));
 }
 

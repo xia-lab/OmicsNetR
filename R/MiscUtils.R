@@ -374,3 +374,69 @@ makeReadable <- function(str){
                     "pubchem" = "PubChem",
                  str)
 }
+
+
+GetNodeMat <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+    df <- .readDataTable('node_table.csv')
+    df[,-c(1:2)] <- lapply(df[,-c(1:2)], function(col) as.numeric(as.character(col)))
+    dataSet$imgSet$node_table <<- df;
+  }
+  return(as.matrix(dataSet$imgSet$node_table[,-c(1:2)]))  # ensure matrix of numerics
+}
+
+GetNodeRowNames <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+  df <- .readDataTable('node_table.csv')
+    dataSet$imgSet$node_table <<- df;
+
+  }
+  dataSet$imgSet$node_table$Id;
+}
+
+GetNodeGeneSymbols <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+  df <- .readDataTable('node_table.csv')
+    dataSet$imgSet$node_table <<- df;
+
+  }
+  dataSet$imgSet$node_table$Label;
+}
+
+GetNodeColNames <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+  df <- .readDataTable('node_table.csv')
+    dataSet$imgSet$node_table <<- df;
+
+  }
+  return(colnames(dataSet$imgSet$node_table[,-c(1:2)]));
+
+}
+
+CleanNumber <-function(bdata){
+  if(sum(bdata==Inf)>0){
+    inx <- bdata == Inf;
+    bdata[inx] <- NA;
+    bdata[inx] <- 999999;
+  }
+  if(sum(bdata==-Inf)>0){
+    inx <- bdata == -Inf;
+    bdata[inx] <- NA;
+    bdata[inx] <- -999999;
+  }
+  bdata;
+}
+
+CheckDetailsTablePerformed <-function(type){
+  performed <- T;
+  if(type == "node"){
+    performed <- file.exists("node_table.csv");
+  }else if(type %in% c( "network_enr", "regNetwork_enr", "gba_enr", "module_enr", "defaultEnr")){
+    clean_type <- gsub("_enr", "", type);
+    performed <- !is.null(dataSet$imgSet$enrTables[[clean_type]]);
+  }
+  print(paste("checkPerformed=", type, "====",performed));
+
+return(performed)
+}
+
