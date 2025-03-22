@@ -192,7 +192,6 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
   }
 
   #get gene symbols
-  print(head(hits.query));
   resTable <- data.frame(Pathway=rownames(res.mat),IDs=as.vector(current.setids[names(hits.query)]), res.mat);
   current.msg <<- "Functional enrichment analysis was completed";
 
