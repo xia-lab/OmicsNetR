@@ -267,7 +267,29 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   # save node table
 
 
-  nd.tbl <- data.frame(Id=nms, Label=lbls, Degree=node.dgr, Betweenness=round(node.btw,2), Expression = node.exp, Closeness=node.clo, Eigenvalue=node.eig);
+# Collect all potential columns as a named list
+node_data <- list(
+  Id = nms,
+  Label = lbls,
+  Degree = node.dgr,
+  Betweenness = if (length(node.btw) > 0) round(node.btw, 2) else NULL,
+  Expression = node.exp,
+  Closeness = node.clo,
+  Eigenvalue = node.eig
+)
+
+# Filter out NULL or 0-length entries
+node_data <- Filter(function(x) length(x) > 0, node_data)
+
+# Check that all remaining vectors have the same length
+lens <- sapply(node_data, length)
+
+if (length(unique(lens)) == 1 && lens[1] > 0) {
+  nd.tbl <- as.data.frame(node_data)
+} else {
+  warning("Node table not created: inconsistent or empty inputs.")
+  nd.tbl <- NULL
+}
   # order
   ord.inx <- order(nd.tbl[,3], nd.tbl[,4], decreasing = TRUE)
   nd.tbl <- nd.tbl[ord.inx, ];
