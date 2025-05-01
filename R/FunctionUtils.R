@@ -112,11 +112,6 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
 # note: hit.query, resTable must synchronize
 # ora.vec should contains entrez ids, named by entrez ids ASWELL
 PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network"){
-  #print("debug == PerformEnrichAnalysis");
-  #print(paste("file.nm=", file.nm))
-  #print(paste("fun.type=", fun.type))
-  #print(paste(ora.vec))
-  # print(paste("save.type=", save.type))
 
   # prepare lib
   LoadLib(fun.type);
@@ -191,16 +186,19 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
     }
   }
 
-  #get gene symbols
+  # add a new column containing pathway names
+  ###########
+  #### note the column position shifts by one as new columns introduced
+  ###########
   resTable <- data.frame(Pathway=rownames(res.mat),IDs=as.vector(current.setids[names(hits.query)]), res.mat);
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
   require("RJSONIO");
   fun.anot <- hits.query;
-  fun.padj <- resTable[,6]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj) };
-  fun.pval <- resTable[,5]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
-  hit.num <- resTable[,4]; if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
+  fun.padj <- resTable[,7]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj) };
+  fun.pval <- resTable[,6]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
+  hit.num <- resTable[,5]; if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
   fun.ids <- as.vector(current.setids[names(fun.anot)]);
   if(length(fun.ids) ==1) { fun.ids <- matrix(fun.ids) };
   json.res <- list(
@@ -1008,6 +1006,9 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat){
   #get gene symbols
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
   current.msg <<- "Functional enrichment analysis was completed";
+
+#print("testing here!!!");
+#print(resTable[1:5,1:6]);
 
   # write json
   require("RJSONIO");
