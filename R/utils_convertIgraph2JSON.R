@@ -296,6 +296,7 @@ if (length(unique(lens)) == 1 && lens[1] > 0) {
 
   netData <- list(nodes=nodes,typeVec=dataSet$gene_type_vec, edges=edge.mat, modules=modules, prot.nms=prot.nms,gene.nms=gene.nms, containsGP=containsGP, middleLayerType = middleLayerType);
 
+  fast.write.csv(nd.tbl, file="node_table.csv", row.names=FALSE);
   dataSet$imgSet$node_table <- nd.tbl;
 
   if(exists("PeakSet",envir = .GlobalEnv)) {
