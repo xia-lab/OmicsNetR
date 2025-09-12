@@ -54,11 +54,14 @@ LoadEnrLib <- function(type, subtype){
   current.geneset <- set[[setsInx]];
 
   set.ids<- names(current.geneset);
+  names(set.ids) <-  set$term;
+
   names(current.geneset) <- set[[termInx]];
   current.geneset <<- current.geneset
 
   current.setlink <<- set[[linkInx]];
   current.setids <<- set.ids;
+  print(head(current.setids));
   current.universe <<- unique(unlist(current.geneset));
 }
 
@@ -107,8 +110,9 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
     }
 
 # note: hit.query, resTable must synchronize
-# ora.vec should contains entrez ids, named by their gene symbols
-PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
+# ora.vec should contains entrez ids, named by entrez ids ASWELL
+PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network"){
+
   # prepare lib
   LoadLib(fun.type);
 
@@ -119,7 +123,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
   set.size<-length(current.geneset);
   res.mat<-matrix(0, nrow=set.size, ncol=5);
   rownames(res.mat)<-names(current.geneset);
-  colnames(res.mat)<-c("Total", "Expected", "Hits", "P.Value", "FDR");
+  colnames(res.mat)<-c("Total", "Expected", "Hits", "Pval", "FDR");
 
   # need to cut to the universe covered by the pathways, not all genes
   if(tolower(fun.type) %in% c("chea", "jaspar", "encode", "mir")){
@@ -182,16 +186,19 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
     }
   }
 
-  #get gene symbols
-  resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
+  # add a new column containing pathway names
+  ###########
+  #### note the column position shifts by one as new columns introduced
+  ###########
+  resTable <- data.frame(Pathway=rownames(res.mat),IDs=as.vector(current.setids[names(hits.query)]), res.mat);
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
   require("RJSONIO");
   fun.anot <- hits.query;
-  fun.padj <- resTable[,6]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj) };
-  fun.pval <- resTable[,5]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
-  hit.num <- resTable[,4]; if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
+  fun.padj <- resTable$FDR; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj) };
+  fun.pval <- resTable$Pval; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
+  hit.num <- paste0(resTable$Hits,"/",resTable$Total); if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
   fun.ids <- as.vector(current.setids[names(fun.anot)]);
   if(length(fun.ids) ==1) { fun.ids <- matrix(fun.ids) };
   json.res <- list(
@@ -208,19 +215,40 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
   cat(json.mat);
   sink();
 
+  gene.vec <- current.universe;
+  sym.vec <- doEntrez2SymbolMapping(gene.vec);
+  gene.nms <- sym.vec;
+
+  current.geneset.symb <- lapply(current.geneset, 
+                       function(x) {
+                         gene.nms[gene.vec%in%unlist(x)];
+                       }
+  );
+
+
   #record table for report
-  type = "network";
+  type <- save.type;
   dataSet$imgSet$enrTables[[type]] <- list()
   dataSet$imgSet$enrTables[[type]]$table <- resTable;
   dataSet$imgSet$enrTables[[type]]$library <- fun.type
   dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"
+
+
+  dataSet$imgSet$enrTables[[type]]$current.geneset <- current.geneset;
+  dataSet$imgSet$enrTables[[type]]$hits.query <- hits.query;
+  dataSet$imgSet$enrTables[[type]]$current.setids <- current.setids;
+  dataSet$imgSet$enrTables[[type]]$res.mat<- res.mat;
+  dataSet$imgSet$enrTables[[type]]$current.geneset.symb <- current.geneset.symb;
+  print(paste("saveType==" ,save.type))
   dataSet <<- dataSet
 
   # write csv
+  # print(file.nm);
   csv.nm <- paste(file.nm, ".csv", sep="");
   a <- lapply(fun.anot,function(x){paste(x,collapse = "; ")})
   resTable$ids <- unlist(a);
   fast.write.csv(resTable, file=csv.nm, row.names=F);
+  fast.write.csv(resTable, file=paste0(type, "_enr_table.csv"), row.names=F);
 
   return(1);
 }
@@ -801,7 +829,7 @@ LoadKEGGLibOther<-function(type){
 #'
 #' @export
 #'
-PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids){
+PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, save.type="network"){
   dataSet <- .get.nSet(dataSetObj);
   if(ids=="Not_applicable"){
     ora.vec <- keggp.allfeatures;
@@ -861,9 +889,9 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids){
     integ$integP = integP
     res.mat <- integ
     hits.query<<-hits.query
-    SaveIntegEnr(file.nm,res.mat);
+    SaveIntegEnr(file.nm,res.mat, save.type);
   }else{
-    SaveSingleOmicsEnr(file.nm,res.mat);
+    SaveSingleOmicsEnr(file.nm,res.mat, save.type);
     if(fun.type == "kegg"){
       kg.query <<-hits.query
     }else if(fun.type == "keggm"){
@@ -895,7 +923,7 @@ PerformEnrichAnalysisKegg <- function(dataSetObj=NA, file.nm, fun.type, ora.vec)
   set.size<-length(current.geneset);
   res.mat<-matrix(0, nrow=set.size, ncol=5);
   rownames(res.mat)<-names(current.geneset);
-  colnames(res.mat)<-c("Total", "Expected", "Hits", "P.Value", "FDR");
+  colnames(res.mat)<-c("Total", "Expected", "Hits", "Pval", "FDR");
 
   # need to cut to the universe covered by the pathways, not all genes
 
@@ -982,9 +1010,9 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat){
   # write json
   require("RJSONIO");
   fun.anot <- hits.query;
-  fun.padj <- resTable[,6]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj)};
-  fun.pval <- resTable[,5]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval)};
-  hit.num <- resTable[,4]; if(length(hit.num) ==1) { hit.num <- matrix(hit.num)};
+  fun.padj <- resTable$FDR; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj)};
+  fun.pval <- resTable$Pval; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval)};
+  hit.num <- paste0(resTable$Hits,"/",resTable$Total); if(length(hit.num) ==1) { hit.num <- matrix(hit.num)};
   fun.ids <- as.vector(current.setids[names(fun.anot)]);
   if(length(fun.ids) ==1) {fun.ids <- matrix(fun.ids)};
 
@@ -1404,4 +1432,100 @@ getApiResult <- function(url="NA", init=TRUE){
 
   })
   return(json_data)
+}
+
+
+GetSetIDLinks <- function(type=""){
+  imgSet <- dataSet$imgSet;
+  fun.type <- imgSet$enrTables[[type]]$library;
+
+  ids <- imgSet$enrTables[[type]]$table$IDs
+  pathways <- imgSet$enrTables[[type]]$table$Pathway
+  print("GetSetIDLinks");
+  print(type);
+  print(fun.type);
+
+    if(fun.type %in% c("go_bp", "go_mf", "go_cc")){
+        annots <- paste("<a href='https://www.ebi.ac.uk/QuickGO/term/", ids, "' target='_blank'>", pathways, "</a>", sep="");
+    }else if(fun.type %in% c("go_panthbp", "go_panthmf", "go_panthcc")){
+        annots <- paste("<a href='https://www.pantherdb.org/panther/categoryList.do?searchType=basic&fieldName=all&organism=all&fieldValue=", ids, "&listType=5' target='_blank'>", pathways, "</a>", sep="");
+    }else if(fun.type == "kegg"){
+        annots <- paste("<a href='https://www.genome.jp/dbget-bin/www_bget?pathway+", ids, "' target='_blank'>", pathways, "</a>", sep="");
+    }else if(fun.type == "reactome"){
+        annots <- paste("<a href='https://reactome.org/content/query?q=", ids, "' target='_blank'>", pathways, "</a>", sep="");
+    }else{
+        annots <- ids;
+    }
+  
+  return(annots);
+}
+
+GetHTMLPathSet <- function(type, setNm){
+  imgSet <- dataSet$imgSet
+  current.geneset <- imgSet$enrTables[[type]]$current.geneset.symb;
+  hits.query <- imgSet$enrTables[[type]]$hits.query;
+  set <- current.geneset[[setNm]]; 
+  
+  #set <- cur.setids[[setNm]];
+  
+  hits <- hits.query
+  
+  # highlighting with different colors
+  red.inx <- which(set %in% hits[[setNm]]);
+  
+  # use actual cmpd names
+  #nms <- names(set);
+  nms <- set;
+  nms[red.inx] <- paste("<font color=\"red\">", "<b>", nms[red.inx], "</b>", "</font>",sep="");
+
+  return(cbind(setNm, paste(unique(nms), collapse="; ")));
+}
+
+
+GetEnrResultMatrix <-function(type){
+  imgSet <- dataSet$imgSet;
+  res <- imgSet$enrTables[[type]]$res.mat
+  res <- suppressWarnings(apply(res, 2, as.numeric)); # force to be all numeric
+  return(signif(as.matrix(res), 5));
+}
+
+GetEnrResultColNames<-function(type){
+  imgSet <- dataSet$imgSet;
+  res <- imgSet$enrTables[[type]]$res.mat
+  colnames(res);
+}
+
+GetEnrResSetIDs<-function(type){
+  imgSet <- dataSet$imgSet
+  res <- imgSet$enrTables[[type]]$table;
+  return(res$IDs);
+}
+
+GetEnrResSetNames<-function(type){
+  imgSet <- dataSet$imgSet
+  res <- imgSet$enrTables[[type]]$table;
+  if("Pathway" %in% colnames(res)){
+  return(res$Pathway);
+  }else if("Name" %in% colnames(res)){
+  return(res$Name);
+  }else{
+    return(res[,1]);
+  }
+
+}
+
+
+PerformDefaultEnrichment <- function(file.nm, fun.type){
+  require("igraph");
+  net.nm <- names(ppi.comps)[1];
+  my.ppi <- ppi.comps[[net.nm]];
+  ora.vec <- V(my.ppi)$name;
+  names(ora.vec) <- ora.vec;
+  save.type <- "defaultEnr";
+  if(fun.type %in% c("keggm", "integ")){
+      PerformEnrichAnalysisKegg(file.nm, fun.type, ora.vec, save.type);
+  }else{
+      PerformEnrichAnalysis(file.nm, fun.type, ora.vec, save.type);
+  }
+  return(1);
 }

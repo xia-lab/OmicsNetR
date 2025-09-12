@@ -1,5 +1,8 @@
   
 my.peak.net <- function(dataSetObj=NA){
+  #save.image("peaknet.RData");
+  #print("peaknet1");
+
   dataSet <- .get.nSet(dataSetObj);
   if(exists("PeakSetDone",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSetDone", envir = .GlobalEnv);
@@ -72,7 +75,7 @@ my.peak.net <- function(dataSetObj=NA){
   rownames(dataSet$exp.mat[["peak"]]) <- paste0(PeakSet$NetID_output$peak_id,"_", PeakSet$NetID_output$medMz);
 
   cmp.nms <- PrepareInputList(dataSet, rownames(dataSet$seed[["peak"]]), data.org, "peak", "kegg");
-  
+  #print("peaknet2");
   qs:::qsave(PeakSet, "PeakSet_net.qs");
   dataSet <<- dataSet;
   if(.on.public.web){
