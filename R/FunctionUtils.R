@@ -61,7 +61,6 @@ LoadEnrLib <- function(type, subtype){
 
   current.setlink <<- set[[linkInx]];
   current.setids <<- set.ids;
-  print(head(current.setids));
   current.universe <<- unique(unlist(current.geneset));
 }
 
@@ -239,7 +238,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
   dataSet$imgSet$enrTables[[type]]$current.setids <- current.setids;
   dataSet$imgSet$enrTables[[type]]$res.mat<- res.mat;
   dataSet$imgSet$enrTables[[type]]$current.geneset.symb <- current.geneset.symb;
-  print(paste("saveType==" ,save.type))
+  #print(paste("saveType==" ,save.type))
   dataSet <<- dataSet
 
   # write csv
@@ -1327,14 +1326,6 @@ Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
   dataSet$snpTable <- mir.dic;
 
   return(mir.dic);
-}
-
-
-Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalogue="GWAS", pvalue=1E-5, proxies="None", r2=0.8, build=37){
-  if(!exists("my.query.phenoscanner")){ # public web on same user dir
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_phenoscanner.Rc");
-  }
-  return(my.query.phenoscanner(snpquery, genequery, regionquery, catalogue, pvalue, proxies, r2, build));
 }
 
 

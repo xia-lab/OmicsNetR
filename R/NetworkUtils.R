@@ -859,7 +859,7 @@ BuildPCSFNet <- function(dataSetObj=NA){
   #if(sum(expr.vec) == 0){ # make sure weights are not 0?!
     hit.inx <- unique(names(expr.vec)) %in% V(overall.graph)$name;
     my.seeds = names(expr.vec)[hit.inx];
-    print(my.seeds);
+    #print(my.seeds);
     expr.vec <- setNames(rep(5, length(my.seeds)), my.seeds)
   #}
   #expr.vec <- abs(expr.vec)
@@ -1078,12 +1078,11 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
   #community.vec <- community.vec[ord.inx];
   #qnum.vec <- qnum.vec[ord.inx];
   ord.inx <- order(psize.vec, decreasing=T);
-  print(ord.inx);
+  #print(ord.inx);
   community.vec <- community.vec[ord.inx];
 
   all.communities <- paste(community.vec, collapse="||");
   df <- convertModuleToDF(all.communities);
-  print(df);
   df <- df[,-c(3,5)];
 
 
@@ -1094,7 +1093,6 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
 
   df1<- data.frame(Size=df$Size,Pval=df$P.value)
   rownames(df1) <- df$Module;
-  print(head(df1));
   dataSet$imgSet$enrTables[[type]]$res.mat <- df1;
   dataSet$imgSet$enrTables[[type]]$library <- "";
   dataSet$imgSet$enrTables[[type]]$algo <- method;
