@@ -1115,12 +1115,51 @@ SaveIntegEnr <- function(file.nm,res.mat){
 # note, last two par only for STRING database
 QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
   require('RSQLite')
-  path <- paste0(sqlite.path, "ppi.sqlite");
-  if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+
+  # Determine which SQLite file to use based on database type
+  if(grepl("string$", table.nm)){
+    db.path <- paste(sqlite.path, "ppi_string.sqlite", sep="");
+  }else if(grepl("intact$", table.nm)){
+    db.path <- paste(sqlite.path, "ppi_intact.sqlite", sep="");
+  }else if(grepl("huri$", table.nm)){
+    db.path <- paste(sqlite.path, "ppi_huri.sqlite", sep="");
+  }else if(grepl("innate$", table.nm)){
+    # Check if separate InnateDB file exists, otherwise fall back to ppi.sqlite
+    innate.path <- paste(sqlite.path, "ppi_innate.sqlite", sep="");
+    if(file.exists(innate.path)){
+      db.path <- innate.path;
+    }else{
+      db.path <- paste(sqlite.path, "ppi.sqlite", sep="");
+    }
+  }else{
+    # For other databases (rolland, irefinx, interactome, tissue, etc.), use original ppi.sqlite
+    db.path <- paste(sqlite.path, "ppi.sqlite", sep="");
   }
-  ppi.db <- dbConnect(SQLite(), path);
+
+  # DEBUG: Print database path and query info
+  print(paste("DEBUG QueryPpiSQLite: Database file =", db.path));
+  print(paste("DEBUG QueryPpiSQLite: File exists =", file.exists(db.path)));
+  print(paste("DEBUG QueryPpiSQLite: Table name =", table.nm));
+  print(paste("DEBUG QueryPpiSQLite: Number of query genes =", length(q.vec)));
+  print("DEBUG QueryPpiSQLite: First 10 query gene IDs:");
+  print(head(q.vec, 10));
+  print(paste("DEBUG QueryPpiSQLite: requireExp =", requireExp));
+  print(paste("DEBUG QueryPpiSQLite: min.score =", min.score));
+
+  ppi.db <- .connect.sqlite(db.path);
+
+  # DEBUG: Check what IDs are actually in the database
+  test_query <- paste("SELECT DISTINCT id1 FROM", table.nm, "LIMIT 10");
+  sample_ids <- tryCatch({
+    .query.sqlite(ppi.db, test_query, FALSE);
+  }, error = function(e) {
+    data.frame(id1=c("error"));
+  });
+  print("DEBUG QueryPpiSQLite: Sample id1 values from database:");
+  print(sample_ids$id1);
+
   query <- paste(shQuote(q.vec),collapse=",");
+
   if(grepl("string$", table.nm)){
     if(requireExp){
       statement <- paste("SELECT * FROM ",table.nm, " WHERE ((id1 IN (", query, ")) OR (id2 IN (", query, ")))  AND combined_score >=", min.score, " AND experimental > 0", sep="");
@@ -1131,12 +1170,48 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
     statement <- paste("SELECT * FROM ",table.nm, " WHERE ((id1 IN (", query, ")) OR (id2 IN (", query, ")))", sep="");
   }
 
-  ppi.res <- .query.sqlite(ppi.db, statement);
+  # DEBUG: Print SQL query
+  print("DEBUG QueryPpiSQLite: SQL query:");
+  print(statement);
 
-  # remove dupliated edges
-  # ppi.res <- ppi.res[!duplicated(ppi.res$row_id),]
+  # Try to execute query with error handling for missing tables
+  ppi.res <- tryCatch({
+    .query.sqlite(ppi.db, statement);
+  }, error = function(e) {
+    dbDisconnect(ppi.db);
+    if(grepl("no such table", e$message, ignore.case = TRUE)){
+      stop(paste0("Database table '", table.nm, "' not found in ", basename(db.path),
+                  ". Please verify that the selected database (", table.nm,
+                  ") is available for your organism."));
+    }else{
+      stop(paste0("Database query failed: ", e$message));
+    }
+  });
+
+  # DEBUG: Print query results
+  print(paste("DEBUG QueryPpiSQLite: Rows returned (before dedup) =", nrow(ppi.res)));
+  print("DEBUG QueryPpiSQLite: Column names in result:");
+  print(colnames(ppi.res));
+  if(nrow(ppi.res) > 0){
+    print("DEBUG QueryPpiSQLite: First row sample:");
+    print(ppi.res[1,]);
+  }
+
+  # remove duplicated edges
+  # Check if row_id has valid values (not all NA/empty)
+  if("row_id" %in% colnames(ppi.res) && any(!is.na(ppi.res$row_id) & ppi.res$row_id != "")){
+    # row_id has valid values, use it for deduplication
+    ppi.res <- ppi.res[!duplicated(ppi.res$row_id),]
+  }else{
+    # row_id is empty/NULL, deduplicate by id1+id2 pair
+    ppi.res <- ppi.res[!duplicated(paste(ppi.res$id1, ppi.res$id2, sep="_")),]
+  }
+
+  print(paste("DEBUG QueryPpiSQLite: Rows returned (after dedup) =", nrow(ppi.res)));
+
   return(ppi.res);
 }
+
 
 # table name is org code, id.type is column name
 QueryMirSQLite <- function(table.nm, id.type, q.vec, inv, db.nm){
@@ -1404,4 +1479,51 @@ getApiResult <- function(url="NA", init=TRUE){
 
   })
   return(json_data)
+}
+
+
+
+.query.sqlite <- function(db.con, statement, offline=TRUE){
+  rs <- dbSendQuery(db.con, statement);
+  res <- fetch(rs, n=-1); # get all records
+  dbClearResult(rs);
+  if(offline){
+    dbDisconnect(db.con);
+  }
+  cleanMem();
+  return(res);
+}
+
+# OmniPath PPI query function
+QueryOmnipathPpiSQLite <- function(sqlite.path, data.org, q.vec){
+  require('RSQLite');
+  db.path <- paste(sqlite.path, "omnipath_ppi.sqlite", sep="");
+  con <- .connect.sqlite(db.path);
+  query <- paste(shQuote(q.vec),collapse=",");
+  statement <- paste("SELECT * FROM ", data.org, " WHERE ((id1 IN (", query, ")) OR (id2 IN (", query, ")))", sep="");
+  return(.query.sqlite(con, statement));
+}
+
+# OmniPath TF-gene query function
+QueryOmnipathTfSQLite <- function(sqlite.path, data.org, q.vec){
+  require('RSQLite');
+  db.path <- paste(sqlite.path, "omnipath_tf2gene.sqlite", sep="");
+  con <- .connect.sqlite(db.path);
+  query <- paste(shQuote(q.vec),collapse=",");
+  statement <- paste("SELECT * FROM ", data.org, " WHERE entrez IN (",query,")", sep="");
+  return(.query.sqlite(con, statement));
+}
+
+# OmniPath miRNA-gene query function
+QueryOmnipathMirSQLite <- function(sqlite.path, data.org, q.vec){
+  require('RSQLite');
+  db.path <- paste(sqlite.path, "omnipath_mir2gene.sqlite", sep="");
+  con <- .connect.sqlite(db.path);
+  query <- paste(shQuote(q.vec),collapse=",");
+  statement <- paste("SELECT * FROM ", data.org, " WHERE entrez IN (", query, ")", sep="");
+  return(.query.sqlite(con, statement));
+}
+
+.connect.sqlite <- function(db.path){
+  return(dbConnect(SQLite(), db.path));
 }

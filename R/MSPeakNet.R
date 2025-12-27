@@ -361,45 +361,47 @@ GetFastPeak <- function(){
 }
 
 .prepareILPSet <- function(PeakSet) {
-
-    ILPSet = list()
-
-    # Initialize
-    ILPSet[["ilp_nodes"]] <-
-        initiate_ilp_nodes(PeakSet);
-
-    ILPSet[["ilp_edges"]] <-
-        initiate_ilp_edges(PeakSet$EdgeSet_all,
-                           ILPSet,
-                           Exclude = ""); #can be faster
-
-    ILPSet[["heterodimer_ilp_edges"]] <-
-        initiate_heterodimer_ilp_edges(PeakSet$EdgeSet_all,
-                                       ILPSet,
-                                       PeakSet$NodeSet);
-
-    print("Finish ILPSet initialization")
-
-    # Score
-    ILPSet[["ilp_nodes"]] <-
-        score_ilp_nodes(ILPSet,
-                        metabolite_score = 0.1,
-                        putative_metabolite_score = 0,
-                        artifact_score = 0,
-                        unknown_score = -0.5)
-
-    ILPSet[["ilp_edges"]] <- score_ilp_edges(ILPSet, PeakSet$NodeSet)
-
-    ILPSet[["heterodimer_ilp_edges"]] <-
-        score_heterodimer_ilp_edges(ILPSet,
-                                    type_score_heterodimer = 0,
-                                    MS2_score_experiment_fragment = 0.5)
-    print("Finish ILPSet scoring")
-
-    ILPSet[["para"]] <- Initiate_cplexset(ILPSet)
-
-    cat("Done!\n")
-    return(ILPSet)
+  
+  ILPSet = list()
+  
+  print("Start initiate_ilp_nodes")
+  ILPSet[["ilp_nodes"]] <-
+    initiate_ilp_nodes(PeakSet);
+  print("Start initiate_ilp_edges")
+  
+  ILPSet[["ilp_edges"]] <-
+    initiate_ilp_edges(PeakSet$EdgeSet_all,
+                       ILPSet,
+                       Exclude = ""); #can be faster
+  
+  print("initiate_heterodimer_ilp_edges")
+  ILPSet[["heterodimer_ilp_edges"]] <-
+    initiate_heterodimer_ilp_edges(PeakSet$EdgeSet_all,
+                                   ILPSet,
+                                   PeakSet$NodeSet);
+  
+  print("Finish ILPSet initialization")
+  
+  # Score
+  ILPSet[["ilp_nodes"]] <-
+    score_ilp_nodes(ILPSet,
+                    metabolite_score = 0.1,
+                    putative_metabolite_score = 0,
+                    artifact_score = 0,
+                    unknown_score = -0.5)
+  
+  ILPSet[["ilp_edges"]] <- score_ilp_edges(ILPSet, PeakSet$NodeSet)
+  
+  ILPSet[["heterodimer_ilp_edges"]] <-
+    score_heterodimer_ilp_edges(ILPSet,
+                                type_score_heterodimer = 0,
+                                MS2_score_experiment_fragment = 0.5)
+  print("Finish ILPSet scoring")
+  
+  ILPSet[["para"]] <- Initiate_cplexset(ILPSet)
+  
+  cat("Done!\n")
+  return(ILPSet)
 }
 
 .networkConstruct <- function(PeakSet) {

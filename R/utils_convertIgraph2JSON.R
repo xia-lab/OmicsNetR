@@ -48,7 +48,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   node.btw <- as.numeric(betweenness(g));
   node.clo <- as.numeric(closeness(g));
   node.eig <- eigen_centrality(g);
-  node.eig = as.numeric(node.eig$vector);
+  node.eig <- as.numeric(node.eig$vector);
 
   node.dgr <- as.numeric(degree(g));
   exp <-as.vector(get.vertex.attribute(g, name="abundance", index = V(g)));
