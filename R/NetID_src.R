@@ -939,22 +939,22 @@ Expand_edgeset = function(EdgeSet,
     EdgeSet_ring_artifact = Ring_artifact_connection(peak_group, 
                                                      ppm_range_lb = 50, ppm_range_ub = 1000, 
                                                      ring_fold = 50, inten_threshold = 1e6)
-    print(paste("ring_artifact", length(EdgeSet_ring_artifact)))
+    #print(paste("ring_artifact", length(EdgeSet_ring_artifact)))
   }
   if("oligomer_multicharge" %in% types){
     EdgeSet_oligomer_multicharge = Oligomer_multicharge_connection(peak_group, ppm_tol = 10)
     EdgeSet_multicharge_isotope = Multicharge_isotope_connection(EdgeSet, EdgeSet_oligomer_multicharge)
     
-    print(paste("oligomer_multicharge", 
-                nrow(EdgeSet_oligomer_multicharge)+nrow(EdgeSet_multicharge_isotope)))
+    #print(paste("oligomer_multicharge", 
+    #            nrow(EdgeSet_oligomer_multicharge)+nrow(EdgeSet_multicharge_isotope)))
   }
   if("heterodimer" %in% types){
     EdgeSet_heterodimer = Heterodimer_connection(peak_group, NodeSet, ppm_tol = 10, inten_threshold = 1e6)
-    print(paste("heterodimer", length(EdgeSet_heterodimer)))
+   # print(paste("heterodimer", length(EdgeSet_heterodimer)))
   }
   if("experiment_MS2_fragment" %in% types){
     EdgeSet_experiment_MS2_fragment = Experiment_MS2_fragment_connection(peak_group, NodeSet, ppm_tol = 10, inten_threshold = 1e5)
-    print(paste("experiment_MS2_fragment", length(EdgeSet_experiment_MS2_fragment)))
+   # print(paste("experiment_MS2_fragment", length(EdgeSet_experiment_MS2_fragment)))
   }
   if("library_MS2_fragment" %in% types){
     EdgeSet_library_MS2_fragment = Library_MS2_fragment_connection(peak_group, 
@@ -966,7 +966,7 @@ Expand_edgeset = function(EdgeSet,
                                                                    Mset = Mset,
                                                                    LibrarySet = LibrarySet,
                                                                    NodeSet = NodeSet)
-    print(paste("library_MS2_fragment", length(EdgeSet_library_MS2_fragment)))
+   # print(paste("library_MS2_fragment", length(EdgeSet_library_MS2_fragment)))
   }
   
   EdgeSet_expand = bind_rows(EdgeSet_ring_artifact, 
@@ -1445,7 +1445,7 @@ Propagate_structureset = function(Mset,
         }
       }
       
-      print(paste("Step", current_step, "elapsed="))
+      #print(paste("Step", current_step, "elapsed="))
       print((Sys.time()-timer))
     }
 
@@ -1484,8 +1484,8 @@ Propagate_structureset = function(Mset,
                          current_step,
                          NodeSet)
       
-      print(paste("Step",current_step,"elapsed="))
-      print(Sys.time()-timer)
+      #print(paste("Step",current_step,"elapsed="))
+      #print(Sys.time()-timer)
     }
     
   }

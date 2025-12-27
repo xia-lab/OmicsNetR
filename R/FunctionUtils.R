@@ -54,6 +54,8 @@ LoadEnrLib <- function(type, subtype){
   current.geneset <- set[[setsInx]];
 
   set.ids<- names(current.geneset);
+  names(set.ids) <-  set$term;
+
   names(current.geneset) <- set[[termInx]];
   current.geneset <<- current.geneset
 
@@ -107,8 +109,9 @@ PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType)
     }
 
 # note: hit.query, resTable must synchronize
-# ora.vec should contains entrez ids, named by their gene symbols
-PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
+# ora.vec should contains entrez ids, named by entrez ids ASWELL
+PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network"){
+
   # prepare lib
   LoadLib(fun.type);
 
@@ -119,7 +122,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
   set.size<-length(current.geneset);
   res.mat<-matrix(0, nrow=set.size, ncol=5);
   rownames(res.mat)<-names(current.geneset);
-  colnames(res.mat)<-c("Total", "Expected", "Hits", "P.Value", "FDR");
+  colnames(res.mat)<-c("Total", "Expected", "Hits", "Pval", "FDR");
 
   # need to cut to the universe covered by the pathways, not all genes
   if(tolower(fun.type) %in% c("chea", "jaspar", "encode", "mir")){
@@ -182,16 +185,19 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
     }
   }
 
-  #get gene symbols
-  resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
+  # add a new column containing pathway names
+  ###########
+  #### note the column position shifts by one as new columns introduced
+  ###########
+  resTable <- data.frame(Pathway=rownames(res.mat),IDs=as.vector(current.setids[names(hits.query)]), res.mat);
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
   require("RJSONIO");
   fun.anot <- hits.query;
-  fun.padj <- resTable[,6]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj) };
-  fun.pval <- resTable[,5]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
-  hit.num <- resTable[,4]; if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
+  fun.padj <- resTable$FDR; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj) };
+  fun.pval <- resTable$Pval; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
+  hit.num <- paste0(resTable$Hits,"/",resTable$Total); if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
   fun.ids <- as.vector(current.setids[names(fun.anot)]);
   if(length(fun.ids) ==1) { fun.ids <- matrix(fun.ids) };
   json.res <- list(
@@ -208,19 +214,40 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec){
   cat(json.mat);
   sink();
 
+  gene.vec <- current.universe;
+  sym.vec <- doEntrez2SymbolMapping(gene.vec);
+  gene.nms <- sym.vec;
+
+  current.geneset.symb <- lapply(current.geneset, 
+                       function(x) {
+                         gene.nms[gene.vec%in%unlist(x)];
+                       }
+  );
+
+
   #record table for report
-  type = "network";
+  type <- save.type;
   dataSet$imgSet$enrTables[[type]] <- list()
   dataSet$imgSet$enrTables[[type]]$table <- resTable;
   dataSet$imgSet$enrTables[[type]]$library <- fun.type
   dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"
+
+
+  dataSet$imgSet$enrTables[[type]]$current.geneset <- current.geneset;
+  dataSet$imgSet$enrTables[[type]]$hits.query <- hits.query;
+  dataSet$imgSet$enrTables[[type]]$current.setids <- current.setids;
+  dataSet$imgSet$enrTables[[type]]$res.mat<- res.mat;
+  dataSet$imgSet$enrTables[[type]]$current.geneset.symb <- current.geneset.symb;
+  #print(paste("saveType==" ,save.type))
   dataSet <<- dataSet
 
   # write csv
+  # print(file.nm);
   csv.nm <- paste(file.nm, ".csv", sep="");
   a <- lapply(fun.anot,function(x){paste(x,collapse = "; ")})
   resTable$ids <- unlist(a);
   fast.write.csv(resTable, file=csv.nm, row.names=F);
+  fast.write.csv(resTable, file=paste0(type, "_enr_table.csv"), row.names=F);
 
   return(1);
 }
@@ -801,7 +828,7 @@ LoadKEGGLibOther<-function(type){
 #'
 #' @export
 #'
-PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids){
+PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, save.type="network"){
   dataSet <- .get.nSet(dataSetObj);
   if(ids=="Not_applicable"){
     ora.vec <- keggp.allfeatures;
@@ -861,9 +888,9 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids){
     integ$integP = integP
     res.mat <- integ
     hits.query<<-hits.query
-    SaveIntegEnr(file.nm,res.mat);
+    SaveIntegEnr(file.nm,res.mat, save.type);
   }else{
-    SaveSingleOmicsEnr(file.nm,res.mat);
+    SaveSingleOmicsEnr(file.nm,res.mat, save.type);
     if(fun.type == "kegg"){
       kg.query <<-hits.query
     }else if(fun.type == "keggm"){
@@ -895,7 +922,7 @@ PerformEnrichAnalysisKegg <- function(dataSetObj=NA, file.nm, fun.type, ora.vec)
   set.size<-length(current.geneset);
   res.mat<-matrix(0, nrow=set.size, ncol=5);
   rownames(res.mat)<-names(current.geneset);
-  colnames(res.mat)<-c("Total", "Expected", "Hits", "P.Value", "FDR");
+  colnames(res.mat)<-c("Total", "Expected", "Hits", "Pval", "FDR");
 
   # need to cut to the universe covered by the pathways, not all genes
 
@@ -982,9 +1009,9 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat){
   # write json
   require("RJSONIO");
   fun.anot <- hits.query;
-  fun.padj <- resTable[,6]; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj)};
-  fun.pval <- resTable[,5]; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval)};
-  hit.num <- resTable[,4]; if(length(hit.num) ==1) { hit.num <- matrix(hit.num)};
+  fun.padj <- resTable$FDR; if(length(fun.padj) ==1) { fun.padj <- matrix(fun.padj)};
+  fun.pval <- resTable$Pval; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval)};
+  hit.num <- paste0(resTable$Hits,"/",resTable$Total); if(length(hit.num) ==1) { hit.num <- matrix(hit.num)};
   fun.ids <- as.vector(current.setids[names(fun.anot)]);
   if(length(fun.ids) ==1) {fun.ids <- matrix(fun.ids)};
 
@@ -1374,14 +1401,6 @@ Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
   dataSet$snpTable <- mir.dic;
 
   return(mir.dic);
-}
-
-
-Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalogue="GWAS", pvalue=1E-5, proxies="None", r2=0.8, build=37){
-  if(!exists("my.query.phenoscanner")){ # public web on same user dir
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_phenoscanner.Rc");
-  }
-  return(my.query.phenoscanner(snpquery, genequery, regionquery, catalogue, pvalue, proxies, r2, build));
 }
 
 

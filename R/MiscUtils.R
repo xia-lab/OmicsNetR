@@ -380,3 +380,123 @@ makeReadable <- function(str){
                     "pubchem" = "PubChem",
                  str)
 }
+
+
+GetNodeMat <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+    df <- .readDataTable('node_table.csv')
+    df[,-c(1:2)] <- lapply(df[,-c(1:2)], function(col) as.numeric(as.character(col)))
+    dataSet$imgSet$node_table <<- df;
+  }
+  return(as.matrix(dataSet$imgSet$node_table[,-c(1:2)]))  # ensure matrix of numerics
+}
+
+GetNodeRowNames <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+  df <- .readDataTable('node_table.csv')
+    dataSet$imgSet$node_table <<- df;
+
+  }
+  dataSet$imgSet$node_table$Id;
+}
+
+GetNodeGeneSymbols <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+  df <- .readDataTable('node_table.csv')
+    dataSet$imgSet$node_table <<- df;
+
+  }
+  dataSet$imgSet$node_table$Label;
+}
+
+GetNodeColNames <- function(){
+  if(is.null(dataSet$imgSet$node_table)){
+  df <- .readDataTable('node_table.csv')
+    dataSet$imgSet$node_table <<- df;
+
+  }
+  return(colnames(dataSet$imgSet$node_table[,-c(1:2)]));
+
+}
+
+CleanNumber <-function(bdata){
+  if(sum(bdata==Inf)>0){
+    inx <- bdata == Inf;
+    bdata[inx] <- NA;
+    bdata[inx] <- 999999;
+  }
+  if(sum(bdata==-Inf)>0){
+    inx <- bdata == -Inf;
+    bdata[inx] <- NA;
+    bdata[inx] <- -999999;
+  }
+  bdata;
+}
+
+CheckDetailsTablePerformed <-function(type){
+  performed <- T;
+  if(type == "node"){
+    performed <- file.exists("node_table.csv");
+  }else if(type %in% c( "network_enr", "regNetwork_enr", "gba_enr", "module_enr", "defaultEnr")){
+    clean_type <- gsub("_enr", "", type);
+    performed <- !is.null(dataSet$imgSet$enrTables[[clean_type]]);
+  }else if(type %in% c( "peak_anot")){
+    performed <- file.exists("peak_annotation.csv")
+  }
+  print(paste("checkPerformed=", type, "====",performed));
+
+return(performed)
+}
+
+
+GetPeakAnnotMat <- function(){
+  if(is.null(dataSet$imgSet$peak_annotation)){
+    df <- .readDataTable('peak_annotation.csv')
+    dataSet$imgSet$peak_annotation <<- df;
+  }
+  df <- dataSet$imgSet$peak_annotation
+cols_to_exclude <- c("class", "formula", "annotation")
+cols_to_convert <- setdiff(names(df), cols_to_exclude)
+
+df[cols_to_convert] <- lapply(df[cols_to_convert], function(col) as.numeric(as.character(col)))
+  return(as.matrix(df[cols_to_convert]))  # ensure matrix of numerics
+}
+
+GetPeakAnnotRowNames <- function(){
+  if(is.null(dataSet$imgSet$peak_annotation)){
+  df <- .readDataTable('peak_annotation.csv')
+    dataSet$imgSet$peak_annotation <<- df;
+
+  }
+  dataSet$imgSet$peak_annotation$annotation;
+}
+
+GetPeakAnnotClass <- function(){
+  if(is.null(dataSet$imgSet$peak_annotation)){
+  df <- .readDataTable('peak_annotation.csv')
+    dataSet$imgSet$node_table <<- df;
+
+  }
+  dataSet$imgSet$peak_annotation$class;
+}
+
+
+GetPeakAnnotColNames <- function(){
+  if(is.null(dataSet$imgSet$peak_annotation)){
+  df <- .readDataTable('peak_annotation.csv')
+    dataSet$imgSet$peak_annotation <<- df;
+
+  }
+  df <- dataSet$imgSet$peak_annotation
+cols_to_exclude <- c("class", "formula", "annotation")
+cols_to_convert <- setdiff(names(df), cols_to_exclude)
+
+  return(colnames(dataSet$imgSet$peak_annotation[cols_to_convert]));
+
+}
+
+
+GetHTMLPathSet <- function(type, setNm){
+    return(c("NA"));
+}
+

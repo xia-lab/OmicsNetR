@@ -60,7 +60,7 @@ my.reg.enrich <- function(file.nm, fun.type, ora.vec, netInv, idType){
       gene.vec <- doEntrez2UniprotMapping(gene.vec)
       hits.gene[[i]] <- gene.vec;
     }
-  } else if(idType == "entrez") {
+  }  else if(idType == "entrez") {
     for(i in 1:nrow(hit.freq)){
       df <- edge.res[which(edge.res$id == hit.freq$id[i]),];
       gene.vec <- as.vector(df$gene);
@@ -102,14 +102,18 @@ my.reg.enrich <- function(file.nm, fun.type, ora.vec, netInv, idType){
   sink();
 
   resTable1$Features = hits.gene
+
+  type = "regNetwork";
   # write csv
   csv.nm <- paste(file.nm, ".csv", sep="");
   fast.write.csv(resTable1, file=csv.nm, row.names=F);
+  fast.write.csv(resTable1, file=paste0(type, "_enr_table.csv"), row.names=F);
 
   #record table for report
-  type = "regNetwork";
   dataSet$imgSet$enrTables[[type]] <- list()
   dataSet$imgSet$enrTables[[type]]$table <- resTable1;
+  dataSet$imgSet$enrTables[[type]]$res.mat <- resTable1[,3, drop=F];
+
   dataSet$imgSet$enrTables[[type]]$library <- fun.type
   dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"
   dataSet <<- dataSet

@@ -1,5 +1,8 @@
   
 my.peak.net <- function(dataSetObj=NA){
+  #save.image("peaknet.RData");
+  #print("peaknet1");
+
   dataSet <- .get.nSet(dataSetObj);
   if(exists("PeakSetDone",envir = .GlobalEnv)) {
     PeakSet <- get("PeakSetDone", envir = .GlobalEnv);

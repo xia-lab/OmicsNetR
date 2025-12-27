@@ -788,6 +788,8 @@ FilterBipartiNet <- function(dataSetObj=NA, nd.type, min.dgr, min.btw){
 #' @export
 #'
 BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
+  library(igraph);
+
   dataSet <- .get.nSet(dataSetObj);
   set.seed(8574);
   # first get shortest paths for all pair-wise seeds
@@ -872,7 +874,7 @@ BuildPCSFNet <- function(dataSetObj=NA){
   #if(sum(expr.vec) == 0){ # make sure weights are not 0?!
     hit.inx <- unique(names(expr.vec)) %in% V(overall.graph)$name;
     my.seeds = names(expr.vec)[hit.inx];
-    print(my.seeds);
+    #print(my.seeds);
     expr.vec <- setNames(rep(5, length(my.seeds)), my.seeds)
   #}
   #expr.vec <- abs(expr.vec)
@@ -1091,19 +1093,25 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
   #community.vec <- community.vec[ord.inx];
   #qnum.vec <- qnum.vec[ord.inx];
   ord.inx <- order(psize.vec, decreasing=T);
-  print(ord.inx);
+  #print(ord.inx);
   community.vec <- community.vec[ord.inx];
 
   all.communities <- paste(community.vec, collapse="||");
   df <- convertModuleToDF(all.communities);
   df <- df[,-c(3,5)];
-  
+
+
   #record table for report
   type = "module";
   dataSet$imgSet$enrTables[[type]] <- list()
   dataSet$imgSet$enrTables[[type]]$table <- df;
+
+  df1<- data.frame(Size=df$Size,Pval=df$P.value)
+  rownames(df1) <- df$Module;
+  dataSet$imgSet$enrTables[[type]]$res.mat <- df1;
   dataSet$imgSet$enrTables[[type]]$library <- "";
   dataSet$imgSet$enrTables[[type]]$algo <- method;
+
   dataSet <<- dataSet;
   colnames(gene.community) <- c("Id", "Label", "Module");
   fast.write.csv(gene.community, file="module_table.csv", row.names=F);
@@ -1574,6 +1582,7 @@ GetNetworkTopology <- function(netnm){
 #' @export
 #'
 PlotDegreeHistogram <- function(imgNm, netNm = "NA", dpi=72, format="png"){
+  library(igraph);
   require("Cairo")
   dpi<-as.numeric(dpi)
   imgNm <- paste(imgNm, "dpi", dpi, ".", format, sep="");
@@ -1599,6 +1608,11 @@ PlotDegreeHistogram <- function(imgNm, netNm = "NA", dpi=72, format="png"){
     theme(plot.title = element_text(hjust = 0.5));
   print(p);
   dev.off();
+
+  dataSet$imgSet$degreeHistogram <- list();
+  dataSet$imgSet$degreeHistogram$netName <- netNm;
+  dataSet <<- dataSet;
+  return(1);
 }
 
 #' PlotBetweennessHistogram
@@ -1635,6 +1649,12 @@ PlotBetweennessHistogram <- function(imgNm, netNm = "NA",dpi=72, format="png"){
     theme(plot.title = element_text(hjust = 0.5));
   print(p);
   dev.off();
+
+
+  dataSet$imgSet$betwennessHistogram <- list();
+  dataSet$imgSet$betwennessHistogram$netName <- netNm;
+  dataSet <<- dataSet;
+  return(1);
 }
 
 #' PreparePeaksNetwork
@@ -1663,9 +1683,14 @@ DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids){
   require("RandomWalkRestartMH")
   require("igraph")
 
+  if(queryType == "seed"){
+
   nodes <- strsplit(nodeids, ",")[[1]];
+  }else{
+  nodes <- strsplit(nodeids, ",")[[1]];
+  }
   g <- ppi.comps[[current.net.nm]];
-  PPI_MultiplexObject <- create.multiplex(list(PPI=g))
+  PPI_MultiplexObject <- RandomWalkRestartMH::create.multiplex(list(PPI=g))
 
   AdjMatrix_PPI <- compute.adjacency.matrix(PPI_MultiplexObject)
   AdjMatrixNorm_PPI <- normalize.multiplex.adjacency(AdjMatrix_PPI)
@@ -1683,12 +1708,20 @@ DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids){
   sink();
 
   csvNm <- paste0(gsub(".json", "", fileNm), ".csv");
-  fast.write.csv(RWR_PPI_Results$RWRM_Results, file=csvNm);
+  df <- RWR_PPI_Results$RWRM_Results;
+  colnames(df) <- c("IDs", "Score");
+  sym.vec <- doEntrez2SymbolMapping(df$IDs);
+
+  df <- cbind(Name=sym.vec, df);
+  fast.write.csv(df, file=csvNm);
+  fast.write.csv(df, file="gba_table.csv");
 
   #record table for report
   type = "gba";
   dataSet$imgSet$enrTables[[type]] <- list();
-  dataSet$imgSet$enrTables[[type]]$table <- RWR_PPI_Results$RWRM_Results;
+  dataSet$imgSet$enrTables[[type]]$table <- df;
+  dataSet$imgSet$enrTables[[type]]$res.mat<- df[,3, drop=F];
+
   dataSet$imgSet$enrTables[[type]]$library <- "";
   dataSet$imgSet$enrTables[[type]]$query <- queryType; 
   dataSet$imgSet$enrTables[[type]]$algo <- "Random walk with restart";
