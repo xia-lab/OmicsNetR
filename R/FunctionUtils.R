@@ -61,7 +61,6 @@ LoadEnrLib <- function(type, subtype){
 
   current.setlink <<- set[[linkInx]];
   current.setids <<- set.ids;
-  print(head(current.setids));
   current.universe <<- unique(unlist(current.geneset));
 }
 
@@ -239,7 +238,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
   dataSet$imgSet$enrTables[[type]]$current.setids <- current.setids;
   dataSet$imgSet$enrTables[[type]]$res.mat<- res.mat;
   dataSet$imgSet$enrTables[[type]]$current.geneset.symb <- current.geneset.symb;
-  print(paste("saveType==" ,save.type))
+  #print(paste("saveType==" ,save.type))
   dataSet <<- dataSet
 
   # write csv
@@ -1143,12 +1142,51 @@ SaveIntegEnr <- function(file.nm,res.mat){
 # note, last two par only for STRING database
 QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
   require('RSQLite')
-  path <- paste0(sqlite.path, "ppi.sqlite");
-  if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+
+  # Determine which SQLite file to use based on database type
+  if(grepl("string$", table.nm)){
+    db.path <- paste(sqlite.path, "ppi_string.sqlite", sep="");
+  }else if(grepl("intact$", table.nm)){
+    db.path <- paste(sqlite.path, "ppi_intact.sqlite", sep="");
+  }else if(grepl("huri$", table.nm)){
+    db.path <- paste(sqlite.path, "ppi_huri.sqlite", sep="");
+  }else if(grepl("innate$", table.nm)){
+    # Check if separate InnateDB file exists, otherwise fall back to ppi.sqlite
+    innate.path <- paste(sqlite.path, "ppi_innate.sqlite", sep="");
+    if(file.exists(innate.path)){
+      db.path <- innate.path;
+    }else{
+      db.path <- paste(sqlite.path, "ppi.sqlite", sep="");
+    }
+  }else{
+    # For other databases (rolland, irefinx, interactome, tissue, etc.), use original ppi.sqlite
+    db.path <- paste(sqlite.path, "ppi.sqlite", sep="");
   }
-  ppi.db <- dbConnect(SQLite(), path);
+
+  # DEBUG: Print database path and query info
+  #print(paste("DEBUG QueryPpiSQLite: Database file =", db.path));
+  #print(paste("DEBUG QueryPpiSQLite: File exists =", file.exists(db.path)));
+  #print(paste("DEBUG QueryPpiSQLite: Table name =", table.nm));
+  #print(paste("DEBUG QueryPpiSQLite: Number of query genes =", length(q.vec)));
+  #print("DEBUG QueryPpiSQLite: First 10 query gene IDs:");
+  #print(head(q.vec, 10));
+  #print(paste("DEBUG QueryPpiSQLite: requireExp =", requireExp));
+  #print(paste("DEBUG QueryPpiSQLite: min.score =", min.score));
+
+  ppi.db <- .connect.sqlite(db.path);
+
+  # DEBUG: Check what IDs are actually in the database
+  test_query <- paste("SELECT DISTINCT id1 FROM", table.nm, "LIMIT 10");
+  sample_ids <- tryCatch({
+    .query.sqlite(ppi.db, test_query, FALSE);
+  }, error = function(e) {
+    data.frame(id1=c("error"));
+  });
+  #print("DEBUG QueryPpiSQLite: Sample id1 values from database:");
+  #print(sample_ids$id1);
+
   query <- paste(shQuote(q.vec),collapse=",");
+
   if(grepl("string$", table.nm)){
     if(requireExp){
       statement <- paste("SELECT * FROM ",table.nm, " WHERE ((id1 IN (", query, ")) OR (id2 IN (", query, ")))  AND combined_score >=", min.score, " AND experimental > 0", sep="");
@@ -1159,12 +1197,48 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
     statement <- paste("SELECT * FROM ",table.nm, " WHERE ((id1 IN (", query, ")) OR (id2 IN (", query, ")))", sep="");
   }
 
-  ppi.res <- .query.sqlite(ppi.db, statement);
+  # DEBUG: Print SQL query
+  #print("DEBUG QueryPpiSQLite: SQL query:");
+  #print(statement);
 
-  # remove dupliated edges
-  # ppi.res <- ppi.res[!duplicated(ppi.res$row_id),]
+  # Try to execute query with error handling for missing tables
+  ppi.res <- tryCatch({
+    .query.sqlite(ppi.db, statement);
+  }, error = function(e) {
+    dbDisconnect(ppi.db);
+    if(grepl("no such table", e$message, ignore.case = TRUE)){
+      stop(paste0("Database table '", table.nm, "' not found in ", basename(db.path),
+                  ". Please verify that the selected database (", table.nm,
+                  ") is available for your organism."));
+    }else{
+      stop(paste0("Database query failed: ", e$message));
+    }
+  });
+
+  # DEBUG: Print query results
+  #print(paste("DEBUG QueryPpiSQLite: Rows returned (before dedup) =", nrow(ppi.res)));
+  #print("DEBUG QueryPpiSQLite: Column names in result:");
+  #print(colnames(ppi.res));
+  if(nrow(ppi.res) > 0){
+    #print("DEBUG QueryPpiSQLite: First row sample:");
+    #print(ppi.res[1,]);
+  }
+
+  # remove duplicated edges
+  # Check if row_id has valid values (not all NA/empty)
+  if("row_id" %in% colnames(ppi.res) && any(!is.na(ppi.res$row_id) & ppi.res$row_id != "")){
+    # row_id has valid values, use it for deduplication
+    ppi.res <- ppi.res[!duplicated(ppi.res$row_id),]
+  }else{
+    # row_id is empty/NULL, deduplicate by id1+id2 pair
+    ppi.res <- ppi.res[!duplicated(paste(ppi.res$id1, ppi.res$id2, sep="_")),]
+  }
+
+  #print(paste("DEBUG QueryPpiSQLite: Rows returned (after dedup) =", nrow(ppi.res)));
+
   return(ppi.res);
 }
+
 
 # table name is org code, id.type is column name
 QueryMirSQLite <- function(table.nm, id.type, q.vec, inv, db.nm){
@@ -1330,14 +1404,6 @@ Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
 }
 
 
-Query.PhenoScanner <- function(snpquery=NULL, genequery=NULL, regionquery=NULL, catalogue="GWAS", pvalue=1E-5, proxies="None", r2=0.8, build=37){
-  if(!exists("my.query.phenoscanner")){ # public web on same user dir
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_phenoscanner.Rc");
-  }
-  return(my.query.phenoscanner(snpquery, genequery, regionquery, catalogue, pvalue, proxies, r2, build));
-}
-
-
 QueryVEP <- function(q.vec,vepDis,queryType,snpRegion,content_type="application/json" ){
 
   require("httr")
@@ -1435,97 +1501,48 @@ getApiResult <- function(url="NA", init=TRUE){
 }
 
 
-GetSetIDLinks <- function(type=""){
-  imgSet <- dataSet$imgSet;
-  fun.type <- imgSet$enrTables[[type]]$library;
 
-  ids <- imgSet$enrTables[[type]]$table$IDs
-  pathways <- imgSet$enrTables[[type]]$table$Pathway
-  print("GetSetIDLinks");
-  print(type);
-  print(fun.type);
-
-    if(fun.type %in% c("go_bp", "go_mf", "go_cc")){
-        annots <- paste("<a href='https://www.ebi.ac.uk/QuickGO/term/", ids, "' target='_blank'>", pathways, "</a>", sep="");
-    }else if(fun.type %in% c("go_panthbp", "go_panthmf", "go_panthcc")){
-        annots <- paste("<a href='https://www.pantherdb.org/panther/categoryList.do?searchType=basic&fieldName=all&organism=all&fieldValue=", ids, "&listType=5' target='_blank'>", pathways, "</a>", sep="");
-    }else if(fun.type == "kegg"){
-        annots <- paste("<a href='https://www.genome.jp/dbget-bin/www_bget?pathway+", ids, "' target='_blank'>", pathways, "</a>", sep="");
-    }else if(fun.type == "reactome"){
-        annots <- paste("<a href='https://reactome.org/content/query?q=", ids, "' target='_blank'>", pathways, "</a>", sep="");
-    }else{
-        annots <- ids;
-    }
-  
-  return(annots);
-}
-
-GetHTMLPathSet <- function(type, setNm){
-  imgSet <- dataSet$imgSet
-  current.geneset <- imgSet$enrTables[[type]]$current.geneset.symb;
-  hits.query <- imgSet$enrTables[[type]]$hits.query;
-  set <- current.geneset[[setNm]]; 
-  
-  #set <- cur.setids[[setNm]];
-  
-  hits <- hits.query
-  
-  # highlighting with different colors
-  red.inx <- which(set %in% hits[[setNm]]);
-  
-  # use actual cmpd names
-  #nms <- names(set);
-  nms <- set;
-  nms[red.inx] <- paste("<font color=\"red\">", "<b>", nms[red.inx], "</b>", "</font>",sep="");
-
-  return(cbind(setNm, paste(unique(nms), collapse="; ")));
-}
-
-
-GetEnrResultMatrix <-function(type){
-  imgSet <- dataSet$imgSet;
-  res <- imgSet$enrTables[[type]]$res.mat
-  res <- suppressWarnings(apply(res, 2, as.numeric)); # force to be all numeric
-  return(signif(as.matrix(res), 5));
-}
-
-GetEnrResultColNames<-function(type){
-  imgSet <- dataSet$imgSet;
-  res <- imgSet$enrTables[[type]]$res.mat
-  colnames(res);
-}
-
-GetEnrResSetIDs<-function(type){
-  imgSet <- dataSet$imgSet
-  res <- imgSet$enrTables[[type]]$table;
-  return(res$IDs);
-}
-
-GetEnrResSetNames<-function(type){
-  imgSet <- dataSet$imgSet
-  res <- imgSet$enrTables[[type]]$table;
-  if("Pathway" %in% colnames(res)){
-  return(res$Pathway);
-  }else if("Name" %in% colnames(res)){
-  return(res$Name);
-  }else{
-    return(res[,1]);
+.query.sqlite <- function(db.con, statement, offline=TRUE){
+  rs <- dbSendQuery(db.con, statement);
+  res <- fetch(rs, n=-1); # get all records
+  dbClearResult(rs);
+  if(offline){
+    dbDisconnect(db.con);
   }
-
+  cleanMem();
+  return(res);
 }
 
+# OmniPath PPI query function
+QueryOmnipathPpiSQLite <- function(sqlite.path, data.org, q.vec){
+  require('RSQLite');
+  db.path <- paste(sqlite.path, "omnipath_ppi.sqlite", sep="");
+  con <- .connect.sqlite(db.path);
+  query <- paste(shQuote(q.vec),collapse=",");
+  statement <- paste("SELECT * FROM ", data.org, " WHERE ((id1 IN (", query, ")) OR (id2 IN (", query, ")))", sep="");
+  return(.query.sqlite(con, statement));
+}
 
-PerformDefaultEnrichment <- function(file.nm, fun.type){
-  require("igraph");
-  net.nm <- names(ppi.comps)[1];
-  my.ppi <- ppi.comps[[net.nm]];
-  ora.vec <- V(my.ppi)$name;
-  names(ora.vec) <- ora.vec;
-  save.type <- "defaultEnr";
-  if(fun.type %in% c("keggm", "integ")){
-      PerformEnrichAnalysisKegg(file.nm, fun.type, ora.vec, save.type);
-  }else{
-      PerformEnrichAnalysis(file.nm, fun.type, ora.vec, save.type);
-  }
-  return(1);
+# OmniPath TF-gene query function
+QueryOmnipathTfSQLite <- function(sqlite.path, data.org, q.vec){
+  require('RSQLite');
+  db.path <- paste(sqlite.path, "omnipath_tf2gene.sqlite", sep="");
+  con <- .connect.sqlite(db.path);
+  query <- paste(shQuote(q.vec),collapse=",");
+  statement <- paste("SELECT * FROM ", data.org, " WHERE entrez IN (",query,")", sep="");
+  return(.query.sqlite(con, statement));
+}
+
+# OmniPath miRNA-gene query function
+QueryOmnipathMirSQLite <- function(sqlite.path, data.org, q.vec){
+  require('RSQLite');
+  db.path <- paste(sqlite.path, "omnipath_mir2gene.sqlite", sep="");
+  con <- .connect.sqlite(db.path);
+  query <- paste(shQuote(q.vec),collapse=",");
+  statement <- paste("SELECT * FROM ", data.org, " WHERE entrez IN (", query, ")", sep="");
+  return(.query.sqlite(con, statement));
+}
+
+.connect.sqlite <- function(db.path){
+  return(dbConnect(SQLite(), db.path));
 }

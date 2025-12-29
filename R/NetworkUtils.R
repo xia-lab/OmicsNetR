@@ -363,7 +363,12 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
   if(netw.type == "ppi" || netw.type == "gene" || netw.type == "protein"){
     table.nm = paste(data.org, db.type, sep="_");
     message("We are going to query the data table: ", table.nm, " from ppi database..");
-    res <- QueryPpiSQLite(table.nm, protein.vec, require.exp, min.score);
+    # Check if OmniPath database is selected
+    if(grepl("omnipath$", table.nm)){
+      res <- QueryOmnipathPpiSQLite(sqlite.path, data.org, protein.vec);
+    }else{
+      res <- QueryPpiSQLite(table.nm, protein.vec, require.exp, min.score);
+    }
 
     if(dataSet$ppiZero){
       if(inputType == "gene"){
@@ -414,7 +419,12 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
   } else if (netw.type == "tf") {
 
     table.nm <- paste(data.org, db.type, sep="_");
-    res <- QueryTFSQLite(table.nm, protein.vec, netInv);
+    # Check if OmniPath database is selected
+    if(db.type == "omnipath"){
+      res <- QueryOmnipathTfSQLite(sqlite.path, data.org, protein.vec);
+    }else{
+      res <- QueryTFSQLite(table.nm, protein.vec, netInv);
+    }
     # no hits
     if(nrow(res)==0){ return(c(0,0)); }
 
@@ -443,7 +453,12 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     }else{
       table.nm <- data.org;
     }
-    res <- QueryMirSQLite(table.nm, "mir_id", protein.vec, netInv, db.type);
+    # Check if OmniPath database is selected
+    if(db.type == "omnipath"){
+      res <- QueryOmnipathMirSQLite(sqlite.path, data.org, protein.vec);
+    }else{
+      res <- QueryMirSQLite(table.nm, "mir_id", protein.vec, netInv, db.type);
+    }
     if(nrow(res)==0){ return(c(0,0)); }
     # no hits
 
@@ -859,7 +874,7 @@ BuildPCSFNet <- function(dataSetObj=NA){
   #if(sum(expr.vec) == 0){ # make sure weights are not 0?!
     hit.inx <- unique(names(expr.vec)) %in% V(overall.graph)$name;
     my.seeds = names(expr.vec)[hit.inx];
-    print(my.seeds);
+    #print(my.seeds);
     expr.vec <- setNames(rep(5, length(my.seeds)), my.seeds)
   #}
   #expr.vec <- abs(expr.vec)
@@ -1078,12 +1093,11 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
   #community.vec <- community.vec[ord.inx];
   #qnum.vec <- qnum.vec[ord.inx];
   ord.inx <- order(psize.vec, decreasing=T);
-  print(ord.inx);
+  #print(ord.inx);
   community.vec <- community.vec[ord.inx];
 
   all.communities <- paste(community.vec, collapse="||");
   df <- convertModuleToDF(all.communities);
-  print(df);
   df <- df[,-c(3,5)];
 
 
@@ -1094,7 +1108,6 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
 
   df1<- data.frame(Size=df$Size,Pval=df$P.value)
   rownames(df1) <- df$Module;
-  print(head(df1));
   dataSet$imgSet$enrTables[[type]]$res.mat <- df1;
   dataSet$imgSet$enrTables[[type]]$library <- "";
   dataSet$imgSet$enrTables[[type]]$algo <- method;
