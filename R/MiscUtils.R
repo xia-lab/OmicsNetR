@@ -280,6 +280,7 @@ makeReadable <- function(str){
                  ath = "A. thaliana (Arabidopsis)",
                  bta = "B. taurus (cow)",
                  gga = "G. gallus (chicken)",
+                 sly = "S. lycopersicum (tomato)",
                  mun = "M. unguiculatus (Mongolian gerbil)",
                  bsu = "B. subtilis",
                  pae = "P. aeruginosa",

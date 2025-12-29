@@ -113,7 +113,7 @@ SetCurrentDataMulti <- function(){
 #'
 #' @param dataSetObj Input the name of the created dataSetObj (see Init.Data)
 #' @param inputList Tab-delimited String of input omics list
-#' @param org organism code: hsa, mmu, microbiome, rno, cel, dme, dre, sce, bta, gga
+#' @param org organism code: hsa, mmu, microbiome, rno, cel, dme, dre, sce, bta, gga, sly
 #' @param type character, type
 #' @param queryType character, queryType
 #'

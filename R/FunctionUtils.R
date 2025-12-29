@@ -1164,14 +1164,14 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
   }
 
   # DEBUG: Print database path and query info
-  print(paste("DEBUG QueryPpiSQLite: Database file =", db.path));
-  print(paste("DEBUG QueryPpiSQLite: File exists =", file.exists(db.path)));
-  print(paste("DEBUG QueryPpiSQLite: Table name =", table.nm));
-  print(paste("DEBUG QueryPpiSQLite: Number of query genes =", length(q.vec)));
-  print("DEBUG QueryPpiSQLite: First 10 query gene IDs:");
-  print(head(q.vec, 10));
-  print(paste("DEBUG QueryPpiSQLite: requireExp =", requireExp));
-  print(paste("DEBUG QueryPpiSQLite: min.score =", min.score));
+  #print(paste("DEBUG QueryPpiSQLite: Database file =", db.path));
+  #print(paste("DEBUG QueryPpiSQLite: File exists =", file.exists(db.path)));
+  #print(paste("DEBUG QueryPpiSQLite: Table name =", table.nm));
+  #print(paste("DEBUG QueryPpiSQLite: Number of query genes =", length(q.vec)));
+  #print("DEBUG QueryPpiSQLite: First 10 query gene IDs:");
+  #print(head(q.vec, 10));
+  #print(paste("DEBUG QueryPpiSQLite: requireExp =", requireExp));
+  #print(paste("DEBUG QueryPpiSQLite: min.score =", min.score));
 
   ppi.db <- .connect.sqlite(db.path);
 
@@ -1182,8 +1182,8 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
   }, error = function(e) {
     data.frame(id1=c("error"));
   });
-  print("DEBUG QueryPpiSQLite: Sample id1 values from database:");
-  print(sample_ids$id1);
+  #print("DEBUG QueryPpiSQLite: Sample id1 values from database:");
+  #print(sample_ids$id1);
 
   query <- paste(shQuote(q.vec),collapse=",");
 
@@ -1198,8 +1198,8 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
   }
 
   # DEBUG: Print SQL query
-  print("DEBUG QueryPpiSQLite: SQL query:");
-  print(statement);
+  #print("DEBUG QueryPpiSQLite: SQL query:");
+  #print(statement);
 
   # Try to execute query with error handling for missing tables
   ppi.res <- tryCatch({
@@ -1216,12 +1216,12 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
   });
 
   # DEBUG: Print query results
-  print(paste("DEBUG QueryPpiSQLite: Rows returned (before dedup) =", nrow(ppi.res)));
-  print("DEBUG QueryPpiSQLite: Column names in result:");
-  print(colnames(ppi.res));
+  #print(paste("DEBUG QueryPpiSQLite: Rows returned (before dedup) =", nrow(ppi.res)));
+  #print("DEBUG QueryPpiSQLite: Column names in result:");
+  #print(colnames(ppi.res));
   if(nrow(ppi.res) > 0){
-    print("DEBUG QueryPpiSQLite: First row sample:");
-    print(ppi.res[1,]);
+    #print("DEBUG QueryPpiSQLite: First row sample:");
+    #print(ppi.res[1,]);
   }
 
   # remove duplicated edges
@@ -1234,7 +1234,7 @@ QueryPpiSQLite <- function(table.nm, q.vec, requireExp, min.score){
     ppi.res <- ppi.res[!duplicated(paste(ppi.res$id1, ppi.res$id2, sep="_")),]
   }
 
-  print(paste("DEBUG QueryPpiSQLite: Rows returned (after dedup) =", nrow(ppi.res)));
+  #print(paste("DEBUG QueryPpiSQLite: Rows returned (after dedup) =", nrow(ppi.res)));
 
   return(ppi.res);
 }
