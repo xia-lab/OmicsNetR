@@ -466,37 +466,30 @@ GetPeakAnnotRowNames <- function(){
   if(is.null(dataSet$imgSet$peak_annotation)){
   df <- .readDataTable('peak_annotation.csv')
     dataSet$imgSet$peak_annotation <<- df;
-
   }
   dataSet$imgSet$peak_annotation$annotation;
 }
 
 GetPeakAnnotClass <- function(){
   if(is.null(dataSet$imgSet$peak_annotation)){
-  df <- .readDataTable('peak_annotation.csv')
+    df <- .readDataTable('peak_annotation.csv')
     dataSet$imgSet$node_table <<- df;
-
   }
   dataSet$imgSet$peak_annotation$class;
 }
 
 
 GetPeakAnnotColNames <- function(){
-  if(is.null(dataSet$imgSet$peak_annotation)){
-  df <- .readDataTable('peak_annotation.csv')
-    dataSet$imgSet$peak_annotation <<- df;
+    if(is.null(dataSet$imgSet$peak_annotation)){
+    df <- .readDataTable('peak_annotation.csv')
+        dataSet$imgSet$peak_annotation <<- df;
 
-  }
-  df <- dataSet$imgSet$peak_annotation
-cols_to_exclude <- c("class", "formula", "annotation")
-cols_to_convert <- setdiff(names(df), cols_to_exclude)
+    }
+    df <- dataSet$imgSet$peak_annotation
+    cols_to_exclude <- c("class", "formula", "annotation")
+    cols_to_convert <- setdiff(names(df), cols_to_exclude)
 
-  return(colnames(dataSet$imgSet$peak_annotation[cols_to_convert]));
+    return(colnames(dataSet$imgSet$peak_annotation[cols_to_convert]));
 
-}
-
-
-GetHTMLPathSet <- function(type, setNm){
-    return(c("NA"));
 }
 
