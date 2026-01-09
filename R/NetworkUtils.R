@@ -391,7 +391,13 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     }
     
     edge.res <- data.frame(Source=res$id1,Target=res$id2, stringsAsFactors=FALSE);
-    row.names(edge.res) <- 1:nrow(res);
+
+    # Filter out rows with NA values in Source or Target columns
+    edge.res <- edge.res[complete.cases(edge.res), ];
+
+    if(nrow(edge.res)!=0){
+      row.names(edge.res) <- 1:nrow(edge.res);
+    }
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
 
     node.ids <- c(res[,1], res[,2])
@@ -429,8 +435,12 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     if(nrow(res)==0){ return(c(0,0)); }
 
     edge.res <- data.frame(Source=res[,"tfid"],Target=res[,"entrez"], stringsAsFactors=FALSE);
-    if(nrow(res)!=0){
-      row.names(edge.res) <- 1:nrow(res);
+
+    # Filter out rows with NA values in Source or Target columns
+    edge.res <- edge.res[complete.cases(edge.res), ];
+
+    if(nrow(edge.res)!=0){
+      row.names(edge.res) <- 1:nrow(edge.res);
     }
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
     node.ids <- c(res[,"entrez"], res[,"tfid"])
@@ -463,8 +473,12 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     # no hits
 
     edge.res <- data.frame(Source=res[,"mir_id"],Target=res[,"entrez"],stringsAsFactors = FALSE)
-    if(nrow(res)!=0){
-      row.names(edge.res) <- 1:nrow(res);
+
+    # Filter out rows with NA values in Source or Target columns
+    edge.res <- edge.res[complete.cases(edge.res), ];
+
+    if(nrow(edge.res)!=0){
+      row.names(edge.res) <- 1:nrow(edge.res);
     }
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
 
@@ -503,8 +517,11 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
                            Target=res[,"entrez"],
                            stringsAsFactors=FALSE);
 
-    if(nrow(res)!=0){
-      row.names(edge.res) <- 1:nrow(res);
+    # Filter out rows with NA values in Source or Target columns
+    edge.res <- edge.res[complete.cases(edge.res), ];
+
+    if(nrow(edge.res)!=0){
+      row.names(edge.res) <- 1:nrow(edge.res);
     }
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
     node.ids <- c(res[,"kegg"], res[,"entrez"]);
@@ -651,8 +668,11 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
                            Target=res[,"productID"],
                            stringsAsFactors=FALSE);
 
-    if(nrow(res)!=0){
-      row.names(edge.res) <- 1:nrow(res);
+    # Filter out rows with NA values in Source or Target columns
+    edge.res <- edge.res[complete.cases(edge.res), ];
+
+    if(nrow(edge.res)!=0){
+      row.names(edge.res) <- 1:nrow(edge.res);
     }
     fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
     node.ids <- c(res[,"sourceID"], res[,"productID"])
