@@ -657,8 +657,11 @@ extendMetPeakNetwork <- function(table.nm) {
                          Target=edgeList[,"productID"],
                          stringsAsFactors=FALSE);
 
-  if(nrow(edgeList)!=0){
-    row.names(edge.res) <- 1:nrow(edgeList);
+  # Filter out rows with NA values in Source or Target columns
+  edge.res <- edge.res[complete.cases(edge.res), ];
+
+  if(nrow(edge.res)!=0){
+    row.names(edge.res) <- 1:nrow(edge.res);
   }
   fast.write.csv(edge.res, file="orig_edge_list.csv",row.names=FALSE);
   node.ids <- c(edgeList[,"sourceID"], edgeList[,"productID"])
