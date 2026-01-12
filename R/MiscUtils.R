@@ -479,11 +479,8 @@ GetPeakAnnotRowNames <- function(){
 
 GetPeakAnnotClass <- function(){
   if(is.null(dataSet$imgSet$peak_annotation)){
-    if(!file.exists("peak_annotation.csv")){
-      return(character(0));
-    }
     df <- .readDataTable('peak_annotation.csv')
-    dataSet$imgSet$peak_annotation <<- df;
+    dataSet$imgSet$node_table <<- df;
   }
   dataSet$imgSet$peak_annotation$class;
 }
@@ -491,9 +488,6 @@ GetPeakAnnotClass <- function(){
 
 GetPeakAnnotColNames <- function(){
     if(is.null(dataSet$imgSet$peak_annotation)){
-    if(!file.exists("peak_annotation.csv")){
-      return(character(0));
-    }
     df <- .readDataTable('peak_annotation.csv')
         dataSet$imgSet$peak_annotation <<- df;
 
