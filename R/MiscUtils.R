@@ -441,7 +441,7 @@ CheckDetailsTablePerformed <-function(type){
   }else if(type %in% c( "network_enr", "regNetwork_enr", "gba_enr", "module_enr", "defaultEnr")){
     clean_type <- gsub("_enr", "", type);
     performed <- !is.null(dataSet$imgSet$enrTables[[clean_type]]);
-  }else if(type %in% c( "peak_anot")){
+  }else if(type %in% c("peak_anot", "peak_annotation")){
     performed <- file.exists("peak_annotation.csv")
   }
   print(paste("checkPerformed=", type, "====",performed));
@@ -452,6 +452,9 @@ return(performed)
 
 GetPeakAnnotMat <- function(){
   if(is.null(dataSet$imgSet$peak_annotation)){
+    if(!file.exists("peak_annotation.csv")){
+      return(matrix(numeric(0), nrow=0, ncol=0));
+    }
     df <- .readDataTable('peak_annotation.csv')
     dataSet$imgSet$peak_annotation <<- df;
   }
@@ -465,6 +468,9 @@ df[cols_to_convert] <- lapply(df[cols_to_convert], function(col) as.numeric(as.c
 
 GetPeakAnnotRowNames <- function(){
   if(is.null(dataSet$imgSet$peak_annotation)){
+    if(!file.exists("peak_annotation.csv")){
+      return(character(0));
+    }
   df <- .readDataTable('peak_annotation.csv')
     dataSet$imgSet$peak_annotation <<- df;
   }
@@ -494,3 +500,205 @@ GetPeakAnnotColNames <- function(){
 
 }
 
+GetEnrResultMatrix <- function(type){
+  if(is.null(dataSet$imgSet$enrTables) || is.null(dataSet$imgSet$enrTables[[type]])){
+    return(matrix(numeric(0), nrow=0, ncol=0));
+  }
+  enr <- dataSet$imgSet$enrTables[[type]];
+  mat <- enr$res.mat;
+  if(is.null(mat) && !is.null(enr$table)){
+    mat <- enr$table;
+  }
+  if(is.null(mat)){
+    return(matrix(numeric(0), nrow=0, ncol=0));
+  }
+  if(is.data.frame(mat)){
+    numeric_cols <- vapply(mat, is.numeric, logical(1));
+    if(any(numeric_cols)){
+      mat <- as.matrix(mat[, numeric_cols, drop=FALSE]);
+    }else{
+      mat <- as.matrix(mat);
+    }
+  }
+  if(!is.numeric(mat)){
+    mat <- suppressWarnings(apply(mat, 2, function(x) as.numeric(as.character(x))));
+  }
+  if(is.null(dim(mat)) && length(mat) > 0){
+    mat <- matrix(mat, ncol=1);
+  }
+  return(mat);
+}
+
+GetEnrResColNames <- function(type){
+  mat <- GetEnrResultMatrix(type);
+  if(!is.null(mat) && !is.null(colnames(mat))){
+    return(colnames(mat));
+  }
+  if(!is.null(dataSet$imgSet$enrTables[[type]]$table)){
+    tbl <- dataSet$imgSet$enrTables[[type]]$table;
+    numeric_cols <- vapply(tbl, is.numeric, logical(1));
+    return(colnames(tbl)[numeric_cols]);
+  }
+  return(character(0));
+}
+
+GetEnrResSetIDs <- function(type){
+  enr <- dataSet$imgSet$enrTables[[type]];
+  if(is.null(enr)){
+    return(character(0));
+  }
+  if(!is.null(enr$table) && "IDs" %in% colnames(enr$table)){
+    return(as.character(enr$table$IDs));
+  }
+  if(!is.null(enr$current.setids)){
+    return(as.character(enr$current.setids));
+  }
+  return(character(0));
+}
+
+GetEnrResSetNames <- function(type){
+  enr <- dataSet$imgSet$enrTables[[type]];
+  if(is.null(enr)){
+    return(character(0));
+  }
+  if(!is.null(enr$table) && "Pathway" %in% colnames(enr$table)){
+    return(as.character(enr$table$Pathway));
+  }
+  if(!is.null(enr$res.mat)){
+    return(rownames(enr$res.mat));
+  }
+  return(character(0));
+}
+
+GetEnrResLibrary <- function(type){
+  enr <- dataSet$imgSet$enrTables[[type]];
+  if(is.null(enr)){
+    return("");
+  }
+  return(enr$library);
+}
+
+PerformDefaultEnrichment <- function(file.nm, fun.type){
+  if(!exists("dataSet")){
+    return(0);
+  }
+  ids <- NULL;
+  if(!is.null(dataSet$seeds.proteins) && length(dataSet$seeds.proteins) > 0){
+    ids <- unique(as.character(dataSet$seeds.proteins));
+  }else if(exists("seed.proteins") && length(seed.proteins) > 0){
+    ids <- unique(as.character(seed.proteins));
+  }else if(!is.null(dataSet$exp.mat) && length(dataSet$exp.mat) > 0){
+    for(i in seq_along(dataSet$exp.mat)){
+      if(length(dataSet$exp.mat[[i]]) > 0){
+        ids <- rownames(dataSet$exp.mat[[i]]);
+        break;
+      }
+    }
+  }
+  if(is.null(ids)){
+    current.msg <<- "No seed nodes available for default enrichment.";
+    return(0);
+  }
+  ids <- ids[!is.na(ids)];
+  if(length(ids) == 0){
+    current.msg <<- "No seed nodes available for default enrichment.";
+    return(0);
+  }
+  ora.vec <- ids;
+  names(ora.vec) <- ora.vec;
+  return(PerformEnrichAnalysis(file.nm, fun.type, ora.vec, save.type="defaultEnr"));
+}
+
+
+GetHTMLPathSet <- function(type, setNm){
+    return(c("NA"));
+}
+
+GetEnrSetMembers <- function(type, setNm){
+  # Get the enrichment table for the given type
+  enr <- dataSet$imgSet$enrTables[[type]];
+  if(is.null(enr)){
+    return(c("Set Name", "No data available"));
+  }
+
+  # Get the gene set library and matched genes
+  library_name <- "Unknown";
+  if(!is.null(enr$library)){
+    library_name <- enr$library;
+  }
+
+  # Get all members of the pathway/set from the reference database
+  all_members <- character(0);
+  matched_members <- character(0);
+
+  # Try to get from current.geneset
+  if(!is.null(enr$current.geneset) && !is.null(enr$current.geneset[[setNm]])){
+    all_members <- enr$current.geneset[[setNm]];
+  }
+
+  # Get matched members from the hits
+  if(!is.null(enr$hits) && !is.null(enr$hits[[setNm]])){
+    matched_members <- enr$hits[[setNm]];
+  }
+
+  # Convert Entrez IDs to gene symbols
+  if(length(all_members) > 0){
+    all_members_symbols <- doEntrez2SymbolMapping(all_members);
+  } else {
+    all_members_symbols <- character(0);
+  }
+
+  if(length(matched_members) > 0){
+    matched_members_symbols <- doEntrez2SymbolMapping(matched_members);
+  } else {
+    matched_members_symbols <- character(0);
+  }
+
+  # If we have members, format them with HTML highlighting
+  if(length(all_members_symbols) > 0){
+    # Create HTML formatted member list with matched ones in red
+    formatted_members <- sapply(seq_along(all_members_symbols), function(i){
+      symbol <- all_members_symbols[i];
+      if(all_members[i] %in% matched_members){
+        return(paste0('<span style="color:red; font-weight:bold;">', symbol, '</span>'));
+      } else {
+        return(symbol);
+      }
+    });
+
+    # Combine into comma-separated string
+    members_str <- paste(formatted_members, collapse=", ");
+
+    # Return set name and formatted members
+    return(c(paste0(setNm, " (", library_name, ")"), members_str));
+  }
+
+  # Fallback: if no members found, return just the matched members
+  if(length(matched_members_symbols) > 0){
+    formatted_matched <- paste0('<span style="color:red; font-weight:bold;">', matched_members_symbols, '</span>');
+    members_str <- paste(formatted_matched, collapse=", ");
+    return(c(paste0(setNm, " (", library_name, ")"), members_str));
+  }
+
+  return(c(setNm, "No members found"));
+}
+
+
+RecordSysMessage <- function(msg){
+
+  if(!exists("sys.msg.vec")){
+    sys.msg.vec <<- NULL;
+  }
+
+  # add time
+  msg <- paste0("[", Sys.time(), "] ", msg); 
+  sys.msg.vec <<- c(sys.msg.vec, msg);
+  write(msg, file = "Project.log", append = TRUE);
+}
+
+GetSysMessages <- function(){
+  if(!exists("sys.msg.vec")){
+    sys.msg.vec <<- "No message available";
+  }
+  return(sys.msg.vec);
+}
