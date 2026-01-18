@@ -89,6 +89,7 @@ ImportMSPeaks <- function(PeakFile = NA) {
   cat("Peak Data import done \n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
   qs::qsave(PeakSet, file = "PeakSet_initial.qs")
+  Sys.sleep(0.15);  # CRITICAL: Prevent race condition
   dataSet <<- dataSet;
   return(1);
 }
@@ -279,6 +280,7 @@ PerformAnnotation <- function() {
     qs::qsave(PeakSet$Data, file = "PeakSet_data.qs")
     PeakSet <<- PeakSet <- .cleanPeakSet(PeakSet);
     qs::qsave(PeakSet, file = "PeakSet_done.qs");
+    Sys.sleep(0.15);  # CRITICAL: Prevent race condition
     cat("Annotation done!\n Time consumed this step: ", Sys.time() - t0, "\n")
     print("Peak annotation completed!");
     return(1L)

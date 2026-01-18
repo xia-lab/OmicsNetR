@@ -1009,9 +1009,10 @@ UpdateSubnetStats <- function(){
 #'
 #' @param method algorithm choice: walktrap, infomap, label propagation
 #' @param use.weight Boolean consider edge weight: FALSE
+#' @param sourceView which network view generated this: "2d" or "3d"
 #'
 #' @export
-FindCommunities <- function(method="infomap", use.weight=FALSE){
+FindCommunities <- function(method="infomap", sourceView="2d", use.weight=FALSE){
   library(igraph);
   set.seed(1);
   # make sure this is the connected
@@ -1125,6 +1126,7 @@ FindCommunities <- function(method="infomap", use.weight=FALSE){
   type = "module";
   dataSet$imgSet$enrTables[[type]] <- list()
   dataSet$imgSet$enrTables[[type]]$table <- df;
+  dataSet$imgSet$enrTables[[type]]$sourceView <- sourceView;
 
   df1<- data.frame(Size=df$Size,Pval=df$P.value)
   rownames(df1) <- df$Module;
@@ -1697,9 +1699,10 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
 #' @param method Method name, only "rwr" is supported
 #' @param queryType seeds or highlighted nodes for report saving purposes
 #' @param nodeids The IDs of nodes set as seed nodes "; " separated.
+#' @param sourceView which network view generated this: "2d" or "3d"
 #'
 #' @export
-DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids){
+DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids, sourceView="2d"){
   require("RandomWalkRestartMH")
   require("igraph")
 
@@ -1741,9 +1744,10 @@ DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids){
   dataSet$imgSet$enrTables[[type]] <- list();
   dataSet$imgSet$enrTables[[type]]$table <- df;
   dataSet$imgSet$enrTables[[type]]$res.mat<- df[,3, drop=F];
+  dataSet$imgSet$enrTables[[type]]$sourceView <- sourceView;
 
   dataSet$imgSet$enrTables[[type]]$library <- "";
-  dataSet$imgSet$enrTables[[type]]$query <- queryType; 
+  dataSet$imgSet$enrTables[[type]]$query <- queryType;
   dataSet$imgSet$enrTables[[type]]$algo <- "Random walk with restart";
   dataSet <<- dataSet;
 

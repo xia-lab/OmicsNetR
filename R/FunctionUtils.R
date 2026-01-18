@@ -71,9 +71,9 @@ SearchReg <- function(file.nm, fun.type, IDs, count){
   res <- PerformNetEnrichment(file.nm, fun.type, IDs);
 }
 
-regEnrichment <- function(file.nm, fun.type, IDs, netInv){
+regEnrichment <- function(file.nm, fun.type, IDs, netInv, sourceView="2d"){
   regBool <<- "false";
-  res <- PerformNetEnrichment(file.nm, fun.type, IDs);
+  res <- PerformNetEnrichment(file.nm, fun.type, IDs, sourceView);
 }
 
 #' Perform gene enrichment analysis or identify gene regulatory targets
@@ -84,7 +84,7 @@ regEnrichment <- function(file.nm, fun.type, IDs, netInv){
 #'
 #' @export
 #'
-PerformNetEnrichment <- function(file.nm, fun.type, IDs){
+PerformNetEnrichment <- function(file.nm, fun.type, IDs, sourceView="2d"){
   # note: hit.query, resTable must synchronize
   # prepare query
   ora.vec <- NULL;
@@ -93,24 +93,24 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs){
   names(ora.vec) <- ora.vec;
   if(fun.type %in% c("trrust", "encode", "jaspar", "mirnet", "met", "drugbank")){
     netInv <- "inverse";
-    res <- PerformRegEnrichAnalysis(file.nm, fun.type, ora.vec, netInv, idtype);
+    res <- PerformRegEnrichAnalysis(file.nm, fun.type, ora.vec, netInv, idtype, sourceView);
   } else{
-    res <- PerformEnrichAnalysis(file.nm, fun.type, ora.vec);
+    res <- PerformEnrichAnalysis(file.nm, fun.type, ora.vec, sourceView=sourceView);
   }
   return(res);
 }
 
-PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType){
+PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType, sourceView="2d"){
     if(!exists("my.reg.enrich")){ # public web on same user dir
         compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_reg_enrich.Rc");
   }
-    res <- my.reg.enrich(file.nm, fun.type, ora.vec, netInv, idType);
+    res <- my.reg.enrich(file.nm, fun.type, ora.vec, netInv, idType, sourceView);
     return(res);
     }
 
 # note: hit.query, resTable must synchronize
 # ora.vec should contains entrez ids, named by entrez ids ASWELL
-PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network"){
+PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network", sourceView="2d"){
 
   # prepare lib
   LoadLib(fun.type);
@@ -231,6 +231,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
   dataSet$imgSet$enrTables[[type]]$table <- resTable;
   dataSet$imgSet$enrTables[[type]]$library <- fun.type
   dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"
+  dataSet$imgSet$enrTables[[type]]$sourceView <- sourceView
 
 
   dataSet$imgSet$enrTables[[type]]$current.geneset <- current.geneset;
@@ -248,6 +249,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
   resTable$ids <- unlist(a);
   fast.write.csv(resTable, file=csv.nm, row.names=F);
   fast.write.csv(resTable, file=paste0(type, "_enr_table.csv"), row.names=F);
+  Sys.sleep(0.15);  # CRITICAL: Prevent race condition - allow file system to sync before Java reads
 
   return(1);
 }
@@ -828,8 +830,10 @@ LoadKEGGLibOther<-function(type){
 #'
 #' @export
 #'
-PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, save.type="network"){
+PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, sourceView="2d", save.type="network"){
   dataSet <- .get.nSet(dataSetObj);
+  # Store sourceView for use by SaveSingleOmicsEnr and SaveIntegEnr
+  dataSet$currentSourceView <- sourceView;
   if(ids=="Not_applicable"){
     ora.vec <- keggp.allfeatures;
     names(ora.vec) <- ora.vec;
