@@ -1014,6 +1014,7 @@ UpdateSubnetStats <- function(){
 FindCommunities <- function(method="infomap", use.weight=FALSE){
   library(igraph);
   set.seed(1);
+  use.weight <- isTRUE(as.logical(use.weight))
   # make sure this is the connected
   current.net <- ppi.comps[[current.net.nm]];
   g <- current.net;

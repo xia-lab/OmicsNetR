@@ -4,6 +4,130 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
+##################################################
+## Compound Name Matching Utilities
+## Fuzzy matching with synonym database support
+##################################################
+
+#' Perform approximate compound name matching using synonym database
+PerformCompoundApproxMatch <- function(q, cmpd.db, syn.db) {
+  # Check if databases match in size
+  if(length(syn.db$syns.vec) != nrow(cmpd.db)) {
+    min.size <- min(length(syn.db$syns.vec), nrow(cmpd.db));
+    com.nms <- cmpd.db$name[1:min.size];
+    syns.vec <- syn.db$syns.vec[1:min.size];
+    syns.list <- syn.db$syns.list[1:min.size];
+  } else {
+    if("lipid" %in% colnames(cmpd.db)) {
+      nonLipidInx <- cmpd.db$lipid == 0;
+      com.nms <- cmpd.db$name[nonLipidInx];
+      syns.vec <- syn.db$syns.vec[nonLipidInx];
+      syns.list <- syn.db$syns.list[nonLipidInx];
+    } else {
+      com.nms <- cmpd.db$name;
+      syns.vec <- syn.db$syns.vec;
+      syns.list <- syn.db$syns.list;
+    }
+  }
+
+  q.length <- nchar(q);
+  s <- c(0, 0.1, 0.2);
+  candidates <- NULL;
+
+  for (j in s) {
+    new.q <- q;
+    if(q.length > 32){
+      new.q <- substr(q, 1, 32);
+    }
+
+    matched.inx <- agrep(new.q, syns.vec, ignore.case=TRUE, max.distance=j, useBytes=TRUE);
+
+    if(length(matched.inx) > 0) {
+      candidates <- data.frame(
+        index = vector(mode = "numeric", length=length(matched.inx)),
+        value = vector(mode = "character", length=length(matched.inx)),
+        score = vector(mode = "numeric", length=length(matched.inx)),
+        stringsAsFactors = FALSE
+      );
+
+      for(n in 1:length(matched.inx)){
+        nm.vec <- syns.list[[matched.inx[n]]];
+        hit3.inx <- agrep(q, nm.vec, ignore.case=TRUE, max.distance=j, useBytes=TRUE);
+
+        if(length(hit3.inx) > 0){
+          hit3.nm <- vector(mode = "character", length=length(hit3.inx));
+          hit3.score <- vector(mode = "numeric", length=length(hit3.inx));
+
+          for(k in 1:length(hit3.inx)){
+            idx <- hit3.inx[k];
+            hit3.nm[k] <- nm.vec[idx];
+            hit3.score[k] <- j + abs(nchar(nm.vec[idx]) - nchar(q)) / (10 * nchar(q));
+          }
+
+          matches2 <- c();
+          if(length(grep("^[1-9a-z]{2}", q, ignore.case=TRUE)) > 0){
+            matches2 <- grep(paste("^", substr(q, 1, 2), sep=""), hit3.nm, ignore.case=TRUE);
+          } else if (length(grep("^[1-9a-z]", q, ignore.case=TRUE)) > 0){
+            matches2 <- grep(paste("^", substr(q, 1, 1), sep=""), hit3.nm, ignore.case=TRUE);
+          }
+
+          if(length(matches2) > 0){
+            hit3.score[matches2] <- hit3.score[matches2] - 0.05;
+          }
+
+          best.inx <- which(hit3.score == min(hit3.score))[1];
+          candidates[n, 1] <- matched.inx[n];
+          candidates[n, 2] <- com.nms[matched.inx[n]];
+          candidates[n, 3] <- hit3.score[best.inx];
+        }
+      }
+
+      rm.inx <- is.na(candidates[,2]) | candidates[,2] == "NA" | candidates[,2] == "";
+      candidates <- candidates[!rm.inx, , drop=FALSE];
+      candidates <- candidates[order(candidates[,3], decreasing=FALSE), , drop=FALSE];
+
+      if(nrow(candidates) > 10){
+        candidates <- candidates[1:10, , drop=FALSE];
+      }
+
+      if(nrow(candidates) > 0) {
+        return(candidates);
+      }
+    }
+  }
+
+  return(NULL);
+}
+
+#' Match compound names with fuzzy matching
+MatchCompoundNames <- function(query.vec, cmpd.db, syn.db) {
+  n <- length(query.vec);
+  hit.inx <- rep(0, n);
+  hit.values <- rep("", n);
+  match.state <- rep(0, n);
+
+  for(i in 1:n) {
+    q <- query.vec[i];
+    candidates <- PerformCompoundApproxMatch(q, cmpd.db, syn.db);
+
+    if(!is.null(candidates) && nrow(candidates) > 0) {
+      best.idx <- candidates[1, 1];
+
+      if(best.idx > 0 && best.idx <= nrow(cmpd.db)) {
+        hit.inx[i] <- best.idx;
+        hit.values[i] <- cmpd.db$name[best.idx];
+        match.state[i] <- 1;
+      }
+    }
+  }
+
+  return(list(
+    hit.inx = hit.inx,
+    hit.values = hit.values,
+    match.state = match.state
+  ));
+}
+
 LoadLib <- function(fun.type){
   fun.type <- tolower(fun.type);
   if(fun.type %in% c("kegg", "reactome", "motif", "bp", "cc", "mf","panth_mf", "go_bp", "go_cc","go_mf",  "go_panthbp", "go_panthcc", "go_panthmf","mirfamily", "mircluster", "mirdisease","mirtissue", "mirfunction")){
@@ -65,15 +189,15 @@ LoadEnrLib <- function(type, subtype){
 }
 
 
-SearchReg <- function(file.nm, fun.type, IDs, count){
+SearchReg <- function(file.nm, fun.type, IDs, count, sourceView="2d"){
   regCount <<- count;
   regBool <<- "true";
-  res <- PerformNetEnrichment(file.nm, fun.type, IDs);
+  res <- PerformNetEnrichment(file.nm, fun.type, IDs, sourceView);
 }
 
-regEnrichment <- function(file.nm, fun.type, IDs, netInv){
+regEnrichment <- function(file.nm, fun.type, IDs, isTf, sourceView="2d"){
   regBool <<- "false";
-  res <- PerformNetEnrichment(file.nm, fun.type, IDs);
+  res <- PerformNetEnrichment(file.nm, fun.type, IDs, sourceView);
 }
 
 #' Perform gene enrichment analysis or identify gene regulatory targets
@@ -84,18 +208,19 @@ regEnrichment <- function(file.nm, fun.type, IDs, netInv){
 #'
 #' @export
 #'
-PerformNetEnrichment <- function(file.nm, fun.type, IDs){
+PerformNetEnrichment <- function(file.nm, fun.type, IDs, sourceView="2d"){
   # note: hit.query, resTable must synchronize
   # prepare query
   ora.vec <- NULL;
   idtype <- "entrez"
+  save.type <- ifelse(is.null(sourceView) || sourceView == "", "network", sourceView)
   ora.vec <- unlist(strsplit(IDs, "; "));
   names(ora.vec) <- ora.vec;
   if(fun.type %in% c("trrust", "encode", "jaspar", "mirnet", "met", "drugbank")){
     netInv <- "inverse";
     res <- PerformRegEnrichAnalysis(file.nm, fun.type, ora.vec, netInv, idtype);
   } else{
-    res <- PerformEnrichAnalysis(file.nm, fun.type, ora.vec);
+    res <- PerformEnrichAnalysis(file.nm, fun.type, ora.vec, save.type=save.type);
   }
   return(res);
 }
@@ -252,6 +377,34 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
   return(1);
 }
 
+# Helper function to query gene database from SQLite
+queryGeneDB <- function(table.nm, org){
+  if(org == "custom"){
+    db.map <- qs::qread("anot_table.qs");
+    return(db.map);
+  }
+
+  require('RSQLite');
+  db.path <- paste0(sqlite.path, org, "_genes.sqlite");
+
+  if(!PrepareSqliteDB(db.path, .on.public.web)){
+    stop("Sqlite database is missing, please check your internet connection!");
+  }
+
+  conv.db <- dbConnect(SQLite(), db.path);
+  tbls <- dbListTables(conv.db);
+
+  if(!table.nm %in% tbls){
+    dbDisconnect(conv.db);
+    return(NULL);
+  }
+
+  db.map <- dbReadTable(conv.db, table.nm);
+  dbDisconnect(conv.db);
+
+  return(db.map);
+}
+
 doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
   if(type %in% c("rsid")){
     hit.inx <- startsWith(q.vec, "rs");
@@ -293,26 +446,51 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
   }else if(type %in% c("entrez", "ctd", "drugbank","ko")){
     # need to get only our data
     if(type == "entrez"){
-      db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+      db.map <- queryGeneDB("entrez", data.org);
+      if(is.null(db.map)){
+        return(data.frame(gene_id=character(0), accession=character(0)));
+      }
+      hit.inx <- match(q.vec, db.map[, "gene_id"]);
+      entrezs <- db.map[hit.inx, ]
+      entrezs <- entrezs[c(1,2)]
+      colnames(entrezs) = c("gene_id", "accession");
     }else if(type == "ctd"){
       db.path <- paste(lib.path, "chem", "/ctd.rds", sep="")
+      if(!.on.public.web){
+        nm <- basename(db.path);
+        download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+        db.path <- nm;
+      }
+      db.map <-  readRDS(db.path);
+      hit.inx <- match(q.vec, db.map[, "gene_id"]);
+      entrezs <- db.map[hit.inx, ]
+      entrezs <- entrezs[c(1,2)]
+      colnames(entrezs) = c("gene_id", "accession");
     }else if(type == "drugbank"){
       db.path <- paste(lib.path, "drug", "/drugbank.rds", sep="")
+      if(!.on.public.web){
+        nm <- basename(db.path);
+        download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+        db.path <- nm;
+      }
+      db.map <-  readRDS(db.path);
+      hit.inx <- match(q.vec, db.map[, "gene_id"]);
+      entrezs <- db.map[hit.inx, ]
+      entrezs <- entrezs[c(1,2)]
+      colnames(entrezs) = c("gene_id", "accession");
     }else if(type == "ko"){
       db.path <- paste(lib.path, "microbiome", "/ko.rds", sep="")
+      if(!.on.public.web){
+        nm <- basename(db.path);
+        download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+        db.path <- nm;
+      }
+      db.map <-  readRDS(db.path);
+      hit.inx <- match(q.vec, db.map[, "gene_id"]);
+      entrezs <- db.map[hit.inx, ]
+      entrezs <- entrezs[c(1,2)]
+      colnames(entrezs) = c("gene_id", "accession");
     }
-
-    if(!.on.public.web){
-      nm <- basename(db.path);
-      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-      db.path <- nm;
-    }
-
-    db.map <-  readRDS(db.path);
-    hit.inx <- match(q.vec, db.map[, "gene_id"]);
-    entrezs <- db.map[hit.inx, ]
-    entrezs <- entrezs[c(1,2)]
-    colnames(entrezs) = c("gene_id", "accession");
   }else if(type %in% c("mir_acc", "mir_id", "mirnet")){
     require('RSQLite');
     path <- paste0(sqlite.path, "mir2gene.sqlite");
@@ -336,15 +514,10 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     entrezs <- data.frame(lapply(entrezs, as.character), stringsAsFactors=FALSE)
     colnames(entrezs) = c("gene_id", "accession");
   }else if(type == "symbol"){
-    db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
-
-    if(!.on.public.web){
-      nm <- basename(db.path);
-      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-      db.path <- nm;
+    gene.map <- queryGeneDB("entrez", data.org);
+    if(is.null(gene.map)){
+      return(data.frame(gene_id=character(0), accession=character(0)));
     }
-
-    gene.map <- readRDS(db.path);
     if(data.org == "hsa"){
       q.vec = toupper(q.vec);
     }
@@ -354,18 +527,44 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     colnames(entrezs) <- c("gene_id", "accession");
   }else if(type %in% c("meta", "kegg", "chebi", "name", "bigg", "pubchem", "hmdb")){
 
-    db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
+    # For name type with synonym matching, use the .qs database
+    if(type == "name"){
+      db.path.qs <- paste(lib.path, "lib/compound_db.qs", sep="");
 
-    if(!.on.public.web){
-      nm <- basename(db.path);
-      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-      db.path <- nm;
+      if(!.on.public.web){
+        nm <- basename(db.path.qs);
+        download.file(db.path.qs, destfile = nm, method="libcurl", mode = "wb");
+        db.path.qs <- nm;
+      }
+
+      if(file.exists(db.path.qs)){
+        cmpd.map <- qs::qread(db.path.qs);
+      }else{
+        # Fallback to .rds if .qs not found
+        db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
+        if(!.on.public.web){
+          nm <- basename(db.path);
+          download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+          db.path <- nm;
+        }
+        cmpd.map <- readRDS(db.path);
+      }
+    }else{
+      # For other types, use the .rds database
+      db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
+
+      if(!.on.public.web){
+        nm <- basename(db.path);
+        download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
+        db.path <- nm;
+      }
+
+      cmpd.map <- readRDS(db.path);
     }
 
-    cmpd.map <- readRDS(db.path)
     q.type <- type;
     cmpd.vec <- q.vec
-  
+
     if(q.type == "hmdb"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$hmdb_id));
     }else if(q.type == "kegg"){
@@ -377,15 +576,48 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     }else if(q.type == "reactome"){
       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$reactome));
     }else if(q.type == "name"){
-       hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$name));
- 
+       # Use synonym-based fuzzy matching for compound names
+       syn.db.path <- paste(lib.path, "lib/syn_nms.qs", sep="");
+
+       if(!.on.public.web){
+         syn.nm <- basename(syn.db.path);
+         download.file(syn.db.path, destfile = syn.nm, method="libcurl", mode = "wb");
+         syn.db.path <- syn.nm;
+       }
+
+       if(file.exists(syn.db.path)){
+         # Load synonym database
+         syn.db <- qs::qread(syn.db.path);
+
+         # Perform fuzzy matching using synonyms
+         match.results <- MatchCompoundNames(cmpd.vec, cmpd.map, syn.db);
+         hit.inx <- match.results$hit.inx;
+
+         # Print matching statistics
+         matched.count <- sum(match.results$match.state == 1);
+         total.count <- length(cmpd.vec);
+         cat(sprintf("Compound name mapping (fuzzy): %d/%d matched (%.1f%%)\n",
+                     matched.count, total.count, 100*matched.count/total.count));
+       }else{
+         # Fallback to exact matching if synonym database not found
+         cat("Warning: Synonym database not found. Using exact matching.\n");
+         hit.inx <- match(tolower(cmpd.vec), tolower(cmpd.map$name));
+       }
+
     }else{
       print("No support for this compound database");
       return(0);
     }
  
     if(q.type == "name"){
-       res_entrez <-  cmpd.map[hit.inx, c("kegg_id", type)];
+       # For name type, return KEGG ID and original query name
+       # (not the matched database name, to ensure proper matching in DataUtils.R)
+       res_entrez <- data.frame(
+         kegg_id = cmpd.map$kegg[hit.inx],
+         query_name = cmpd.vec,
+         stringsAsFactors = FALSE
+       );
+       rownames(res_entrez) <- cmpd.vec;
     }else if(q.type != "kegg"){
       typ = paste0(q.type, "_id")
       res_entrez <-  cmpd.map[hit.inx, c("kegg_id", typ)];
@@ -405,47 +637,47 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     entrezs <- res[hit.inx, ];
     entrezs = res[c(1,2)];
   }else if(type == "NA"){
-   
+
     entrezs <- data.frame(gene_id=q.vec,accession=q.vec)
     rownames(entrezs) <- q.vec;
   }else {
+    # Determine table name based on type
+    table.nm <- NULL;
     if(type == "gb"){
       # note, some ID can have version number which is not in the database
       # need to strip it off NM_001402.5 => NM_001402
       q.mat <- do.call(rbind, strsplit(q.vec, "\\."));
       q.vec <- q.mat[,1];
-      db.path <- paste(lib.path, data.org, "/entrez_gb.rds", sep="");
+      table.nm <- "entrez_gb";
     }else if(type == "refseq"){
       q.mat <- do.call(rbind, strsplit(q.vec, "\\."));
       q.vec <- q.mat[,1];
-      db.path <- paste(lib.path, data.org, "/entrez_refseq.rds", sep="");
+      table.nm <- "entrez_refseq";
     }else if(type == "embl_gene"){
-      db.path <- paste(lib.path, data.org, "/entrez_embl_gene.rds", sep="");
+      table.nm <- "entrez_embl_gene";
     }else if(type == "embl_transcript"){
-      db.path <- paste(lib.path, data.org, "/entrez_embl_transcript.rds", sep="");
+      table.nm <- "entrez_embl_transcript";
     }else if(type == "embl_protein"){
-      db.path <- paste(lib.path, data.org, "/entrez_embl_protein.rds", sep="");
+      table.nm <- "entrez_embl_protein";
     }else if(type == "orf"){ # only for yeast
-      db.path <- paste(lib.path, data.org, "/entrez_orf.rds", sep="");
+      table.nm <- "entrez_orf";
     }else if(type == "string"){
-      db.path <- paste(lib.path, data.org, "/entrez_string.rds", sep="")
+      table.nm <- "entrez_string";
     }else if(type == "ecogene"){ # only for ecoli
-      db.path <- paste(lib.path, data.org, "/entrez_ecogene.rds", sep="")
+      table.nm <- "entrez_ecogene";
     }else if(type == "uniprot"){
-      db.path <- paste(lib.path, data.org, "/entrez_uniprot.rds", sep="")
+      table.nm <- "entrez_uniprot";
     }else if(type == "flybase"){
-      db.path <- paste(lib.path, data.org, "/entrez_flybase.rds", sep="")
+      table.nm <- "entrez_flybase";
     }else{
-      db.path <- paste(lib.path, data.org, "/entrez_",type, ".rds", sep="")
+      table.nm <- paste0("entrez_", type);
     }
 
-    if(!.on.public.web){
-      nm <- basename(db.path);
-      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-      db.path <- nm;
+    db.map <- queryGeneDB(table.nm, data.org);
+    if(is.null(db.map)){
+      return(data.frame(gene_id=character(0), accession=character(0)));
     }
 
-    db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "accession"]);
     entrezs <- db.map[hit.inx, ];
   }
@@ -457,63 +689,54 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
 # mapping between genebank, refseq and entrez
 doGeneIDMapping <- function(q.vec, type){
   if(is.null(q.vec)){
-    db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
-    db.map <-  readRDS(db.path);
+    db.map <- queryGeneDB("entrez", data.org);
+    if(is.null(db.map)){
+      return(character(0));
+    }
     q.vec <- db.map[, "gene_id"];
     type = "entrez";
   }
 
   if(type == "symbol"){
-    db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
-
-    if(!.on.public.web){
-      nm <- basename(db.path);
-      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-      db.path <- nm;
+    db.map <- queryGeneDB("entrez", data.org);
+    if(is.null(db.map)){
+      return(character(0));
     }
-
-    db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "symbol"]);
   }else if(type == "entrez"){
-    db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
-
-    if(!.on.public.web){
-      nm <- basename(db.path);
-      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-      db.path <- nm;
+    db.map <- queryGeneDB("entrez", data.org);
+    if(is.null(db.map)){
+      return(character(0));
     }
-
-    db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "gene_id"]);
   }else{
     # note, some ID can have version number which is not in the database
     # need to strip it off NM_001402.5 => NM_001402
     q.mat <- do.call(rbind, strsplit(q.vec, "\\."));
     q.vec <- q.mat[,1];
+
+    table.nm <- NULL;
     if(type == "gb"){
-      db.path <- paste(lib.path, data.org, "/entrez_gb.rds", sep="");
+      table.nm <- "entrez_gb";
     }else if(type == "refseq"){
-      db.path <- paste(lib.path, data.org, "/entrez_refseq.rds", sep="");
+      table.nm <- "entrez_refseq";
     }else if(type == "embl_gene"){
-      db.path <- paste(lib.path, data.org, "/entrez_embl_gene.rds", sep="");
+      table.nm <- "entrez_embl_gene";
     }else if(type == "embl_transcript"){
-      db.path <- paste(lib.path, data.org, "/entrez_embl_transcript.rds", sep="");
+      table.nm <- "entrez_embl_transcript";
     }else if(type == "embl_protein"){
-      db.path <- paste(lib.path, data.org, "/entrez_embl_protein.rds", sep="");
+      table.nm <- "entrez_embl_protein";
     }else if(type == "orf"){ # only for yeast
-      db.path <- paste(lib.path, data.org, "/entrez_orf.rds", sep="");
+      table.nm <- "entrez_orf";
     }else{
       print("Unknown data type2");
       return(0);
     }
 
-    if(!.on.public.web){
-      nm <- basename(db.path);
-      download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-      db.path <- nm;
+    db.map <- queryGeneDB(table.nm, data.org);
+    if(is.null(db.map)){
+      return(character(0));
     }
-
-    db.map <-  readRDS(db.path);
     hit.inx <- match(q.vec, db.map[, "accession"]);
   }
   entrezs=db.map[hit.inx, "gene_id"];
@@ -523,15 +746,11 @@ doGeneIDMapping <- function(q.vec, type){
 }
 
 doEntrez2SymbolMapping <- function(entrez.vec){
-  db.path <- paste(lib.path, data.org, "/entrez.rds", sep="");
+  gene.map <- queryGeneDB("entrez", data.org);
 
-  if(!.on.public.web){
-    nm <- basename(db.path);
-    download.file(db.path, destfile = nm, method="libcurl", mode = "wb");
-    db.path <- nm;
+  if(is.null(gene.map)){
+    return(entrez.vec);
   }
-
-  gene.map <- readRDS(db.path);
 
   hit.inx <- match(entrez.vec, gene.map[, "gene_id"]);
   symbols <- gene.map[hit.inx, "symbol"];
@@ -830,6 +1049,25 @@ LoadKEGGLibOther<-function(type){
 #'
 PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, save.type="network"){
   dataSet <- .get.nSet(dataSetObj);
+  normalizeEnrRes <- function(res){
+    df <- as.data.frame(res);
+    if(nrow(df) == 0){
+      return(df);
+    }
+    if(!"Hits" %in% colnames(df)){
+      if(ncol(df) >= 3){
+        df$Hits <- df[,3];
+      }
+    }
+    if(!"P.Value" %in% colnames(df)){
+      if("Pval" %in% colnames(df)){
+        df$P.Value <- df$Pval;
+      }else if(ncol(df) >= 4){
+        df$P.Value <- df[,4];
+      }
+    }
+    return(df);
+  }
   if(ids=="Not_applicable"){
     ora.vec <- keggp.allfeatures;
     names(ora.vec) <- ora.vec;
@@ -849,17 +1087,96 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, save.typ
     res1 = PerformEnrichAnalysisKegg(dataSet, file.nm, "kegg", ora.vec)
     res2 = PerformEnrichAnalysisKegg(dataSet, file.nm, "keggm", ora.vec)
     res3 = PerformEnrichAnalysisKegg(dataSet, file.nm, "integ", ora.vec)
+    print(paste0("[PerformMetEnrichment] integ sizes: kegg=", nrow(as.data.frame(res1)),
+                 " keggm=", nrow(as.data.frame(res2)),
+                 " integ=", nrow(as.data.frame(res3))))
   }else{
     res1 = PerformEnrichAnalysisKegg(dataSet, file.nm, fun.type, ora.vec)
     res.mat <- as.data.frame(res1)
   }
   if(fun.type == "integ" || fun.type == "ginteg"){
-    inx = which(rownames(res1) %in% rownames(res2))
-    subres1 = as.data.frame(res1[inx,])
-    inx = which(rownames(res2) %in% rownames(res1))
-    subres2 = as.data.frame(res2[inx,])
-    inx = which(rownames(res3) %in% rownames(subres2))
-    subres3 = as.data.frame(res3[inx,])
+    print(paste0("[PerformMetEnrichment] integ rownames: kegg=", length(rownames(res1)),
+                 " keggm=", length(rownames(res2)),
+                 " integ=", length(rownames(res3))))
+    # Guard against missing metabolite results (or empty integ results)
+    if(nrow(res1) == 0 || nrow(res2) == 0 || nrow(res3) == 0){
+      if(nrow(res1) == 0){
+        res.mat <- data.frame(
+          hitsG = integer(0),
+          hitsM = integer(0),
+          hitsTotal = integer(0),
+          P.ValueG = numeric(0),
+          P.ValueM = numeric(0),
+          P.ValueMerge = numeric(0),
+          P.ValueJoint = numeric(0),
+          integP = numeric(0)
+        )
+      }else{
+        subres1 <- as.data.frame(res1)
+        ord = order(rownames(subres1))
+        subres1 = subres1[ord,]
+        integ <- data.frame(
+          hitsG = subres1$Hits,
+          hitsM = rep(0, nrow(subres1)),
+          hitsTotal = subres1$Hits,
+          P.ValueG = subres1$P.Value,
+          P.ValueM = rep(1, nrow(subres1)),
+          P.ValueMerge = subres1$P.Value,
+          P.ValueJoint = rep(1, nrow(subres1))
+        )
+        integ$integP <- integ$P.ValueG
+        rownames(integ) <- rownames(subres1)
+        res.mat <- integ
+      }
+      SaveIntegEnr(file.nm, res.mat, save.type);
+      return(1);
+    }
+    res1n <- normalizeEnrRes(res1);
+    res2n <- normalizeEnrRes(res2);
+    res3n <- normalizeEnrRes(res3);
+    common <- Reduce(intersect, list(rownames(res1n), rownames(res2n), rownames(res3n)))
+    print(paste0("[PerformMetEnrichment] integ common pathways: ", length(common)))
+    if(length(common) == 0){
+      subres1 <- normalizeEnrRes(res1)
+      ord = order(rownames(subres1))
+      subres1 = subres1[ord,]
+      integ <- data.frame(
+        hitsG = subres1$Hits,
+        hitsM = rep(0, nrow(subres1)),
+        hitsTotal = subres1$Hits,
+        P.ValueG = subres1$P.Value,
+        P.ValueM = rep(1, nrow(subres1)),
+        P.ValueMerge = subres1$P.Value,
+        P.ValueJoint = rep(1, nrow(subres1))
+      )
+      integ$integP <- integ$P.ValueG
+      rownames(integ) <- rownames(subres1)
+      res.mat <- integ
+      SaveIntegEnr(file.nm, res.mat, save.type);
+      return(1);
+    }
+    subres1 = res1n[common,,drop=FALSE]
+    subres2 = res2n[common,,drop=FALSE]
+    subres3 = res3n[common,,drop=FALSE]
+    if(nrow(subres1) == 0 || nrow(subres2) == 0 || nrow(subres3) == 0){
+      subres1 <- res1n
+      ord = order(rownames(subres1))
+      subres1 = subres1[ord,]
+      integ <- data.frame(
+        hitsG = subres1$Hits,
+        hitsM = rep(0, nrow(subres1)),
+        hitsTotal = subres1$Hits,
+        P.ValueG = subres1$P.Value,
+        P.ValueM = rep(1, nrow(subres1)),
+        P.ValueMerge = subres1$P.Value,
+        P.ValueJoint = rep(1, nrow(subres1))
+      )
+      integ$integP <- integ$P.ValueG
+      rownames(integ) <- rownames(subres1)
+      res.mat <- integ
+      SaveIntegEnr(file.nm, res.mat, save.type);
+      return(1);
+    }
 
     ord = order(rownames(subres1));
     subres1 = subres1[ord,]
@@ -976,7 +1293,7 @@ PerformEnrichAnalysisKegg <- function(dataSetObj=NA, file.nm, fun.type, ora.vec)
   return(all.res.mat);
 }
 
-SaveSingleOmicsEnr <- function(file.nm,res.mat){
+SaveSingleOmicsEnr <- function(file.nm,res.mat, save.type="network"){
   inx = res.mat[,3]>0
   res.mat <- res.mat[inx,];
   hits.query <- hits.query[inx];
@@ -1036,7 +1353,7 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat){
   fast.write.csv(resTable, file=csv.nm, row.names=F);
 }
 
-SaveIntegEnr <- function(file.nm,res.mat){
+SaveIntegEnr <- function(file.nm,res.mat, save.type="network"){
   inx = res.mat$hitsTotal > 0
   res.mat <- res.mat[inx,];
   if(nrow(res.mat)> 1){

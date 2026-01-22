@@ -488,7 +488,7 @@ GetPeakAnnotClass <- function(){
 
 GetPeakAnnotColNames <- function(){
     if(is.null(dataSet$imgSet$peak_annotation)){
-    df <- .readDataTable('peak_annotation.csv')
+        df <- .readDataTable('peak_annotation.csv')
         dataSet$imgSet$peak_annotation <<- df;
 
     }
