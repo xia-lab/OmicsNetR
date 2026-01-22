@@ -1,5 +1,5 @@
   
-my.reg.enrich <- function(file.nm, fun.type, ora.vec, netInv, idType){
+my.reg.enrich <- function(file.nm, fun.type, ora.vec, netInv, idType, sourceView="2d"){
   require("plyr")
   ora.nms <- names(ora.vec);
   # prepare for the result table
@@ -113,6 +113,7 @@ my.reg.enrich <- function(file.nm, fun.type, ora.vec, netInv, idType){
   dataSet$imgSet$enrTables[[type]] <- list()
   dataSet$imgSet$enrTables[[type]]$table <- resTable1;
   dataSet$imgSet$enrTables[[type]]$res.mat <- resTable1[,3, drop=F];
+  dataSet$imgSet$enrTables[[type]]$sourceView <- sourceView;
 
   dataSet$imgSet$enrTables[[type]]$library <- fun.type
   dataSet$imgSet$enrTables[[type]]$algo <- "Overrepresentation Analysis"

@@ -702,3 +702,21 @@ GetSysMessages <- function(){
   }
   return(sys.msg.vec);
 }
+
+# Set current report view (2d or 3d) - called when user updates report from a network view
+SetCurrentReportView <- function(viewType) {
+  if(!exists("dataSet") || is.null(dataSet)) {
+    dataSet <<- list();
+  }
+  # Store the current report view (2d or 3d)
+  dataSet$currentReportView <<- viewType;
+  return(1);
+}
+
+# Get current report view for table links in report
+GetCurrentReportView <- function() {
+  if(exists("dataSet") && !is.null(dataSet$currentReportView)) {
+    return(dataSet$currentReportView);
+  }
+  return("2d");  # default to 2d
+}
