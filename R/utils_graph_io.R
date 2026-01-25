@@ -381,7 +381,7 @@ my.convert.Igraph2JSONFromFile <- function(net.nm, filenm, dim=3){
 
   # covert to json
   require("RJSONIO");
-  dg <- decompose.graph(g)
+  dg <- decompose(g)
   if(length(dg)>1){
     modules <- "NA";
   }else{
