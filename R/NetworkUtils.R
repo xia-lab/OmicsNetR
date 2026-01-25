@@ -208,7 +208,7 @@ GetIndNetsQueryNum <- function(){
 GetShortestPaths <- function(from, to, intermediate="false"){
   current.net <- ppi.comps[[current.net.nm]];
 
-  paths <- igraph::get.all.shortest.paths(current.net, from, to)$res;
+  paths <- igraph::all_shortest_paths(current.net, from, to)$res;
   if(length(paths) == 0){
     return (paste("No connection between the two nodes!"));
   }
@@ -724,7 +724,7 @@ SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
   tparam = 1
   while(tparam <= length(terminals))
   {
-    paths = igraph::get.all.shortest.paths(PPI_graph,subtree, nsubtree)
+    paths = igraph::all_shortest_paths(PPI_graph,subtree, nsubtree)
     if(length(paths$res)>1)
     {
       paths_length = sapply(paths$res, length)
