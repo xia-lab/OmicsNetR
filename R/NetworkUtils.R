@@ -17,7 +17,7 @@ BuildSeedProteinNet <- function(dataSetObj=NA){
   hit.inx <- nodes %in% names(expr.vec);
   nodes2rm <- nodes[!hit.inx];
 
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
   nodeList <- igraph::as_data_frame(g, "vertices");
   nodeList <- nodeList[,1:2];
@@ -291,7 +291,7 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   g <- ppi.comps[[current.net.nm]];
   # try to see if the nodes themselves are already connected
   hit.inx <- V(g)$name %in% nodes;
-  gObj <- induced.subgraph(g, V(g)$name[hit.inx]);
+  gObj <- induced_subgraph(g, V(g)$name[hit.inx]);
 
   # now find connected components
   comps <-decompose(gObj, min.vertices=1);
@@ -303,11 +303,11 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
     paths.list <-list();
     sd.len <- length(nodes);
     for(pos in 1:sd.len){
-      paths.list[[pos]] <- igraph::get.shortest.paths(g, nodes[pos], nodes[-(1:pos)])$vpath;
+      paths.list[[pos]] <- igraph::shortest_paths(g, nodes[pos], nodes[-(1:pos)])$vpath;
     }
     nds.inxs <- unique(unlist(paths.list));
     nodes2rm <- V(g)$name[-nds.inxs];
-    g <- simplify(delete.vertices(g, nodes2rm));
+    g <- simplify(delete_vertices(g, nodes2rm));
   }
   nodeList <- igraph::as_data_frame(g, "vertices");
   if(nrow(nodeList) < 3){
@@ -737,13 +737,13 @@ SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
     }
     tparam = tparam+1
   }
-  steinert =mst(induced.subgraph(PPI_graph, subtree))
+  steinert =mst(induced_subgraph(PPI_graph, subtree))
   for(i in length(which(V(steinert)$color == "yellow"))+1)
   { degr = degree(steinert, v = V(steinert), mode = c("all"))
   todel = names(which(degr == 1))
   todel = todel[which(!todel %in% terminals$name)]
   if(length(todel) > 0)
-  {steinert = delete.vertices(steinert, todel)}
+  {steinert = delete_vertices(steinert, todel)}
   }
   steinertrees[[runs]] = steinert
   steinertmin[runs]  = length(V(steinert)$name)
@@ -782,7 +782,7 @@ FilterBipartiNet <- function(dataSetObj=NA, nd.type, min.dgr, min.btw){
   }
 
   nodes2rm <- unique(c(nodes2rm.dgr, nodes2rm.btw));
-  overall.graph <- simplify(delete.vertices(overall.graph, nodes2rm));
+  overall.graph <- simplify(delete_vertices(overall.graph, nodes2rm));
   current.msg <<- paste("A total of", length(nodes2rm) , "was reduced.");
   dataSet <- .decomposeGraph(dataSet, overall.graph);
   if(!is.null(dataSet$substats)){
@@ -823,7 +823,7 @@ BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
   dgrs <- degree(overall.graph);
   keep.inx <- dgrs > 1 | (names(dgrs) %in% my.seeds);
   nodes2rm <- V(overall.graph)$name[!keep.inx];
-  overall.graph <-  simplify(delete.vertices(overall.graph, nodes2rm));
+  overall.graph <-  simplify(delete_vertices(overall.graph, nodes2rm));
 
   # need to restrict the operation b/c get.shortest.paths is very time consuming
   # for top max.len highest degrees
@@ -842,11 +842,11 @@ BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
   # now calculate the shortest paths for
   # each seed vs. all other seeds (note, to remove pairs already calculated previously)
   for(pos in 1:sd.len){
-    paths.list[[pos]] <- igraph::get.shortest.paths(overall.graph, my.seeds[pos], seed.proteins[-(1:pos)])$vpath;
+    paths.list[[pos]] <- igraph::shortest_paths(overall.graph, my.seeds[pos], seed.proteins[-(1:pos)])$vpath;
   }
   nds.inxs <- unique(unlist(paths.list));
   nodes2rm <- V(overall.graph)$name[-nds.inxs];
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
   nodeList <- igraph::as_data_frame(g, "vertices");
   colnames(nodeList) <- c("Id", "Label");
@@ -1051,11 +1051,11 @@ FindCommunities <- function(method="infomap", sourceView="2d", use.weight=FALSE)
   }
 
   if(method == "walktrap"){
-    fc <- walktrap.community(g);
+    fc <- cluster_walktrap(g);
   }else if(method == "infomap"){
-    fc <- infomap.community(g);
+    fc <- cluster_infomap(g);
   }else if(method == "labelprop"){
-    fc <- label.propagation.community(g);
+    fc <- cluster_label_prop(g);
   }else{
     return ("NA||Unknown method!");
   }
@@ -1099,7 +1099,7 @@ FindCommunities <- function(method="infomap", sourceView="2d", use.weight=FALSE)
     qnum.vec <- c(qnum.vec, qnums);
     psize.vec <- c(psize.vec, psize);
     # calculate p values (comparing in- out- degrees)
-    subgraph <- induced.subgraph(g, path.ids);
+    subgraph <- induced_subgraph(g, path.ids);
     in.degrees <- degree(subgraph);
     out.degrees <- degree(g, path.ids) - in.degrees;
     ppval <- wilcox.test(in.degrees, out.degrees)$p.value;
@@ -1173,7 +1173,7 @@ convertModuleToDF <- function(dataString) {
 
 
 community.significance.test <- function(graph, vs, ...) {
-  subgraph <- induced.subgraph(graph, vs)
+  subgraph <- induced_subgraph(graph, vs)
   in.degrees <- degree(subgraph)
   out.degrees <- degree(graph, vs) - in.degrees
   wilcox.test(in.degrees, out.degrees, ...)
@@ -1778,7 +1778,7 @@ FilterByTissue <- function(dataSetObj=NA, type, tissue){
   tissue.genes <- tissue.mat[,1][!hit.inx];
   nodes2rm <- gene.nms[which(gene.nms %in% tissue.genes)]
 
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
   nodeList <- igraph::as_data_frame(g, "vertices");
   nodeList <- nodeList[,1:2];
@@ -1833,7 +1833,7 @@ FilterByPvalue <- function(pvaluecutoff){
   res <- vapply(all.nms, function(x){x %in% nodes2rm}, FUN.VALUE = logical(length = 1));
   nodes2rm <- all.nms[res];
 
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
   nodeList <- igraph::as_data_frame(g, "vertices");
   lbss <- doKegg2NameMapping(nodeList[,1]);
