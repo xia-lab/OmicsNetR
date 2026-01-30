@@ -1,5 +1,5 @@
 ##################################################
-## R script for OmicsNet Pro
+## R script for OmicsNet
 ## Description: Arrow utilities for zero-copy data exchange with Java
 ## Author: OmicsNet Team
 ## Part of the Rserve/qs to Apache Arrow migration
@@ -52,6 +52,12 @@ write_arrow_safe <- function(df, path, compress = "uncompressed") {
         if (is.factor(df[[col]])) {
             df[[col]] <- as.character(df[[col]])
         }
+    }
+
+    # CRITICAL: Remove existing file first to prevent file-lock conflicts
+    if (file.exists(path)) {
+        unlink(path)
+        Sys.sleep(0.01)
     }
 
     # Write the Arrow file

@@ -378,8 +378,24 @@ convertInteraction2Names <- function(types){
 }
 
 doEmblGene2EntrezMapping <- function(emblgene.vec){
-  db.path <- paste(lib.path, data.org, "/entrez_embl_gene.rds", sep="");
-  db.map <-  readRDS(db.path);
+  require('RSQLite');
+  db.path <- paste0(sqlite.path, data.org, "_genes.sqlite");
+
+  if(!PrepareSqliteDB(db.path, .on.public.web)){
+    stop("Sqlite database is missing, please check your internet connection!");
+  }
+
+  conv.db <- dbConnect(SQLite(), db.path);
+  tbls <- dbListTables(conv.db);
+
+  if(!"entrez_embl_gene" %in% tbls){
+    dbDisconnect(conv.db);
+    return(character(0));
+  }
+
+  db.map <- dbReadTable(conv.db, "entrez_embl_gene");
+  dbDisconnect(conv.db);
+
   hit.inx <- match(emblgene.vec, db.map[, "accession"]);
   entrezs <- db.map[hit.inx, "gene_id"];
   mode(entrezs) <- "character";
