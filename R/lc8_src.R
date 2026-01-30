@@ -171,7 +171,11 @@ my_calculate_formula <- function(Formula1,Formula2,sign = 1, Valid_formula = FAL
   }
 }
 
-formula_mz <- function(formula = "C2H4O1", charge = 0, elem_table = OmicsNetR::elem_table){
+formula_mz <- function(formula = "C2H4O1", charge = 0, elem_table = NULL){
+  # Get elem_table from global environment if not provided
+  if (is.null(elem_table)) {
+    elem_table <- get("elem_table", envir = .GlobalEnv)
+  }
 
   mz = numeric()
   for(i in 1:length(formula)){
@@ -256,8 +260,12 @@ formula_mz <- function(formula = "C2H4O1", charge = 0, elem_table = OmicsNetR::e
 #' @noRd
 #' @return the ring and double bond number
 #'
-#' @examples formula_rdbe(formula = "C2H4O1", elem_table = OmicsNetR::elem_table)
-formula_rdbe = function(formula = "C2H4O1", elem_table = OmicsNetR::elem_table){
+#' @examples formula_rdbe(formula = "C2H4O1", elem_table = elem_table)
+formula_rdbe = function(formula = "C2H4O1", elem_table = NULL){
+  # Get elem_table from global environment if not provided
+  if (is.null(elem_table)) {
+    elem_table <- get("elem_table", envir = .GlobalEnv)
+  }
 
   rdbe = numeric()
   for(i in 1:length(formula)){
@@ -330,8 +338,13 @@ formula_rdbe = function(formula = "C2H4O1", elem_table = OmicsNetR::elem_table){
 #' @noRd
 #' @return the ratio of given formula and its isotopic peak
 #'
-#' @examples isotopic_abundance(formula = "C2H4O1", elem_table = OmicsNetR::elem_table)
-isotopic_abundance = function(formula = "C2H4O1", isotope = "[13]C1", elem_table = OmicsNetR::elem_table){
+#' @examples isotopic_abundance(formula = "C2H4O1", elem_table = elem_table)
+isotopic_abundance = function(formula = "C2H4O1", isotope = "[13]C1", elem_table = NULL){
+  # Get elem_table from global environment if not provided
+  if (is.null(elem_table)) {
+    elem_table <- get("elem_table", envir = .GlobalEnv)
+  }
+
   formula <- gsub("D", "[2]H", formula)
   ende2 <- nchar(formula)
   element2 <- c()
