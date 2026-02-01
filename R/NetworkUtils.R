@@ -206,6 +206,7 @@ GetIndNetsQueryNum <- function(){
 #' @param intermediate if true check whether from and target node connects to each other
 #'
 GetShortestPaths <- function(from, to, intermediate="false"){
+  require("igraph")
   current.net <- ppi.comps[[current.net.nm]];
 
   paths <- igraph::all_shortest_paths(current.net, from, to)$res;
