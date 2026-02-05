@@ -1134,10 +1134,33 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, sourceVi
       SaveIntegEnr(file.nm, res.mat, save.type);
       return(1);
     }
+    # Normalize and filter NA rownames from each result
     res1n <- normalizeEnrRes(res1);
+    if (nrow(res1n) > 0) {
+      rn1 <- trimws(rownames(res1n))
+      valid1 <- !is.na(rn1) & rn1 != "" & tolower(rn1) != "na"
+      res1n <- res1n[valid1, , drop = FALSE]
+    }
+
     res2n <- normalizeEnrRes(res2);
+    if (nrow(res2n) > 0) {
+      rn2 <- trimws(rownames(res2n))
+      valid2 <- !is.na(rn2) & rn2 != "" & tolower(rn2) != "na"
+      res2n <- res2n[valid2, , drop = FALSE]
+    }
+
     res3n <- normalizeEnrRes(res3);
+    if (nrow(res3n) > 0) {
+      rn3 <- trimws(rownames(res3n))
+      valid3 <- !is.na(rn3) & rn3 != "" & tolower(rn3) != "na"
+      res3n <- res3n[valid3, , drop = FALSE]
+    }
+
     all_paths <- unique(na.omit(c(rownames(res1n), rownames(res2n), rownames(res3n))))
+    if (length(all_paths) > 0) {
+      all_paths <- trimws(all_paths)
+      all_paths <- all_paths[!is.na(all_paths) & all_paths != "" & tolower(all_paths) != "na"]
+    }
     print(paste0("[PerformMetEnrichment] integ total pathways: ", length(all_paths)))
     if(length(all_paths) == 0){
       res.mat <- data.frame(
@@ -1156,6 +1179,9 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, sourceVi
 
     get_col <- function(df, col, default) {
       if (length(default) > 1) {
+        if (length(default) != length(all_paths)) {
+          default <- rep(default[1], length(all_paths))
+        }
         out <- as.numeric(default)
         names(out) <- all_paths
       } else {
@@ -1207,6 +1233,12 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, sourceVi
                       length(all_paths), nrow(integ)))
       rownames(integ) <- seq_len(nrow(integ))
     }
+    # Drop any NA/empty pathway names from output
+    rn <- trimws(rownames(integ))
+    bad_nm <- is.na(rn) | rn == "" | tolower(rn) == "na"
+    if (any(bad_nm)) {
+      integ <- integ[!bad_nm, , drop = FALSE]
+    }
 
     for(i in 1:nrow(integ)){
       if(integ$P.ValueG[i] != 1 && integ$P.ValueM[i] != 1){
@@ -1255,6 +1287,14 @@ PerformEnrichAnalysisKegg <- function(dataSetObj=NA, file.nm, fun.type, ora.vec)
 
   current.geneset = current.geneset[keepInx]
   current.geneset = current.geneset[which(!names(current.geneset) %in% dataSet$toremove)]
+
+  # Filter out NA/empty pathway names BEFORE creating result matrix
+  geneset_names <- names(current.geneset)
+  if (length(geneset_names) > 0) {
+    geneset_names <- trimws(geneset_names)
+    valid_idx <- !is.na(geneset_names) & geneset_names != "" & tolower(geneset_names) != "na"
+    current.geneset <- current.geneset[valid_idx]
+  }
 
   # prepare for the result table
   set.size<-length(current.geneset);
@@ -1342,6 +1382,14 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat, save.type="network"){
 
   #get gene symbols
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
+  if (nrow(resTable) > 0) {
+    rn <- trimws(as.character(resTable$Pathway))
+    keep <- !is.na(rn) & rn != "" & tolower(rn) != "na"
+    if (!all(keep)) {
+      resTable <- resTable[keep, , drop = FALSE]
+      res.mat <- res.mat[keep, , drop = FALSE]
+    }
+  }
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
