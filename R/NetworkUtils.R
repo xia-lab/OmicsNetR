@@ -120,8 +120,20 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
     return(.set.nSet(dataSet));
   }else{
     GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
-    entrezIDs <- GeneAnotDB[,1];
-    names(entrezIDs) <- nd.nms;
+    if (is.null(GeneAnotDB) || nrow(GeneAnotDB) == 0) {
+      message("[WARN] ID mapping returned no results, using original node names")
+      entrezIDs <- nd.nms;
+      names(entrezIDs) <- nd.nms;
+    } else {
+      entrezIDs <- GeneAnotDB[,1];
+      if (length(entrezIDs) == 0) {
+        message("[WARN] ID mapping returned empty vector, using original node names")
+        entrezIDs <- nd.nms;
+        names(entrezIDs) <- nd.nms;
+      } else {
+        names(entrezIDs) <- nd.nms;
+      }
+    }
     current.anot <<- entrezIDs;
     convertIgraph2JSON(dataSet, net.nm, json.nm, FALSE);
     message("Conversion from Graph object into Json file completed successfully!")
@@ -136,8 +148,20 @@ PrepareMinNetwork <- function(dataSetObj=NA, net.nm, json.nm){
   ppi.comps$minimumNet <<- my.ppi;
   nd.nms <- V(my.ppi)$name;
   GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
-  entrezIDs <- GeneAnotDB[,1];
-  names(entrezIDs) <- nd.nms;
+  if (is.null(GeneAnotDB) || nrow(GeneAnotDB) == 0) {
+    message("[WARN] ID mapping returned no results, using original node names")
+    entrezIDs <- nd.nms;
+    names(entrezIDs) <- nd.nms;
+  } else {
+    entrezIDs <- GeneAnotDB[,1];
+    if (length(entrezIDs) == 0) {
+      message("[WARN] ID mapping returned empty vector, using original node names")
+      entrezIDs <- nd.nms;
+      names(entrezIDs) <- nd.nms;
+    } else {
+      names(entrezIDs) <- nd.nms;
+    }
+  }
   current.anot <<- entrezIDs;
   current.net.nm <<- "minimumNet";
   convertIgraph2JSON(dataSet, "minimumNet", json.nm, FALSE);
