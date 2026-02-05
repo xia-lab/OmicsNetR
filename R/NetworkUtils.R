@@ -17,15 +17,15 @@ BuildSeedProteinNet <- function(dataSetObj=NA){
   hit.inx <- nodes %in% names(expr.vec);
   nodes2rm <- nodes[!hit.inx];
 
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
-  nodeList <- get.data.frame(g, "vertices");
+  nodeList <- igraph::as_data_frame(g, "vertices");
   nodeList <- nodeList[,1:2];
   colnames(nodeList) <- c("Id", "Label");
   fast.write.csv(nodeList, file="orig_node_list.csv");
   nd.inx <- omics.net$node.data[,1] %in% nodeList[,1];
 
-  edgeList <- get.data.frame(g, "edges");
+  edgeList <- igraph::as_data_frame(g, "edges");
   edgeList <- edgeList[,1:2];
   colnames(edgeList) <- c("Source", "Target");
   fast.write.csv(edgeList, file="orig_edge_list.csv");
@@ -54,7 +54,7 @@ CreateGraph <- function(dataSetObj=NA){
   node.list <- omics.net$node.data;
   edge.list <- omics.net$edge.data;
   seed.proteins <- omics.net$node.data[,1];
-  overall.graph <- simplify(graph.data.frame(edge.list, directed=FALSE)) #, vertices=node.list));
+  overall.graph <- simplify(graph_from_data_frame(edge.list, directed=FALSE)) #, vertices=node.list));
 
   # add node expression value
   newIDs <- dataSet$seeds.proteins;
@@ -77,7 +77,7 @@ CreateGraph <- function(dataSetObj=NA){
   expr.vec <<- expr.vec;
   current.overall.graph <- overall.graph;
 
-  overall.graph <- suppressWarnings(set.vertex.attribute(overall.graph, "abundance", index = V(overall.graph), value = expr.vals));
+  overall.graph <- suppressWarnings(set_vertex_attr(overall.graph, "abundance", index = V(overall.graph), value = expr.vals));
   overall.graph <<- overall.graph;
   dataSet <- .decomposeGraph(dataSet, overall.graph);
   seed.proteins <<- seed.proteins
@@ -232,7 +232,7 @@ GetIndNetsQueryNum <- function(){
 GetShortestPaths <- function(from, to, intermediate="false"){
   current.net <- ppi.comps[[current.net.nm]];
 
-  paths <- igraph::get.all.shortest.paths(current.net, from, to)$res;
+  paths <- igraph::all_shortest_paths(current.net, from, to)$res;
   if(length(paths) == 0){
     return (paste("No connection between the two nodes!"));
   }
@@ -315,10 +315,10 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   g <- ppi.comps[[current.net.nm]];
   # try to see if the nodes themselves are already connected
   hit.inx <- V(g)$name %in% nodes;
-  gObj <- induced.subgraph(g, V(g)$name[hit.inx]);
+  gObj <- induced_subgraph(g, V(g)$name[hit.inx]);
 
   # now find connected components
-  comps <-decompose.graph(gObj, min.vertices=1);
+  comps <-decompose(gObj, min.vertices=1);
 
   if(length(comps) == 1){ # nodes are all connected
     g <- comps[[1]];
@@ -327,13 +327,13 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
     paths.list <-list();
     sd.len <- length(nodes);
     for(pos in 1:sd.len){
-      paths.list[[pos]] <- igraph::get.shortest.paths(g, nodes[pos], nodes[-(1:pos)])$vpath;
+      paths.list[[pos]] <- igraph::shortest_paths(g, nodes[pos], nodes[-(1:pos)])$vpath;
     }
     nds.inxs <- unique(unlist(paths.list));
     nodes2rm <- V(g)$name[-nds.inxs];
-    g <- simplify(delete.vertices(g, nodes2rm));
+    g <- simplify(delete_vertices(g, nodes2rm));
   }
-  nodeList <- get.data.frame(g, "vertices");
+  nodeList <- igraph::as_data_frame(g, "vertices");
   if(nrow(nodeList) < 3){
     return ("NA");
   }
@@ -344,7 +344,7 @@ ExtractModule<- function(dataSetObj=NA, nodeids, dim="3"){
   ndFileNm = paste(module.nm, "_node_list.csv", sep="");
   fast.write.csv(nodeList, file=ndFileNm, row.names=F);
 
-  edgeList <- get.data.frame(g, "edges");
+  edgeList <- igraph::as_data_frame(g, "edges");
   edgeList <- cbind(rownames(edgeList), edgeList);
   colnames(edgeList) <- c("Id", "Source", "Target");
   edgFileNm = paste(module.nm, "_edge_list.csv", sep="");
@@ -610,7 +610,7 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
       }
     }
     require("igraph");
-    g <- simplify(graph.data.frame(edge.res, directed=FALSE)) #, vertices=node.list));
+    g <- simplify(graph_from_data_frame(edge.res, directed=FALSE)) #, vertices=node.list));
 
     met.ids <- unique(net.info$met.ids);
     met.microbe.list <- list();
@@ -748,7 +748,7 @@ SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
   tparam = 1
   while(tparam <= length(terminals))
   {
-    paths = igraph::get.all.shortest.paths(PPI_graph,subtree, nsubtree)
+    paths = igraph::all_shortest_paths(PPI_graph,subtree, nsubtree)
     if(length(paths$res)>1)
     {
       paths_length = sapply(paths$res, length)
@@ -761,13 +761,13 @@ SteinerTree_cons <- function(terminal_nodes, PPI_graph, run_times) {
     }
     tparam = tparam+1
   }
-  steinert =mst(induced.subgraph(PPI_graph, subtree))
+  steinert =mst(induced_subgraph(PPI_graph, subtree))
   for(i in length(which(V(steinert)$color == "yellow"))+1)
   { degr = degree(steinert, v = V(steinert), mode = c("all"))
   todel = names(which(degr == 1))
   todel = todel[which(!todel %in% terminals$name)]
   if(length(todel) > 0)
-  {steinert = delete.vertices(steinert, todel)}
+  {steinert = delete_vertices(steinert, todel)}
   }
   steinertrees[[runs]] = steinert
   steinertmin[runs]  = length(V(steinert)$name)
@@ -806,7 +806,7 @@ FilterBipartiNet <- function(dataSetObj=NA, nd.type, min.dgr, min.btw){
   }
 
   nodes2rm <- unique(c(nodes2rm.dgr, nodes2rm.btw));
-  overall.graph <- simplify(delete.vertices(overall.graph, nodes2rm));
+  overall.graph <- simplify(delete_vertices(overall.graph, nodes2rm));
   current.msg <<- paste("A total of", length(nodes2rm) , "was reduced.");
   dataSet <- .decomposeGraph(dataSet, overall.graph);
   if(!is.null(dataSet$substats)){
@@ -847,7 +847,7 @@ BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
   dgrs <- degree(overall.graph);
   keep.inx <- dgrs > 1 | (names(dgrs) %in% my.seeds);
   nodes2rm <- V(overall.graph)$name[!keep.inx];
-  overall.graph <-  simplify(delete.vertices(overall.graph, nodes2rm));
+  overall.graph <-  simplify(delete_vertices(overall.graph, nodes2rm));
 
   # need to restrict the operation b/c get.shortest.paths is very time consuming
   # for top max.len highest degrees
@@ -866,17 +866,17 @@ BuildMinConnectedGraphs <- function(dataSetObj=NA, max.len = 200){
   # now calculate the shortest paths for
   # each seed vs. all other seeds (note, to remove pairs already calculated previously)
   for(pos in 1:sd.len){
-    paths.list[[pos]] <- igraph::get.shortest.paths(overall.graph, my.seeds[pos], seed.proteins[-(1:pos)])$vpath;
+    paths.list[[pos]] <- igraph::shortest_paths(overall.graph, my.seeds[pos], seed.proteins[-(1:pos)])$vpath;
   }
   nds.inxs <- unique(unlist(paths.list));
   nodes2rm <- V(overall.graph)$name[-nds.inxs];
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
-  nodeList <- get.data.frame(g, "vertices");
+  nodeList <- igraph::as_data_frame(g, "vertices");
   colnames(nodeList) <- c("Id", "Label");
   fast.write.csv(nodeList, file="orig_node_list.csv", row.names=F);
 
-  edgeList <- get.data.frame(g, "edges");
+  edgeList <- igraph::as_data_frame(g, "edges");
   edgeList <- cbind(rownames(edgeList), edgeList);
   colnames(edgeList) <- c("Id", "Source", "Target");
   fast.write.csv(edgeList, file="orig_edge_list.csv", row.names=F);
@@ -911,7 +911,7 @@ BuildPCSFNet <- function(dataSetObj=NA){
   colnames(edg) <- c("from", "to", "cost");
 
   node_names <- unique(c(as.character(edg[,1]),as.character(edg[,2])))
-  ppi <- graph.data.frame(edg[,1:2],vertices=node_names,directed=F)
+  ppi <- graph_from_data_frame(edg[,1:2],vertices=node_names,directed=F)
   E(ppi)$weight <- as.numeric(edg[,3])
   ppi <- simplify(ppi)
 
@@ -925,11 +925,11 @@ BuildPCSFNet <- function(dataSetObj=NA){
 
   g <- Compute.SteinerForest(ppi, expr.vec, w = 5, b = 100, mu = 0.0005);
 
-  nodeList <- get.data.frame(g, "vertices");
+  nodeList <- igraph::as_data_frame(g, "vertices");
   colnames(nodeList) <- c("Id", "Label");
   fast.write.csv(nodeList, file="orig_node_list.csv", row.names=F);
 
-  edgeList <- get.data.frame(g, "edges");
+  edgeList <- igraph::as_data_frame(g, "edges");
   edgeList <- cbind(rownames(edgeList), edgeList);
   colnames(edgeList) <- c("Id", "Source", "Target");
   fast.write.csv(edgeList, file="orig_edge_list.csv", row.names=F);
@@ -958,10 +958,10 @@ BuildPCSFNet <- function(dataSetObj=NA){
   dataSet <- .get.nSet(dataSetObj);
   # now decompose to individual connected subnetworks
   if(uploadedGraph == "false"){
-    comps <-decompose.graph(gObj, min.vertices=minNodeNum);
+    comps <-decompose(gObj, min.vertices=minNodeNum);
   }else{
     if(gsize(gObj)>0){
-      comps <-decompose.graph(gObj, min.vertices=minNodeNum);
+      comps <-decompose(gObj, min.vertices=minNodeNum);
 
     }else{
       comps = list()
@@ -1044,7 +1044,7 @@ FindCommunities <- function(method="infomap", sourceView="2d", use.weight=FALSE)
   current.net <- ppi.comps[[current.net.nm]];
   g <- current.net;
   if(!is.connected(g)){
-    g <- decompose.graph(current.net, min.vertices=2)[[1]];
+    g <- decompose(current.net, min.vertices=2)[[1]];
   }
   total.size <- length(V(g));
 
@@ -1075,11 +1075,11 @@ FindCommunities <- function(method="infomap", sourceView="2d", use.weight=FALSE)
   }
 
   if(method == "walktrap"){
-    fc <- walktrap.community(g);
+    fc <- cluster_walktrap(g);
   }else if(method == "infomap"){
-    fc <- infomap.community(g);
+    fc <- cluster_infomap(g);
   }else if(method == "labelprop"){
-    fc <- label.propagation.community(g);
+    fc <- cluster_label_prop(g);
   }else{
     return ("NA||Unknown method!");
   }
@@ -1123,7 +1123,7 @@ FindCommunities <- function(method="infomap", sourceView="2d", use.weight=FALSE)
     qnum.vec <- c(qnum.vec, qnums);
     psize.vec <- c(psize.vec, psize);
     # calculate p values (comparing in- out- degrees)
-    subgraph <- induced.subgraph(g, path.ids);
+    subgraph <- induced_subgraph(g, path.ids);
     in.degrees <- degree(subgraph);
     out.degrees <- degree(g, path.ids) - in.degrees;
     ppval <- wilcox.test(in.degrees, out.degrees)$p.value;
@@ -1197,7 +1197,7 @@ convertModuleToDF <- function(dataString) {
 
 
 community.significance.test <- function(graph, vs, ...) {
-  subgraph <- induced.subgraph(graph, vs)
+  subgraph <- induced_subgraph(graph, vs)
   in.degrees <- degree(subgraph)
   out.degrees <- degree(graph, vs) - in.degrees
   wilcox.test(in.degrees, out.degrees, ...)
@@ -1405,7 +1405,7 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
 
     v <- data.frame(output[[4]], output[[5]], type)
     names(v) <- c("terminals", "prize", "type")
-    subnet <- graph.data.frame(e,vertices=v,directed=F)
+    subnet <- graph_from_data_frame(e,vertices=v,directed=F)
     #E(subnet)$weight <- as.numeric(output[[3]])
     subnet <- delete_vertices(subnet, "DUMMY")
     subnet <- delete_vertices(subnet, names(which(degree(subnet)==0)));
@@ -1802,16 +1802,16 @@ FilterByTissue <- function(dataSetObj=NA, type, tissue){
   tissue.genes <- tissue.mat[,1][!hit.inx];
   nodes2rm <- gene.nms[which(gene.nms %in% tissue.genes)]
 
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
-  nodeList <- get.data.frame(g, "vertices");
+  nodeList <- igraph::as_data_frame(g, "vertices");
   nodeList <- nodeList[,1:2];
   colnames(nodeList) <- c("Id", "Label");
 
   fast.write.csv(nodeList, file="orig_node_list.csv");
   nd.inx <- omics.net$node.data[,1] %in% nodeList[,1];
 
-  edgeList <- get.data.frame(g, "edges");
+  edgeList <- igraph::as_data_frame(g, "edges");
   edgeList <- edgeList[,1:2];
   colnames(edgeList) <- c("Source", "Target");
   fast.write.csv(edgeList, file="orig_edge_list.csv");
@@ -1857,9 +1857,9 @@ FilterByPvalue <- function(pvaluecutoff){
   res <- vapply(all.nms, function(x){x %in% nodes2rm}, FUN.VALUE = logical(length = 1));
   nodes2rm <- all.nms[res];
 
-  g <- simplify(delete.vertices(overall.graph, nodes2rm));
+  g <- simplify(delete_vertices(overall.graph, nodes2rm));
 
-  nodeList <- get.data.frame(g, "vertices");
+  nodeList <- igraph::as_data_frame(g, "vertices");
   lbss <- doKegg2NameMapping(nodeList[,1]);
   nodeList <- cbind(nodeList[,1], label = lbss);
   colnames(nodeList) <- c("Id", "Label");
@@ -1867,7 +1867,7 @@ FilterByPvalue <- function(pvaluecutoff){
   #fast.write.csv(nodeList, file="orig_node_list.csv");
   nd.inx <- omics.net$node.data[,1] %in% nodeList[,1];
 
-  edgeList <- get.data.frame(g, "edges");
+  edgeList <- igraph::as_data_frame(g, "edges");
   edgeList <- edgeList[,1:2];
   colnames(edgeList) <- c("Source", "Target");
   #fast.write.csv(edgeList, file="orig_edge_list.csv");
@@ -1991,7 +1991,7 @@ PrepareGraph <- function(net.nm, type="", export=T){
   if(type == "subnetwork"){
     g <- ppi.comps[[net.nm]];
   }else{
-    g <- simplify(graph.data.frame(edgeu.res.list[[net.nm]]$table, directed=FALSE));
+    g <- simplify(graph_from_data_frame(edgeu.res.list[[net.nm]]$table, directed=FALSE));
     net.value <- net.nm;
     net.nm <- paste0("network_", net.nm);
   }

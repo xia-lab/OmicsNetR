@@ -191,7 +191,7 @@ my.convert.igraph <- function(dataSetObj=NA, net.nm, filenm, thera=FALSE, dim=3)
   type[seed.inx] = TRUE
 
   lblsu <<- lbls;
-  node_attr = list.vertex.attributes(g);
+  node_attr = vertex_attr_names(g);
   node_attr = node_attr[which(node_attr!="names")]
 
   # now create the json object

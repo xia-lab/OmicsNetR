@@ -649,7 +649,7 @@ extendMetPeakNetwork <- function(table.nm) {
 
   g <- Compute.SteinerForest(ppi, expr.vec, w = 5, b = 100, mu = 0.0005);
 
-  edgeList <- get.data.frame(g, "edges");
+  edgeList <- igraph::as_data_frame(g, "edges");
   edgeList <- cbind(rownames(edgeList), edgeList);
   colnames(edgeList) <- c("Id", "sourceID", "productID");
 
@@ -769,7 +769,7 @@ redundancyClean <- function(node.res, edge.res) {
   }),]
 
   ## case 2
-  temp.graph <- simplify(graph.data.frame(kwdt_rmed, directed=FALSE))
+  temp.graph <- simplify(graph_from_data_frame(kwdt_rmed, directed=FALSE))
   res_degree <- degree(temp.graph)
 
   # a kncmpd with degree = 1 should be removed
