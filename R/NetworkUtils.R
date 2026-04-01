@@ -119,7 +119,22 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
     message("Conversion from Graph object into Json file completed successfully!")
     return(.set.nSet(dataSet));
   }else{
-    current.anot <<- .perform_id_mapping(nd.nms);
+    GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
+    if (is.null(GeneAnotDB) || nrow(GeneAnotDB) == 0) {
+      message("[WARN] ID mapping returned no results, using original node names")
+      entrezIDs <- nd.nms;
+      names(entrezIDs) <- nd.nms;
+    } else {
+      entrezIDs <- GeneAnotDB[,1];
+      if (length(entrezIDs) == 0) {
+        message("[WARN] ID mapping returned empty vector, using original node names")
+        entrezIDs <- nd.nms;
+        names(entrezIDs) <- nd.nms;
+      } else {
+        names(entrezIDs) <- nd.nms;
+      }
+    }
+    current.anot <<- entrezIDs;
     convertIgraph2JSON(dataSet, net.nm, json.nm, FALSE);
     message("Conversion from Graph object into Json file completed successfully!")
     return(.set.nSet(dataSet));
@@ -132,7 +147,22 @@ PrepareMinNetwork <- function(dataSetObj=NA, net.nm, json.nm){
   my.ppi <-SteinerTree_cons(seed.genes_entrez, ppi.comps[[net.nm]],2);
   ppi.comps$minimumNet <<- my.ppi;
   nd.nms <- V(my.ppi)$name;
-  current.anot <<- .perform_id_mapping(nd.nms);
+  GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
+  if (is.null(GeneAnotDB) || nrow(GeneAnotDB) == 0) {
+    message("[WARN] ID mapping returned no results, using original node names")
+    entrezIDs <- nd.nms;
+    names(entrezIDs) <- nd.nms;
+  } else {
+    entrezIDs <- GeneAnotDB[,1];
+    if (length(entrezIDs) == 0) {
+      message("[WARN] ID mapping returned empty vector, using original node names")
+      entrezIDs <- nd.nms;
+      names(entrezIDs) <- nd.nms;
+    } else {
+      names(entrezIDs) <- nd.nms;
+    }
+  }
+  current.anot <<- entrezIDs;
   current.net.nm <<- "minimumNet";
   convertIgraph2JSON(dataSet, "minimumNet", json.nm, FALSE);
   return(.set.nSet(dataSet));
@@ -370,6 +400,7 @@ GetIndNetsQueryNum <- function(){
 #' @param intermediate if true check whether from and target node connects to each other
 #'
 GetShortestPaths <- function(from, to, intermediate="false"){
+  require("igraph")
   current.net <- ppi.comps[[current.net.nm]];
 
   paths <- igraph::all_shortest_paths(current.net, from, to)$res;

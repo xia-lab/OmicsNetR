@@ -1134,62 +1134,112 @@ PerformMetEnrichment <- function(dataSetObj=NA, file.nm, fun.type, ids, sourceVi
       SaveIntegEnr(file.nm, res.mat, save.type);
       return(1);
     }
+    # Normalize and filter NA rownames from each result
     res1n <- normalizeEnrRes(res1);
+    if (nrow(res1n) > 0) {
+      rn1 <- trimws(rownames(res1n))
+      valid1 <- !is.na(rn1) & rn1 != "" & tolower(rn1) != "na"
+      res1n <- res1n[valid1, , drop = FALSE]
+    }
+
     res2n <- normalizeEnrRes(res2);
+    if (nrow(res2n) > 0) {
+      rn2 <- trimws(rownames(res2n))
+      valid2 <- !is.na(rn2) & rn2 != "" & tolower(rn2) != "na"
+      res2n <- res2n[valid2, , drop = FALSE]
+    }
+
     res3n <- normalizeEnrRes(res3);
-    common <- Reduce(intersect, list(rownames(res1n), rownames(res2n), rownames(res3n)))
-    print(paste0("[PerformMetEnrichment] integ common pathways: ", length(common)))
-    if(length(common) == 0){
-      subres1 <- normalizeEnrRes(res1)
-      ord = order(rownames(subres1))
-      subres1 = subres1[ord,]
-      integ <- data.frame(
-        hitsG = subres1$Hits,
-        hitsM = rep(0, nrow(subres1)),
-        hitsTotal = subres1$Hits,
-        P.ValueG = subres1$P.Value,
-        P.ValueM = rep(1, nrow(subres1)),
-        P.ValueMerge = subres1$P.Value,
-        P.ValueJoint = rep(1, nrow(subres1))
-      )
-      integ$integP <- integ$P.ValueG
-      rownames(integ) <- rownames(subres1)
-      res.mat <- integ
-      SaveIntegEnr(file.nm, res.mat, save.type);
-      return(1);
+    if (nrow(res3n) > 0) {
+      rn3 <- trimws(rownames(res3n))
+      valid3 <- !is.na(rn3) & rn3 != "" & tolower(rn3) != "na"
+      res3n <- res3n[valid3, , drop = FALSE]
     }
-    subres1 = res1n[common,,drop=FALSE]
-    subres2 = res2n[common,,drop=FALSE]
-    subres3 = res3n[common,,drop=FALSE]
-    if(nrow(subres1) == 0 || nrow(subres2) == 0 || nrow(subres3) == 0){
-      subres1 <- res1n
-      ord = order(rownames(subres1))
-      subres1 = subres1[ord,]
-      integ <- data.frame(
-        hitsG = subres1$Hits,
-        hitsM = rep(0, nrow(subres1)),
-        hitsTotal = subres1$Hits,
-        P.ValueG = subres1$P.Value,
-        P.ValueM = rep(1, nrow(subres1)),
-        P.ValueMerge = subres1$P.Value,
-        P.ValueJoint = rep(1, nrow(subres1))
+
+    all_paths <- unique(na.omit(c(rownames(res1n), rownames(res2n), rownames(res3n))))
+    if (length(all_paths) > 0) {
+      all_paths <- trimws(all_paths)
+      all_paths <- all_paths[!is.na(all_paths) & all_paths != "" & tolower(all_paths) != "na"]
+    }
+    print(paste0("[PerformMetEnrichment] integ total pathways: ", length(all_paths)))
+    if(length(all_paths) == 0){
+      res.mat <- data.frame(
+        hitsG = integer(0),
+        hitsM = integer(0),
+        hitsTotal = integer(0),
+        P.ValueG = numeric(0),
+        P.ValueM = numeric(0),
+        P.ValueMerge = numeric(0),
+        P.ValueJoint = numeric(0),
+        integP = numeric(0)
       )
-      integ$integP <- integ$P.ValueG
-      rownames(integ) <- rownames(subres1)
-      res.mat <- integ
       SaveIntegEnr(file.nm, res.mat, save.type);
       return(1);
     }
 
-    ord = order(rownames(subres1));
-    subres1 = subres1[ord,]
-    ord = order(rownames(subres2));
-    subres2 = subres2[ord,]
-    ord = order(rownames(subres3));
-    subres3 = subres3[ord,]
-    integ=data.frame(hitsG = subres1$Hits,hitsM = subres2$Hits,hitsTotal = subres3$Hits, P.ValueG=subres1$P.Value, P.ValueM=subres2$P.Value, P.ValueMerge=subres3$P.Value, P.ValueJoint=subres2$P.Value)
+    get_col <- function(df, col, default) {
+      if (length(default) > 1) {
+        if (length(default) != length(all_paths)) {
+          default <- rep(default[1], length(all_paths))
+        }
+        out <- as.numeric(default)
+        names(out) <- all_paths
+      } else {
+        out <- rep(default, length(all_paths))
+        names(out) <- all_paths
+      }
+      if (is.null(df) || nrow(df) == 0 || is.null(rownames(df))) {
+        return(out)
+      }
+      vec_raw <- df[[col]]
+      if (is.null(vec_raw)) {
+        return(out)
+      }
+      if (is.data.frame(vec_raw) || is.matrix(vec_raw)) {
+        vec_raw <- vec_raw[, 1]
+      }
+      vec <- as.vector(vec_raw)
+      vec <- as.numeric(vec)
+      names(vec) <- rownames(df)
+      idx <- match(names(vec), all_paths)
+      ok <- !is.na(idx)
+      if (any(ok)) {
+        out[idx[ok]] <- vec[ok]
+      }
+      return(out)
+    }
 
-    rownames(integ) = rownames(subres1)
+    hitsG <- get_col(res1n, "Hits", 0)
+    hitsM <- get_col(res2n, "Hits", 0)
+    hitsTotal <- get_col(res3n, "Hits", hitsG + hitsM)
+    pG <- get_col(res1n, "P.Value", 1)
+    pM <- get_col(res2n, "P.Value", 1)
+    pMerge <- get_col(res3n, "P.Value", pmin(pG, pM, na.rm = TRUE))
+
+    integ <- data.frame(
+      hitsG = as.numeric(hitsG),
+      hitsM = as.numeric(hitsM),
+      hitsTotal = as.numeric(hitsTotal),
+      P.ValueG = as.numeric(pG),
+      P.ValueM = as.numeric(pM),
+      P.ValueMerge = as.numeric(pMerge),
+      P.ValueJoint = as.numeric(pM)
+    )
+    integ <- as.data.frame(integ, stringsAsFactors = FALSE)
+    if (length(all_paths) == nrow(integ)) {
+      rownames(integ) <- all_paths
+    } else {
+      message(sprintf("[PerformMetEnrichment] WARNING: pathway count mismatch (paths=%d, rows=%d) - using sequential rownames",
+                      length(all_paths), nrow(integ)))
+      rownames(integ) <- seq_len(nrow(integ))
+    }
+    # Drop any NA/empty pathway names from output
+    rn <- trimws(rownames(integ))
+    bad_nm <- is.na(rn) | rn == "" | tolower(rn) == "na"
+    if (any(bad_nm)) {
+      integ <- integ[!bad_nm, , drop = FALSE]
+    }
+
     for(i in 1:nrow(integ)){
       if(integ$P.ValueG[i] != 1 && integ$P.ValueM[i] != 1){
         #integ$P.ValueJoint[i] = metap::sumlog(c(integ$P.ValueG[i], integ$P.ValueM[i]))$p
@@ -1237,6 +1287,14 @@ PerformEnrichAnalysisKegg <- function(dataSetObj=NA, file.nm, fun.type, ora.vec)
 
   current.geneset = current.geneset[keepInx]
   current.geneset = current.geneset[which(!names(current.geneset) %in% dataSet$toremove)]
+
+  # Filter out NA/empty pathway names BEFORE creating result matrix
+  geneset_names <- names(current.geneset)
+  if (length(geneset_names) > 0) {
+    geneset_names <- trimws(geneset_names)
+    valid_idx <- !is.na(geneset_names) & geneset_names != "" & tolower(geneset_names) != "na"
+    current.geneset <- current.geneset[valid_idx]
+  }
 
   # prepare for the result table
   set.size<-length(current.geneset);
@@ -1324,6 +1382,14 @@ SaveSingleOmicsEnr <- function(file.nm,res.mat, save.type="network"){
 
   #get gene symbols
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
+  if (nrow(resTable) > 0) {
+    rn <- trimws(as.character(resTable$Pathway))
+    keep <- !is.na(rn) & rn != "" & tolower(rn) != "na"
+    if (!all(keep)) {
+      resTable <- resTable[keep, , drop = FALSE]
+      res.mat <- res.mat[keep, , drop = FALSE]
+    }
+  }
   current.msg <<- "Functional enrichment analysis was completed";
 
   # write json
@@ -1390,7 +1456,7 @@ SaveIntegEnr <- function(file.nm,res.mat, save.type="network"){
   require("RJSONIO");
   integ.query <- integ.query[resTable$Pathway]
   fun.anot <- integ.query;
-  fun.nms <- resTable[,"Pathway"];  if(length(fun.nms) ==1) { fun.nms <- matrix(fun.nmsl) };
+  fun.nms <- resTable[,"Pathway"];  if(length(fun.nms) ==1) { fun.nms <- matrix(fun.nms) };
   integ.pval <- resTable[,"integP"];  if(length(integ.pval) ==1) { integ.pval <- matrix(integ.pval) };
   fun.pval1 <- resTable[,"P.ValueMerge"]; if(length(fun.pval1) ==1) { fun.pval1 <- matrix(fun.pval1) };
   fun.pval2 <- resTable[,"P.ValueJoint"]; if(length(fun.pval2) ==1) { fun.pval2 <- matrix(fun.pval2) };
