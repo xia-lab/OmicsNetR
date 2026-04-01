@@ -119,10 +119,7 @@ PrepareNetwork <- function(dataSetObj=NA, net.nm, json.nm){
     message("Conversion from Graph object into Json file completed successfully!")
     return(.set.nSet(dataSet));
   }else{
-    GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
-    entrezIDs <- GeneAnotDB[,1];
-    names(entrezIDs) <- nd.nms;
-    current.anot <<- entrezIDs;
+    current.anot <<- .perform_id_mapping(nd.nms);
     convertIgraph2JSON(dataSet, net.nm, json.nm, FALSE);
     message("Conversion from Graph object into Json file completed successfully!")
     return(.set.nSet(dataSet));
@@ -135,13 +132,180 @@ PrepareMinNetwork <- function(dataSetObj=NA, net.nm, json.nm){
   my.ppi <-SteinerTree_cons(seed.genes_entrez, ppi.comps[[net.nm]],2);
   ppi.comps$minimumNet <<- my.ppi;
   nd.nms <- V(my.ppi)$name;
-  GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
-  entrezIDs <- GeneAnotDB[,1];
-  names(entrezIDs) <- nd.nms;
-  current.anot <<- entrezIDs;
+  current.anot <<- .perform_id_mapping(nd.nms);
   current.net.nm <<- "minimumNet";
   convertIgraph2JSON(dataSet, "minimumNet", json.nm, FALSE);
   return(.set.nSet(dataSet));
+}
+
+# Internal helper: Determine correct ID type for mapping (microbiome vs standard)
+# For microbiome data, uses mic.taxa (e.g., "species") instead of "entrez"
+.perform_id_mapping <- function(nd.nms) {
+  if (exists("data.org", envir = .GlobalEnv) && get("data.org", envir = .GlobalEnv) == "microbiome") {
+    mic.taxa_val <- if (exists("mic.taxa", envir = .GlobalEnv)) get("mic.taxa", envir = .GlobalEnv) else NULL;
+    if (!is.null(mic.taxa_val) && mic.taxa_val != "") {
+      GeneAnotDB <- doProteinIDMapping(nd.nms, mic.taxa_val);
+    } else {
+      GeneAnotDB <- doProteinIDMapping(nd.nms, "species");
+    }
+  } else {
+    GeneAnotDB <- doProteinIDMapping(nd.nms, "entrez");
+  }
+
+  if (is.null(GeneAnotDB) || nrow(GeneAnotDB) == 0) {
+    entrezIDs <- nd.nms;
+    names(entrezIDs) <- nd.nms;
+  } else {
+    entrezIDs <- GeneAnotDB[, 1];
+    if (length(entrezIDs) == 0) {
+      entrezIDs <- nd.nms;
+      names(entrezIDs) <- nd.nms;
+      return(entrezIDs);
+    }
+    if (length(entrezIDs) == length(nd.nms)) {
+      names(entrezIDs) <- nd.nms;
+    } else {
+      if (!is.null(rownames(GeneAnotDB))) {
+        names(entrezIDs) <- rownames(GeneAnotDB);
+      } else {
+        names(entrezIDs) <- entrezIDs;
+      }
+    }
+  }
+
+  return(entrezIDs);
+}
+
+#' Build Large Multi-Omics Network
+#' @description Builds igraph network from edge data. For large networks (>10K edges),
+#' isolates igraph in a subprocess on Pro.
+#' @param dataSet OmicsNet data object
+#' @param network.type Type of network to build
+#' @export
+BuildLargeOmicsNetwork <- function(dataSet, network.type = "ppi") {
+
+  edge_count <- if (!is.null(dataSet$edges)) nrow(dataSet$edges) else 0;
+
+  if (!is.null(dataSet$edges) && nrow(dataSet$edges) >= 10000) {
+    # --- subprocess isolation path for large networks ---
+    params <- list(network.type = network.type);
+
+    isolated_func <- function(input_data) {
+      library(igraph);
+      dataSet <- input_data$data_obj;
+      edges <- dataSet$edges;
+      net <- igraph::graph_from_data_frame(d = edges[, c("source", "target")], directed = FALSE);
+      if ("weight" %in% colnames(edges)) E(net)$weight <- edges$weight;
+      if ("type" %in% colnames(edges)) E(net)$type <- edges$type;
+      dataSet$network <- net;
+      dataSet$net.stats <- list(
+        nodes = igraph::vcount(net),
+        edges = igraph::ecount(net),
+        density = igraph::edge_density(net),
+        components = igraph::components(net)$no,
+        avg_degree = mean(igraph::degree(net))
+      );
+      gc(verbose = FALSE, full = TRUE);
+      return(dataSet);
+    };
+
+    dataSet <- tryCatch({
+      res <- rsclient_isolated_exec(
+        func_body = isolated_func,
+        input_data = list(data_obj = dataSet, params = params),
+        packages = c("igraph", "qs"),
+        timeout = 300,
+        output_type = "qs"
+      );
+      if (is.list(res) && isFALSE(res$success)) { AddErrMsg(res$message); return(0) }
+      res
+    }, error = function(e) {
+      AddErrMsg(paste("Network construction failed:", e$message));
+      NULL
+    });
+    if (is.null(dataSet)) return(0);
+  } else {
+    # --- Standard path ---
+    require("igraph");
+    edges <- dataSet$edges;
+    if (is.null(edges) || nrow(edges) == 0) {
+      return(dataSet);
+    }
+    net <- igraph::graph_from_data_frame(d = edges[, c("source", "target")], directed = FALSE);
+    if ("weight" %in% colnames(edges)) igraph::E(net)$weight <- edges$weight;
+    if ("type" %in% colnames(edges)) igraph::E(net)$type <- edges$type;
+    dataSet$network <- net;
+    dataSet$net.stats <- list(
+      nodes = igraph::vcount(net),
+      edges = igraph::ecount(net),
+      density = igraph::edge_density(net),
+      components = igraph::components(net)$no,
+      avg_degree = mean(igraph::degree(net))
+    );
+  }
+
+  return(dataSet);
+}
+
+#' Perform Network Clustering on Large Networks
+#' @description Community detection on networks. For large networks, isolates igraph in subprocess on Pro.
+#' @param dataSet OmicsNet data object
+#' @param method Clustering method ("louvain", "walktrap", "infomap", "fast_greedy")
+#' @export
+PerformLargeNetworkClustering <- function(dataSet, method = "louvain") {
+
+  if (is.null(dataSet$network)) {
+    AddErrMsg("Network not found. Run BuildLargeOmicsNetwork first.");
+    return(0);
+  }
+
+  # --- subprocess isolation path ---
+  params <- list(method = method);
+
+  isolated_func <- function(input_data) {
+    library(igraph);
+    dataSet <- input_data$data_obj;
+    params <- input_data$params;
+    net <- dataSet$network;
+    if (params$method == "louvain") {
+      communities <- igraph::cluster_louvain(net);
+    } else if (params$method == "walktrap") {
+      communities <- igraph::cluster_walktrap(net);
+    } else if (params$method == "infomap") {
+      communities <- igraph::cluster_infomap(net);
+    } else if (params$method == "fast_greedy") {
+      communities <- igraph::cluster_fast_greedy(net);
+    } else {
+      communities <- igraph::cluster_louvain(net);
+    }
+    dataSet$communities <- communities;
+    dataSet$cluster.membership <- igraph::membership(communities);
+    dataSet$cluster.stats <- list(
+      n_clusters = length(unique(igraph::membership(communities))),
+      modularity = igraph::modularity(communities),
+      sizes = table(igraph::membership(communities))
+    );
+    gc(verbose = FALSE, full = TRUE);
+    return(dataSet);
+  };
+
+  dataSet <- tryCatch({
+    res <- rsclient_isolated_exec(
+      func_body = isolated_func,
+      input_data = list(data_obj = dataSet, params = params),
+      packages = c("igraph", "qs"),
+      timeout = 300,
+      output_type = "qs"
+    );
+    if (is.list(res) && isFALSE(res$success)) { AddErrMsg(res$message); return(0) }
+    res
+  }, error = function(e) {
+    AddErrMsg(paste("Network clustering failed:", e$message));
+    NULL
+  });
+  if (is.null(dataSet)) return(0);
+
+  return(dataSet);
 }
 
 # from node ID (uniprot) return entrez IDs (one to many)
@@ -413,7 +577,7 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
 
   } else if(netw.type == "snp"){
   
-    if(!exists("my.snp.query")){ # public web on same user dir
+    if(!exists("my.snp.query")){
         compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_snp.Rc");
     }
     res <- my.snp.query(dataSet, protein.vec, db.type, netInv, zero, snpRegion)
@@ -549,7 +713,7 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     }
 
   } else if(netw.type == "peak") {
-    PeakSet <- qs:::qread("PeakSet_net.qs");
+    PeakSet <- qs::qread("PeakSet_net.qs");
     net.info$met.ids <- PeakSet$mets;
     net.info$peak.ids <- PeakSet$put.mets;
     seed.genes <<- unique(c(seed.genes, PeakSet$mets));    
@@ -1393,7 +1557,7 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
 }
 
 convertIgraph2JSON <- function(dataSetObj=NA, net.nm, filenm, thera="FALSE", dim=3){
-  if(!exists("my.convert.igraph")){ # public web on same user dir
+  if(!exists("my.convert.igraph")){
     compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_convertIgraph2JSON.Rc");
   }
   return(my.convert.igraph(dataSet, net.nm, filenm, thera, dim));
@@ -1686,7 +1850,7 @@ PlotBetweennessHistogram <- function(imgNm, netNm = "NA",dpi=72, format="png"){
 #' @export
 
 PreparePeaksNetwork <- function(dataSetObj=NA){
-    if(!exists("my.peak.net")){ # public web on same user dir
+    if(!exists("my.peak.net")){
         compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_peak_net.Rc");
     }
     res <- my.peak.net(dataSetObj);
@@ -1704,35 +1868,61 @@ PreparePeaksNetwork <- function(dataSetObj=NA){
 #'
 #' @export
 DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids, sourceView="2d"){
-  require("RandomWalkRestartMH")
-  require("igraph")
-
-  if(queryType == "seed"){
 
   nodes <- strsplit(nodeids, ",")[[1]];
-  }else{
-  nodes <- strsplit(nodeids, ",")[[1]];
-  }
   g <- ppi.comps[[current.net.nm]];
-  PPI_MultiplexObject <- RandomWalkRestartMH::create.multiplex(list(PPI=g))
 
-  AdjMatrix_PPI <- compute.adjacency.matrix(PPI_MultiplexObject)
-  AdjMatrixNorm_PPI <- normalize.multiplex.adjacency(AdjMatrix_PPI)
-  seeds <- nodes;
+  resObj <- NULL;
+  full_results <- NULL;
 
-  RWR_PPI_Results <- Random.Walk.Restart.Multiplex(AdjMatrixNorm_PPI,
-                                                   PPI_MultiplexObject,seeds);
-  resObj <- RWR_PPI_Results$RWRM_Results;
-  if(nrow(resObj) > 100){
-    resObj <- resObj[c(1:100),];
-  }
+  # --- subprocess isolation: RandomWalkRestartMH in subprocess ---
+  isolated_func <- function(input_data) {
+    library(RandomWalkRestartMH);
+    library(igraph);
+    nodes <- input_data$data_obj$nodes;
+    g <- input_data$data_obj$g;
+    PPI_MultiplexObject <- RandomWalkRestartMH::create.multiplex(list(PPI = g));
+    AdjMatrix_PPI <- RandomWalkRestartMH::compute.adjacency.matrix(PPI_MultiplexObject);
+    AdjMatrixNorm_PPI <- RandomWalkRestartMH::normalize.multiplex.adjacency(AdjMatrix_PPI);
+    RWR_PPI_Results <- RandomWalkRestartMH::Random.Walk.Restart.Multiplex(
+      AdjMatrixNorm_PPI, PPI_MultiplexObject, nodes
+    );
+    resObj <- RWR_PPI_Results$RWRM_Results;
+    if (nrow(resObj) > 100) resObj <- resObj[1:100, ];
+    gc(verbose = FALSE, full = TRUE);
+    return(list(resObj = resObj, full_results = RWR_PPI_Results$RWRM_Results));
+  };
+
+  tryCatch({
+    result <- rsclient_isolated_exec(
+      func_body = isolated_func,
+      input_data = list(
+        data_obj = list(nodes = nodes, g = g),
+        params = list()
+      ),
+      packages = c("RandomWalkRestartMH", "igraph", "qs"),
+      timeout = 300,
+      output_type = "qs"
+    );
+    if (is.list(result) && isFALSE(result$success)) { AddErrMsg(result$message); return(0) }
+    resObj <- result$resObj;
+    full_results <- result$full_results;
+  }, error = function(e) {
+    AddErrMsg(paste("Random Walk Restart failed:", e$message));
+    return(0);
+  });
+
+  if (is.null(resObj)) return(0);
+
+  # Write JSON output
   require("RJSONIO");
   sink(fileNm);
   cat(toJSON(resObj));
   sink();
 
+  # Write CSV output
   csvNm <- paste0(gsub(".json", "", fileNm), ".csv");
-  df <- RWR_PPI_Results$RWRM_Results;
+  df <- full_results;
   colnames(df) <- c("IDs", "Score");
   sym.vec <- doEntrez2SymbolMapping(df$IDs);
 
@@ -1740,22 +1930,24 @@ DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids, sourceVi
   fast.write.csv(df, file=csvNm);
   fast.write.csv(df, file="gba_table.csv");
 
-  #record table for report
-  type = "gba";
+  # Record table for report
+  dataSet <- .get.nSet(NA);
+  type <- "gba";
+  if (is.null(dataSet$imgSet)) dataSet$imgSet <- list();
+  if (is.null(dataSet$imgSet$enrTables)) dataSet$imgSet$enrTables <- list();
   dataSet$imgSet$enrTables[[type]] <- list();
   dataSet$imgSet$enrTables[[type]]$table <- df;
-  dataSet$imgSet$enrTables[[type]]$res.mat<- df[,3, drop=F];
+  dataSet$imgSet$enrTables[[type]]$res.mat <- df[, 3, drop=F];
   dataSet$imgSet$enrTables[[type]]$sourceView <- sourceView;
-
   dataSet$imgSet$enrTables[[type]]$library <- "";
   dataSet$imgSet$enrTables[[type]]$query <- queryType;
   dataSet$imgSet$enrTables[[type]]$algo <- "Random walk with restart";
-  dataSet <<- dataSet;
+  .set.nSet(dataSet);
 
   if(.on.public.web){
     return(1);
   }else{
-    return(RWR_PPI_Results$RWRM_Results);
+    return(full_results);
   }
 }
 

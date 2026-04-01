@@ -76,8 +76,8 @@ my.peak.net <- function(dataSetObj=NA){
 
   cmp.nms <- PrepareInputList(dataSet, rownames(dataSet$seed[["peak"]]), data.org, "peak", "kegg");
   
-  qs:::qsave(PeakSet, "PeakSet_net.qs");
-  Sys.sleep(0.15);  # CRITICAL: Prevent race condition
+  qs::qsave(PeakSet, "PeakSet_net.qs");
+  Sys.sleep(0.05);  # CRITICAL: Prevent race condition
   dataSet <<- dataSet;
   if(.on.public.web){
     .set.nSet(dataSet);

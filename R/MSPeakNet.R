@@ -89,7 +89,7 @@ ImportMSPeaks <- function(PeakFile = NA) {
   cat("Peak Data import done \n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
   qs::qsave(PeakSet, file = "PeakSet_initial.qs")
-  Sys.sleep(0.15);  # CRITICAL: Prevent race condition
+  Sys.sleep(0.05);  # CRITICAL: Prevent race condition
   dataSet <<- dataSet;
   return(1);
 }
@@ -280,7 +280,7 @@ PerformAnnotation <- function() {
     qs::qsave(PeakSet$Data, file = "PeakSet_data.qs")
     PeakSet <<- PeakSet <- .cleanPeakSet(PeakSet);
     qs::qsave(PeakSet, file = "PeakSet_done.qs");
-    Sys.sleep(0.15);  # CRITICAL: Prevent race condition
+    Sys.sleep(0.05);  # CRITICAL: Prevent race condition
     cat("Annotation done!\n Time consumed this step: ", Sys.time() - t0, "\n")
     print("Peak annotation completed!");
     return(1L)
@@ -407,10 +407,8 @@ GetFastPeak <- function(){
 }
 
 .networkConstruct <- function(PeakSet) {
-    require("lpsymphony");
     CplexSet <- PeakSet$ILPSet;
     mat <- CplexSet$para$mat;
-    max <- TRUE;
     obj <- CplexSet[["para"]][["obj"]];
     sense <- CplexSet[["para"]][["sense"]];
     sense[sense == "E"] <- "==";
@@ -421,43 +419,71 @@ GetFastPeak <- function(){
     # NOTE: "I" is integer, "B" is binary,
     # both of them are running too slowly (>1h)
     # for huge constraints matrix
-    types <- "C"
-    OptiSolution <- lpsymphony::lpsymphony_solve_LP(obj,
-                                        mat,
-                                        dir,
-                                        rhs,
-                                        types = types,
-                                        max = max,
-                                        verbosity = -1, gap_limit = 1e-3);
+    types <- "C";
+
+    OptiSolution <- NULL;
+
+    # --- subprocess isolation: lpsymphony LP solver in subprocess ---
+    isolated_func <- function(input_data) {
+      library(lpsymphony);
+      mat <- input_data$data_obj$mat;
+      obj <- input_data$data_obj$obj;
+      dir <- input_data$data_obj$dir;
+      rhs <- input_data$data_obj$rhs;
+      OptiSolution <- lpsymphony::lpsymphony_solve_LP(
+        obj, mat, dir, rhs,
+        types = "C", max = TRUE, verbosity = -1, gap_limit = 1e-3
+      );
+      gc(verbose = FALSE, full = TRUE);
+      return(OptiSolution);
+    };
+
+    OptiSolution <- tryCatch({
+      res <- rsclient_isolated_exec(
+        func_body = isolated_func,
+        input_data = list(
+          data_obj = list(mat = mat, obj = obj, dir = dir, rhs = rhs),
+          params = list()
+        ),
+        packages = c("lpsymphony", "qs"),
+        timeout = 300,
+        output_type = "qs"
+      );
+      if (is.list(res) && isFALSE(res$success)) { AddErrMsg(res$message); return(PeakSet) }
+      res
+    }, error = function(e) {
+      AddErrMsg(paste("LP optimization failed:", e$message));
+      NULL
+    });
+    if (is.null(OptiSolution)) return(PeakSet);
 
     CplexSet <- add_SYM_solution(CplexSet, OptiSolution);
 
-    require("igraph")
-    NetworkSet = list();
-    NetworkSet = Initiate_networkset(CplexSet,
+    require("igraph");
+    NetworkSet <- list();
+    NetworkSet <- Initiate_networkset(CplexSet,
                                      PeakSet$StructureSet_df,
                                      PeakSet$LibrarySet,
                                      solution = "ilp_solution");
 
     PeakSet$NetworkSet <- NetworkSet;
-    ValidNetwork <-  NetworkSet[["g_all_valid"]];
-    v_att_nms <- names(vertex.attributes(ValidNetwork));
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_class");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_known_rt");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_RDBE");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_element_ratio");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_missing_isotope_Cl");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_database_origin");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_mz");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "score_propagation");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "ilp_solution");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "log10_inten");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "struct_set_id");
-    ValidNetwork <- delete_vertex_attr(ValidNetwork, "steps");
+    ValidNetwork <- NetworkSet[["g_all_valid"]];
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_class");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_known_rt");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_RDBE");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_element_ratio");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_missing_isotope_Cl");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_database_origin");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_mz");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "score_propagation");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "ilp_solution");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "log10_inten");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "struct_set_id");
+    ValidNetwork <- igraph::delete_vertex_attr(ValidNetwork, "steps");
     PeakSet$NetworkSet$cleanNetwork <- ValidNetwork;
 
     PeakSet$ILPSet <- CplexSet;
-    return(PeakSet)
+    return(PeakSet);
 }
 
 .filterCurrency <- function(nodesVec = NULL) {

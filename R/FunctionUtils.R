@@ -226,7 +226,7 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs, sourceView="2d"){
 }
 
 PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType, sourceView="2d"){
-    if(!exists("my.reg.enrich")){ # public web on same user dir
+    if(!exists("my.reg.enrich")){
         compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_reg_enrich.Rc");
   }
     res <- my.reg.enrich(file.nm, fun.type, ora.vec, netInv, idType, sourceView);
@@ -374,7 +374,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
   resTable$ids <- unlist(a);
   fast.write.csv(resTable, file=csv.nm, row.names=F);
   fast.write.csv(resTable, file=paste0(type, "_enr_table.csv"), row.names=F);
-  Sys.sleep(0.15);  # CRITICAL: Prevent race condition - allow file system to sync before Java reads
+  Sys.sleep(0.05);  # CRITICAL: Prevent race condition - allow file system to sync before Java reads
 
   return(1);
 }

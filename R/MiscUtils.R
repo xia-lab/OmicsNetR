@@ -4,6 +4,12 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
+# Adds an error message — stores in current.msg for Java getCurrentMsg() retrieval
+AddErrMsg <- function(msg){
+  current.msg <<- msg;
+  message("[ERROR] ", msg);
+}
+
 # new range [a, b]
 rescale2NewRange <- function(qvec, a, b){
     qvec = replace(qvec, qvec == 0, 1)
@@ -720,3 +726,58 @@ GetCurrentReportView <- function() {
   }
   return("2d");  # default to 2d
 }
+
+# =============================================================================
+# RSclient Subprocess Execution (Rserve fork isolation)
+# =============================================================================
+
+run_func_via_rsclient <- function(func, args = list(), timeout_sec = 60) {
+  conn <- RSclient::RS.connect(host = "localhost", port = 6311)
+  on.exit(try(RSclient::RS.close(conn), silent = TRUE))
+  RSclient::RS.assign(conn, ".exec_wd", getwd())
+  RSclient::RS.assign(conn, ".exec_func", func)
+  RSclient::RS.assign(conn, ".exec_args", args)
+  RSclient::RS.assign(conn, ".exec_timeout", timeout_sec)
+  RSclient::RS.eval(conn, quote({
+    setwd(.exec_wd)
+    setTimeLimit(elapsed = .exec_timeout, transient = TRUE)
+    on.exit(setTimeLimit(elapsed = Inf))
+    do.call(.exec_func, .exec_args)
+  }))
+}
+
+rsclient_isolated_exec <- function(func_body, input_data, packages = character(0),
+                                   timeout = 180, output_type = "qs") {
+  bridge_tmp <- file.path(tempdir(), "rsclient_bridge")
+  if (!dir.exists(bridge_tmp)) dir.create(bridge_tmp, recursive = TRUE)
+  uid <- paste0(sample(letters, 6), collapse = "")
+  input_path <- file.path(bridge_tmp, paste0(uid, "_in.qs"))
+  output_path <- file.path(bridge_tmp, paste0(uid, "_out.qs"))
+  qs::qsave(input_data, input_path, preset = "fast")
+  Sys.sleep(0.02)
+  on.exit({ for (p in c(input_path, output_path)) if (file.exists(p)) unlink(p) }, add = TRUE)
+  result <- run_func_via_rsclient(
+    func = function(input_path, output_path, func_body, pkgs) {
+      tryCatch({
+        for (pkg in pkgs) suppressPackageStartupMessages(library(pkg, character.only = TRUE))
+        input_data <- qs::qread(input_path)
+        res <- func_body(input_data)
+        qs::qsave(res, output_path, preset = "fast")
+        Sys.sleep(0.02)
+        list(success = TRUE)
+      }, error = function(e) {
+        list(success = FALSE, message = e$message)
+      })
+    },
+    args = list(input_path = input_path, output_path = output_path,
+                func_body = func_body, pkgs = packages),
+    timeout_sec = timeout
+  )
+  if (isTRUE(result$success) && file.exists(output_path)) {
+    return(qs::qread(output_path))
+  }
+  msg <- if (!is.null(result$message)) result$message else "RSclient subprocess failed"
+  message("[rsclient_isolated_exec] ", msg)
+  return(list(success = FALSE, message = msg))
+}
+

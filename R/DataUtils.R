@@ -624,3 +624,89 @@ SetToPrevious <- function(func, version_suffix) {
   body(modified_func) <- as.call(modified_body)
   assign(func, modified_func, envir = .GlobalEnv)
 }
+
+#' Perform Fuzzy ID Matching
+#' @description Fuzzy matching of query IDs against target IDs using string distance.
+#' For large ID lists (>10K), isolates stringdist in a subprocess on Pro.
+#' @param query_ids Vector of query IDs
+#' @param target_ids Vector of target IDs to match against
+#' @param method Matching method ("lv", "jw", "cosine")
+#' @param max_dist Maximum distance threshold
+#' @return Data frame with columns: query, target, distance
+#' @export
+PerformFuzzyIDMatch <- function(query_ids, target_ids, method = "jw", max_dist = 0.1) {
+
+  if (length(query_ids) >= 10000 || length(target_ids) >= 10000) {
+    # --- subprocess isolation: stringdist in subprocess for large lists ---
+    isolated_func <- function(input_data) {
+      library(stringdist);
+      data <- input_data$data_obj;
+      params <- input_data$params;
+      query_ids <- data$query_ids;
+      target_ids <- data$target_ids;
+      chunk_size <- 1000;
+      n_queries <- length(query_ids);
+      matches <- data.frame(query = character(), target = character(),
+                            distance = numeric(), stringsAsFactors = FALSE);
+      for (i in seq(1, n_queries, by = chunk_size)) {
+        end_idx <- min(i + chunk_size - 1, n_queries);
+        chunk_queries <- query_ids[i:end_idx];
+        dist_mat <- stringdist::stringdistmatrix(chunk_queries, target_ids, method = params$method);
+        for (j in seq_along(chunk_queries)) {
+          min_dist <- min(dist_mat[j, ]);
+          if (min_dist <= params$max_dist) {
+            best_idx <- which.min(dist_mat[j, ]);
+            matches <- rbind(matches, data.frame(
+              query = chunk_queries[j], target = target_ids[best_idx],
+              distance = min_dist, stringsAsFactors = FALSE
+            ));
+          }
+        }
+      }
+      gc(verbose = FALSE, full = TRUE);
+      return(matches);
+    };
+
+    result <- NULL;
+    tryCatch({
+      result <- rsclient_isolated_exec(
+        func_body = isolated_func,
+        input_data = list(
+          data_obj = list(query_ids = query_ids, target_ids = target_ids),
+          params = list(method = method, max_dist = max_dist)
+        ),
+        packages = c("stringdist", "qs"),
+        timeout = 300,
+        output_type = "qs"
+      );
+      if (is.list(result) && isFALSE(result$success)) { AddErrMsg(result$message); return(0) }
+    }, error = function(e) {
+      AddErrMsg(paste("Fuzzy matching failed:", e$message));
+      return(0);
+    });
+    return(result);
+  } else {
+    # --- Standard path ---
+    require("stringdist");
+    chunk_size <- 1000;
+    n_queries <- length(query_ids);
+    matches <- data.frame(query = character(), target = character(),
+                          distance = numeric(), stringsAsFactors = FALSE);
+    for (i in seq(1, n_queries, by = chunk_size)) {
+      end_idx <- min(i + chunk_size - 1, n_queries);
+      chunk_queries <- query_ids[i:end_idx];
+      dist_mat <- stringdist::stringdistmatrix(chunk_queries, target_ids, method = method);
+      for (j in seq_along(chunk_queries)) {
+        min_dist <- min(dist_mat[j, ]);
+        if (min_dist <= max_dist) {
+          best_idx <- which.min(dist_mat[j, ]);
+          matches <- rbind(matches, data.frame(
+            query = chunk_queries[j], target = target_ids[best_idx],
+            distance = min_dist, stringsAsFactors = FALSE
+          ));
+        }
+      }
+    }
+    return(matches);
+  }
+}
