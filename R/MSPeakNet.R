@@ -421,41 +421,14 @@ GetFastPeak <- function(){
     # for huge constraints matrix
     types <- "C";
 
-    OptiSolution <- NULL;
-
-    # --- subprocess isolation: lpsymphony LP solver in subprocess ---
-    isolated_func <- function(input_data) {
-      library(lpsymphony);
-      mat <- input_data$data_obj$mat;
-      obj <- input_data$data_obj$obj;
-      dir <- input_data$data_obj$dir;
-      rhs <- input_data$data_obj$rhs;
-      OptiSolution <- lpsymphony::lpsymphony_solve_LP(
-        obj, mat, dir, rhs,
-        types = "C", max = TRUE, verbosity = -1, gap_limit = 1e-3
-      );
-      gc(verbose = FALSE, full = TRUE);
-      return(OptiSolution);
-    };
-
-    OptiSolution <- tryCatch({
-      res <- rsclient_isolated_exec(
-        func_body = isolated_func,
-        input_data = list(
-          data_obj = list(mat = mat, obj = obj, dir = dir, rhs = rhs),
-          params = list()
-        ),
-        packages = c("lpsymphony", "qs"),
-        timeout = 300,
-        output_type = "qs"
-      );
-      if (is.list(res) && isFALSE(res$success)) { AddErrMsg(res$message); return(PeakSet) }
-      res
-    }, error = function(e) {
-      AddErrMsg(paste("LP optimization failed:", e$message));
-      NULL
-    });
-    if (is.null(OptiSolution)) return(PeakSet);
+    require("lpsymphony");
+    OptiSolution <- lpsymphony::lpsymphony_solve_LP(obj,
+                                        mat,
+                                        dir,
+                                        rhs,
+                                        types = "C",
+                                        max = TRUE,
+                                        verbosity = -1, gap_limit = 1e-3);
 
     CplexSet <- add_SYM_solution(CplexSet, OptiSolution);
 

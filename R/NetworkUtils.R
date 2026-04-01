@@ -755,7 +755,7 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
   } else if(netw.type == "mic") { # in mic
     # in mic
     sql.name <-paste0("omicsnet_", db.type, ".sqlite");
-    table.nm <- mic.taxa;
+    table.nm <- if (exists("mic.taxa")) mic.taxa else "species";
 
     res <- QueryMicSQLite(protein.vec, table.nm, sql.name, dataSet$mic.thresh, dataSet$currExclude,dataSet$uniExclude,dataSet$orphExclude);
     if(nrow(res)==0){ return(c(0,0)); }
