@@ -382,7 +382,7 @@ doEmblGene2EntrezMapping <- function(emblgene.vec){
   db.path <- paste0(sqlite.path, data.org, "_genes.sqlite");
 
   if(!PrepareSqliteDB(db.path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
 
   conv.db <- dbConnect(SQLite(), db.path);

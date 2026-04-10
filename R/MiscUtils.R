@@ -4,10 +4,24 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
-# Adds an error message — stores in current.msg for Java getCurrentMsg() retrieval
+# Adds an error message — stores in current.msg for Java retrieval
 AddErrMsg <- function(msg){
-  current.msg <<- msg;
+  current.msg <<- c(current.msg, msg);
   message("[ERROR] ", msg);
+}
+
+GetErrMsg <- function(){
+  return(current.msg);
+}
+
+getCurrentMsg <- function(){
+  msg <- paste(current.msg, collapse="; ");
+  current.msg <<- "";
+  return(msg);
+}
+
+ClearErrMsg <- function(){
+  current.msg <<- "";
 }
 
 # new range [a, b]
@@ -759,6 +773,7 @@ rsclient_isolated_exec <- function(func_body, input_data, packages = character(0
   result <- run_func_via_rsclient(
     func = function(input_path, output_path, func_body, pkgs) {
       tryCatch({
+        Sys.setenv(RGL_USE_NULL = TRUE)
         for (pkg in pkgs) suppressPackageStartupMessages(library(pkg, character.only = TRUE))
         input_data <- qs::qread(input_path)
         res <- func_body(input_data)

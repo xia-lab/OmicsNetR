@@ -608,9 +608,6 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
 
   } else if(netw.type == "snp"){
   
-    if(!exists("my.snp.query")){
-        compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_snp.Rc");
-    }
     res <- my.snp.query(dataSet, protein.vec, db.type, netInv, zero, snpRegion)
     edge.res <- res$edge.res;
     net.info <- res$net.info;
@@ -1588,9 +1585,6 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
 }
 
 convertIgraph2JSON <- function(dataSetObj=NA, net.nm, filenm, thera="FALSE", dim=3){
-  if(!exists("my.convert.igraph")){
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_convertIgraph2JSON.Rc");
-  }
   return(my.convert.igraph(dataSet, net.nm, filenm, thera, dim));
 }
 
@@ -1881,9 +1875,6 @@ PlotBetweennessHistogram <- function(imgNm, netNm = "NA",dpi=72, format="png"){
 #' @export
 
 PreparePeaksNetwork <- function(dataSetObj=NA){
-    if(!exists("my.peak.net")){
-        compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_peak_net.Rc");
-    }
     res <- my.peak.net(dataSetObj);
     return(res);
 }
@@ -2095,7 +2086,7 @@ FilterByPvalue <- function(pvaluecutoff){
 queryFilterDB <- function(type, org){
   require('RSQLite');
   if(!PrepareSqliteDB(paste(sqlite.path, "tissue_filter.sqlite", sep=""), .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   conv.db <- dbConnect(SQLite(), paste(sqlite.path, "tissue_filter.sqlite", sep=""));
   db.map <- dbReadTable(conv.db, paste0(data.org,"_",type));
@@ -2448,4 +2439,78 @@ GetQueryNum <-function(){
 ## subnetwork overall node type and number
 GetTypeNum <-function(){
   return(dataSet$type.nums)
+}
+
+# ── Server-side PNG: PPI Network (igraph) ──
+# Generates a static network image as placeholder for AI workflow results.
+# Users click "Visit Page" to view the interactive 3D network.
+PlotNetworkPNG <- function(imgName, format="png", dpi=150, width=NA) {
+  tryCatch({
+    require(igraph)
+
+    if (!exists("ppi.comps") || is.null(ppi.comps) || length(ppi.comps) == 0) {
+      message("PlotNetworkPNG: no network data (ppi.comps)")
+      return(0)
+    }
+
+    net.nm <- if (exists("current.net.nm") && !is.null(current.net.nm)) {
+      current.net.nm
+    } else {
+      names(ppi.comps)[1]
+    }
+
+    g <- ppi.comps[[net.nm]]
+    if (is.null(g) || vcount(g) == 0) {
+      message("PlotNetworkPNG: empty network")
+      return(0)
+    }
+
+    # Node styling — size by degree, color by type
+    deg <- degree(g)
+    V(g)$size <- if (all(deg == deg[1])) {
+      rep(8, vcount(g))
+    } else {
+      scales::rescale(log(deg + 1, 10), to = c(5, 20))
+    }
+
+    # Color seed nodes differently from interactors
+    node.types <- V(g)$molType
+    if (!is.null(node.types)) {
+      V(g)$color <- ifelse(node.types == "seed", "#de690c", "#6b7280")
+    } else {
+      V(g)$color <- "#de690c"
+    }
+    V(g)$frame.color <- "white"
+
+    # Labels — show for top degree nodes only (avoid clutter)
+    node.labels <- V(g)$name
+    if (vcount(g) > 30) {
+      top.idx <- order(deg, decreasing = TRUE)[1:min(30, vcount(g))]
+      node.labels[-top.idx] <- ""
+    }
+    V(g)$label <- node.labels
+    V(g)$label.cex <- 0.55
+    V(g)$label.color <- "black"
+    V(g)$label.dist <- 0.4
+
+    E(g)$arrow.mode <- 0
+    E(g)$color <- "#cccccc"
+    E(g)$width <- 0.5
+
+    l <- layout_with_graphopt(g)
+
+    imgPath <- paste0(imgName, "dpi", dpi, ".", format)
+    w.val <- if (is.na(width)) 8 else width / dpi
+    png(imgPath, width = w.val, height = w.val * 0.75, units = "in", res = dpi, bg = "white")
+    par(mar = c(1, 1, 2, 1))
+    plot(g, layout = l,
+         main = paste0("PPI Network (", vcount(g), " nodes, ", ecount(g), " edges)"))
+    dev.off()
+
+    message("PlotNetworkPNG: saved ", imgPath)
+    return(1)
+  }, error = function(e) {
+    message("PlotNetworkPNG error: ", e$message)
+    return(0)
+  })
 }

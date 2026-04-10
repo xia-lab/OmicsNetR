@@ -226,9 +226,6 @@ PerformNetEnrichment <- function(file.nm, fun.type, IDs, sourceView="2d"){
 }
 
 PerformRegEnrichAnalysis <- function(file.nm, fun.type, ora.vec, netInv, idType, sourceView="2d"){
-    if(!exists("my.reg.enrich")){
-        compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_reg_enrich.Rc");
-  }
     res <- my.reg.enrich(file.nm, fun.type, ora.vec, netInv, idType, sourceView);
     return(res);
     }
@@ -390,7 +387,7 @@ queryGeneDB <- function(table.nm, org){
   db.path <- paste0(sqlite.path, org, "_genes.sqlite");
 
   if(!PrepareSqliteDB(db.path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
 
   conv.db <- dbConnect(SQLite(), db.path);
@@ -497,7 +494,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     require('RSQLite');
     path <- paste0(sqlite.path, "mir2gene.sqlite");
     if(!PrepareSqliteDB(path, .on.public.web)){
-      stop("Sqlite database is missing, please check your internet connection!");
+      AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
     }
 
     mir.db <- dbConnect(SQLite(), path);
@@ -1631,7 +1628,7 @@ QueryMirSQLite <- function(table.nm, id.type, q.vec, inv, db.nm){
   require('RSQLite');
   path <- paste0(sqlite.path, "mir2gene.sqlite")
   if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   mir.db <- dbConnect(SQLite(), path);
   query <- paste (shQuote(q.vec),collapse=",");
@@ -1651,7 +1648,7 @@ QueryDrugSQLite <- function(q.vec, regsearch){
   require('RSQLite');
   path <- paste0(sqlite.path, "drug.sqlite")
   if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   mir.db <- dbConnect(SQLite(), path);
   table.nm = "human"
@@ -1669,7 +1666,7 @@ QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, un
   require('RSQLite');
   path <- paste0(sqlite.path, sql.nm);
   if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   mir.db <- dbConnect(SQLite(), path);
 
@@ -1710,7 +1707,7 @@ QueryMetSQLiteNet <- function(table.nm, q.vec, inv){
   require('RSQLite');
   path <- paste0(sqlite.path, "omicsnet_met.sqlite")
   if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   lnc.db <- dbConnect(SQLite(), path);
   query <- paste (shQuote(q.vec),collapse=",");
@@ -1730,7 +1727,7 @@ QueryM2mSQLiteNet <- function(table.nm, q.vec, inv){
   require('RSQLite');
   path <- paste0(sqlite.path, "omicsnet_met.sqlite")
   if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   lnc.db <- dbConnect(SQLite(), path);
   query <- paste (shQuote(q.vec),collapse=",");
@@ -1748,7 +1745,7 @@ QueryTFSQLite <- function(table.nm, q.vec, inv){
   require('RSQLite');
   path <- paste0(sqlite.path, "tf2gene.sqlite")
   if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   chem.db <- dbConnect(SQLite(), path);
 
@@ -1771,7 +1768,7 @@ Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
 
   db.path <- paste0(db.path, ".sqlite");
   if(!PrepareSqliteDB(db.path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
   mir.db <- dbConnect(SQLite(), db.path);
 
@@ -1839,7 +1836,7 @@ QueryMicM2mSQLiteNet <- function(table.nm, q.vec){
   require('RSQLite');
   path <- paste0(sqlite.path, "omicsnet_met.sqlite")
   if(!PrepareSqliteDB(path, .on.public.web)){
-    stop("Sqlite database is missing, please check your internet connection!");
+    AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
   }
 
   lnc.db <- dbConnect(SQLite(), path);

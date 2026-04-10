@@ -64,7 +64,7 @@ ImportMSPeaks <- function(PeakFile = NA) {
   } else if(ncol(raw_data) == 4) {
     first_sample_col_num <- 5;
   } else {
-    stop("Data format is wrong!")
+    AddErrMsg("Data format is wrong!"); return(0);
   }
 
   raw_data <- cbind(id = c(1:nrow(raw_data)), raw_data);

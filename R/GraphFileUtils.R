@@ -65,17 +65,11 @@ ProcessOmicsNetJson <- function(dataSet, fileName) {
 #' @param fileType fileType, File type of graph file (".json", ".graphml", ".txt", ".sif")
 #' @export
 ReadGraphFile <- function(dataSetObj=NA, fileName, fileType) {
-  if(!exists("my.read.graphfile")){
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_graph_io.Rc");
-  }
   return(my.read.graphfile(dataSetObj, fileName, fileType));
 }
 
 convertIgraph2JSONFromFile <- function(net.nm, filenm, dim=3){
 
-  if(!exists("my.convert.Igraph2JSONFromFile")){
-    compiler::loadcmp("../../rscripts/OmicsNetR/R/utils_graph_io.Rc");
-  }
   return(my.convert.Igraph2JSONFromFile(net.nm, filenm, dim));
 }
 
