@@ -88,7 +88,7 @@ ImportMSPeaks <- function(PeakFile = NA) {
   PeakSet$MS2_library <- .importMS2Lib();
   cat("Peak Data import done \n Time consumed this step: ", Sys.time() - t0, "\n")
   PeakSet <<- PeakSet;
-  qs::qsave(PeakSet, file = "PeakSet_initial.qs")
+  ov_qs_save(PeakSet, file = "PeakSet_initial.qs")
   Sys.sleep(0.05);  # CRITICAL: Prevent race condition
   dataSet <<- dataSet;
   return(1);
@@ -99,7 +99,7 @@ ImportMSPeaks <- function(PeakFile = NA) {
 #' @param dbNM database name, KEGG, HMDB or PubChem
 #' @export
 UpdateCmpdDB <- function(dbNM){
-  PeakSet <<- qs::qread(file = "PeakSet_initial.qs");
+  PeakSet <<- ov_qs_read(file = "PeakSet_initial.qs");
   cat("Now the db is being changed as ", dbNM, "\n")
   if(dbNM == "kegg"){
     PeakSet$HMDB_library <- .importCmpdLib("KEGG");
@@ -277,9 +277,9 @@ PerformAnnotation <- function() {
     PeakSet$edges <- egs;
     PeakSet <- .filterNonSigCMPDs(PeakSet);
     PeakSet <- .enforceNodeAdduction(PeakSet);
-    qs::qsave(PeakSet$Data, file = "PeakSet_data.qs")
+    ov_qs_save(PeakSet$Data, file = "PeakSet_data.qs")
     PeakSet <<- PeakSet <- .cleanPeakSet(PeakSet);
-    qs::qsave(PeakSet, file = "PeakSet_done.qs");
+    ov_qs_save(PeakSet, file = "PeakSet_done.qs");
     Sys.sleep(0.05);  # CRITICAL: Prevent race condition
     cat("Annotation done!\n Time consumed this step: ", Sys.time() - t0, "\n")
     print("Peak annotation completed!");
@@ -288,9 +288,9 @@ PerformAnnotation <- function() {
 
 GetFastPeak <- function(){
     ImportMSPeaks("../../data/test/ibd_peaks_p.csv");
-    PeakSetDone <<- qs::qread("../../data/test/PeakSet_done.qs");
-    PeakSet_data <- qs::qread("../../data/test/PeakSet_data.qs");
-    qs::qsave(PeakSet_data, "PeakSet_data.qs");
+    PeakSetDone <<- ov_qs_read("../../data/test/PeakSet_done.qs");
+    PeakSet_data <- ov_qs_read("../../data/test/PeakSet_data.qs");
+    ov_qs_save(PeakSet_data, "PeakSet_data.qs");
 }
 
 #### Other internal functions
@@ -311,14 +311,14 @@ GetFastPeak <- function(){
     } else if(DB == "Pubchem"){
       file_path <- system.file('db/pubchem_lib.qs', package = "OmicsNetR")
     }
-    qs::qread(file_path)
+    ov_qs_read(file_path)
   } else {
     if(DB == "HMDB"){
-      qs::qread("../../data/lib/hmdb_lib.qs")
+      ov_qs_read("../../data/lib/hmdb_lib.qs")
     } else if(DB == "KEGG") {
-      qs::qread("../../data/lib/kegg_lib.qs")
+      ov_qs_read("../../data/lib/kegg_lib.qs")
     } else if(DB == "Pubchem"){
-      qs::qread("../../data/lib/pubchem_lib.qs")
+      ov_qs_read("../../data/lib/pubchem_lib.qs")
     }
   }
 }
@@ -330,9 +330,9 @@ GetFastPeak <- function(){
   }
   if(!.on.public.web){
     file_path <- system.file('db/empirical_rule.qs', package = "OmicsNetR")
-    qs::qread(file_path)
+    ov_qs_read(file_path)
   } else {
-    qs::qread("../../data/lib/empirical_rule.qs")
+    ov_qs_read("../../data/lib/empirical_rule.qs")
   }
 }
 .importPropagationRule <- function() {
@@ -343,9 +343,9 @@ GetFastPeak <- function(){
   }
   if(!.on.public.web){
     file_path <- system.file('db/propagation_rule.qs', package = "OmicsNetR")
-    qs::qread(file_path)
+    ov_qs_read(file_path)
   } else {
-    qs::qread("../../data/lib/propagation_rule.qs")
+    ov_qs_read("../../data/lib/propagation_rule.qs")
   }
 }
 .importMS2Lib <- function() {
@@ -356,9 +356,9 @@ GetFastPeak <- function(){
   }
   if(!.on.public.web){
     file_path <- system.file('db/ms2_lib.qs', package = "OmicsNetR")
-    qs::qread(file_path)
+    ov_qs_read(file_path)
   } else {
-    qs::qread("../../data/lib/ms2_lib.qs")
+    ov_qs_read("../../data/lib/ms2_lib.qs")
   }
 }
 
@@ -470,9 +470,9 @@ GetFastPeak <- function(){
   }
   if(!.on.public.web){
     file_path <- system.file('db/currency.qs', package = "OmicsNetR")
-    curVec <- qs::qread(file_path)
+    curVec <- ov_qs_read(file_path)
   } else {
-    curVec <- qs::qread("../../data/lib/currency.qs");
+    curVec <- ov_qs_read("../../data/lib/currency.qs");
   }
 
   res <-
@@ -708,7 +708,7 @@ enhanceKBAnnot <- function(table.nm) {
   } else {
     return(0)
   }
-  cmpdDB <- qs::qread("../../data/lib/hmdb_lib.qs")
+  cmpdDB <- ov_qs_read("../../data/lib/hmdb_lib.qs")
 
   enh.idx <- apply(edgeu.res, 1, FUN = function(x) {
     grepl(pattern = "(C|G)[0-9][0-9][0-9][0-9][0-9]", x = x[1]) &

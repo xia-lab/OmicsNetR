@@ -143,7 +143,7 @@ validateColumns <- function(tab, required, context = "") {
 #' @export
 shadow_save <- function(obj, file, compress = "uncompressed") {
     # Always save to qs for R compatibility
-    qs::qsave(obj, file)
+    ov_qs_save(obj, file)
 
     # Generate Arrow path
     arrow_path <- sub("\\.qs$", ".arrow", file)
@@ -199,7 +199,7 @@ shadow_save <- function(obj, file, compress = "uncompressed") {
 #' @export
 shadow_save_mixed <- function(obj, file, compress = "uncompressed") {
     # Always save qs format for backward compatibility
-    qs::qsave(obj, file)
+    ov_qs_save(obj, file)
 
     # Derive Arrow path
     arrow_path <- sub("\\.qs$", ".arrow", file)

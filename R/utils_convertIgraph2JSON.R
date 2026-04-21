@@ -306,7 +306,7 @@ if (length(unique(lens)) == 1 && lens[1] > 0) {
   }
 
   if(file.exists("micSet.qs")){
-    micSet <- qs::qread("micSet.qs");
+    micSet <- ov_qs_read("micSet.qs");
     inx = names(micSet$met.mic) %in% nms;
     netData[["metMic"]] <- micSet$met.mic[inx];
     netData[["metMicScore"]] <- micSet$met.mic.score[inx];

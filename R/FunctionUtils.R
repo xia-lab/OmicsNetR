@@ -379,7 +379,7 @@ PerformEnrichAnalysis <- function(file.nm, fun.type, ora.vec, save.type="network
 # Helper function to query gene database from SQLite
 queryGeneDB <- function(table.nm, org){
   if(org == "custom"){
-    db.map <- qs::qread("anot_table.qs");
+    db.map <- ov_qs_read("anot_table.qs");
     return(db.map);
   }
 
@@ -537,7 +537,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
       }
 
       if(file.exists(db.path.qs)){
-        cmpd.map <- qs::qread(db.path.qs);
+        cmpd.map <- ov_qs_read(db.path.qs);
       }else{
         # Fallback to .rds if .qs not found
         db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
@@ -586,7 +586,7 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
 
        if(file.exists(syn.db.path)){
          # Load synonym database
-         syn.db <- qs::qread(syn.db.path);
+         syn.db <- ov_qs_read(syn.db.path);
 
          # Perform fuzzy matching using synonyms
          match.results <- MatchCompoundNames(cmpd.vec, cmpd.map, syn.db);
@@ -790,7 +790,7 @@ doPubchem2NameMapping <- function(entrez.vec){
     db.path <- nmdb;
   }
 
-  full.map <- qs::qread(db.path);
+  full.map <- ov_qs_read(db.path);
 
   hit.inx <- match(entrez.vec, full.map[, "accession"]);
   symbols <- full.map[hit.inx, "name"];
@@ -810,7 +810,7 @@ doHMDB2NameMapping <- function(entrez.vec){
     db.path <- nmdb;
   }
 
-  full.map <- qs::qread(db.path);
+  full.map <- ov_qs_read(db.path);
 
   hit.inx <- match(entrez.vec, full.map[, "accession"]);
   symbols <- full.map[hit.inx, "name"];
@@ -850,7 +850,7 @@ doPubchem2KEGGMapping <- function(entrez.vec){
     db.path <- nmdb;
   }
 
-  full.map <- qs::qread(db.path);
+  full.map <- ov_qs_read(db.path);
 
   db.path <- paste(lib.path, "lib/compound_db.rds", sep="");
 

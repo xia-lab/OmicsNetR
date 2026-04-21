@@ -741,7 +741,7 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     }
 
   } else if(netw.type == "peak") {
-    PeakSet <- qs::qread("PeakSet_net.qs");
+    PeakSet <- ov_qs_read("PeakSet_net.qs");
     net.info$met.ids <- PeakSet$mets;
     net.info$peak.ids <- PeakSet$put.mets;
     seed.genes <<- unique(c(seed.genes, PeakSet$mets));    
@@ -805,7 +805,7 @@ SearchNetDB <- function(dataSetObj, protein.vec, orig.input, inputType, netw.typ
     micSet[["met.mic"]] <- met.microbe.list;
     micSet[["met.mic.score"]] <- met.microbe.score.list;
     micSet[["met.mic.table"]] <- mic.table;
-    qs::qsave(micSet, "micSet.qs");
+    ov_qs_save(micSet, "micSet.qs");
 
     dataSet <<- dataSet;
   } else if (netw.type == "m2m" && inputType == "peak") {
@@ -2028,7 +2028,7 @@ FilterByTissue <- function(dataSetObj=NA, type, tissue){
 #' @export
 #'
 FilterByPvalue <- function(pvaluecutoff){
-  data <- qs::qread("PeakSet_data.qs")
+  data <- ov_qs_read("PeakSet_data.qs")
 
   if(exists("dataSet",envir = .GlobalEnv)) {
     dataSetObj <- get("dataSet", envir = .GlobalEnv)
