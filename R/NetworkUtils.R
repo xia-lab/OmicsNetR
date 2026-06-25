@@ -2505,7 +2505,7 @@ PlotNetworkPNG <- function(imgName, format="png", dpi=150, width=NA) {
 
     imgPath <- paste0(imgName, "dpi", dpi, ".", format)
     w.val <- if (is.na(width)) 8 else width / dpi
-    png(imgPath, width = w.val, height = w.val * 0.75, units = "in", res = dpi, bg = "white")
+    png(imgPath, width = w.val, height = w.val * 0.75, units = "in", res = dpi, type = "cairo", bg = "white")
     par(mar = c(1, 1, 2, 1))
     plot(g, layout = l,
          main = paste0("PPI Network (", vcount(g), " nodes, ", ecount(g), " edges)"))
