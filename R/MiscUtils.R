@@ -746,7 +746,7 @@ GetCurrentReportView <- function() {
 # =============================================================================
 
 run_func_via_rsclient <- function(func, args = list(), timeout_sec = 60) {
-  # Docker self-host: a NESTED RSclient connection (an Rserve session opening a
+  # Self-host: a NESTED RSclient connection (an Rserve session opening a
   # connection back to Rserve on 6311) reliably crashes the spawned worker with
   # "Fatal error: unable to initialize the JIT", which leaves the caller looping.
   # The subprocess buys nothing here, so run the function in-process. `func` is a
