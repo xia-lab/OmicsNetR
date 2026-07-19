@@ -546,9 +546,18 @@ PrepareSqliteDB <- function(sqlite_Path, onweb = TRUE) {
   if(file.exists(sqlite_Path)) {return(TRUE)};
 
   dbNM <- basename(sqlite_Path);
+  # TODO(distribution): serve reference DBs from durable registry.omicsverse.com/R2
   DonwloadLink <- paste0("https://www.xialab.ca/resources/sqlite/", dbNM);
-  download.file(DonwloadLink, sqlite_Path);
-  return(TRUE)
+  ok <- tryCatch({
+    download.file(DonwloadLink, sqlite_Path, mode = "wb");
+    file.exists(sqlite_Path) && file.info(sqlite_Path)$size > 0;
+  }, error = function(e) FALSE, warning = function(w) FALSE);
+  if(!ok){
+    if(file.exists(sqlite_Path)) unlink(sqlite_Path);  # drop partial/empty download
+    AddErrMsg(paste0("Reference database '", dbNM, "' unavailable — check internet, or use the bundled image / mount OMICS_LIB_DIR."));
+    return(FALSE);
+  }
+  return(TRUE);
 }
 
 #importFrom("grDevices", "col2rgb", "colorRampPalette", "dev.off","hsv", "rainbow")

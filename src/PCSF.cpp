@@ -4,7 +4,11 @@
 // The heuristic is developed for functional analyses of large biological networks in a reasonable time.
 
 
-// Loading the required libraries
+// Loading the required libraries.
+// [[Rcpp::depends(BH)]] lets Rcpp::sourceCpp() find the Boost headers shipped
+// by the BH package, so this open-source PCSF solver compiles at runtime on
+// self-hosted deployments (no private XiaLabCppLib needed).
+// [[Rcpp::depends(BH)]]
 #include <Rcpp.h>
 #include <boost/config.hpp>
 #include <boost/graph/adjacency_list.hpp>
@@ -15,7 +19,6 @@
 #include <boost/random/linear_congruential.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <boost/graph/erdos_renyi_generator.hpp>
-#include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/graph/connected_components.hpp>
@@ -23,7 +26,6 @@
 #include <boost/graph/prim_minimum_spanning_tree.hpp>
 #include <time.h>
 #include <stdio.h>
-#include <boost/graph/graphviz.hpp>
 #include <fstream>
 #include <vector>
 #include <utility>
