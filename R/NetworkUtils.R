@@ -1548,16 +1548,7 @@ Compute.SteinerForest <- function(ppi, terminals, w = 2, b = 1, mu = 0.0005, dum
   }
 
   ## Feed the input into the PCSF algorithm
-  if(!requireNamespace("XiaLabCppLib", quietly=TRUE)){
-    stop("PCSF network construction requires the XiaLabCppLib package, which is not installed.");
-  }
-  if(.on.public.web){
-    #XiaLabCppLib is required here, but load before
-    output <- XiaLabCppLib::call_sr(from,to,cost,node_names,node_prizes)
-  } else {
-    #For R package, this function has already been included internally
-    output <- XiaLabCppLib::call_sr(from,to,cost,node_names,node_prizes)
-  }
+  output <- ov_call_sr(from,to,cost,node_names,node_prizes)
 
 
   # Check the size of output subnetwork and print a warning if it is 0
