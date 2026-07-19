@@ -118,6 +118,7 @@ Peak_cleanup = function(Mset,
     distinct(MZRT_group, .keep_all=T) %>%
     arrange(id) %>%
     dplyr::rename(Input_id = id) %>%
+    ungroup() %>%
     mutate(id = 1:nrow(.)) %>%
     dplyr::select(-c("MZ_group", "MZRT_group")) %>%
     # mutate(mean_inten = rowMeans(.[,Mset$Cohort$sample_names], na.rm=T)) %>%
