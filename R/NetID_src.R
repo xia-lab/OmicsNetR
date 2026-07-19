@@ -118,8 +118,7 @@ Peak_cleanup = function(Mset,
     distinct(MZRT_group, .keep_all=T) %>%
     arrange(id) %>%
     dplyr::rename(Input_id = id) %>%
-    ungroup() %>%
-    mutate(id = 1:nrow(.)) %>%
+    mutate(id = seq_len(nrow(.))) %>%
     dplyr::select(-c("MZ_group", "MZRT_group")) %>%
     # mutate(mean_inten = rowMeans(.[,Mset$Cohort$sample_names], na.rm=T)) %>%
     mutate(log10_inten = log10(mean_inten))
@@ -303,7 +302,7 @@ Expand_libraryset = function(LibrarySet, Mset = NULL){
   
   expanded_lib = bind_rows(lib_met, lib_adduct) %>%
     arrange(mass) %>%
-    mutate(node_id = 1:nrow(.)+nrow(LibrarySet))
+    mutate(node_id = seq_len(nrow(.))+nrow(LibrarySet))
   
   return(expanded_lib)
 }
@@ -556,7 +555,7 @@ Initiate_edgeset <- function(Mset, NodeSet, mz_tol_abs = 0, mz_tol_ppm = 10,
     filter(!linktype == "") %>% # remove data-data isomer connection
     mutate(node1 = as.numeric(node1),
            node2 = as.numeric(node2)) %>%
-    mutate(edge_id = 1:nrow(.)) %>%
+    mutate(edge_id = seq_len(nrow(.))) %>%
     filter(T)
 
   #print(table(edge_list$category))
@@ -984,7 +983,7 @@ Expand_edgeset = function(EdgeSet,
 merge_edgeset = function(EdgeSet, ...){
   
   EdgeSet_all = bind_rows(EdgeSet, ...) %>%
-    mutate(edge_id = 1:nrow(.))
+    mutate(edge_id = seq_len(nrow(.)))
   return(EdgeSet_all)
 }
 
@@ -1896,7 +1895,7 @@ Score_structureset_missing_isotope = function(StructureSet_df, NodeSet, EdgeSet_
 Score_structureset = function(PeakSet){
   StructureSet <- PeakSet$StructureSet;
   StructureSet_df <- bind_rows(StructureSet) %>%
-    mutate(struct_set_id = 1:nrow(.)) %>%
+    mutate(struct_set_id = seq_len(nrow(.))) %>%
     mutate(class = case_when(
       category %in% c("Unknown") ~ "Unknown",
       category %in% c("Metabolite") & steps == 0 & transform == "" ~ "Metabolite",
@@ -2034,7 +2033,7 @@ initiate_ilp_nodes = function(Mset){
                                  arrange(node_id, -sum_score, steps, category) %>%
                                  distinct(node_id, formula, class, .keep_all=T) %>%
                                  arrange(node_id) %>%
-                                 mutate(ilp_node_id = 1:nrow(.)) %>%
+                                 mutate(ilp_node_id = seq_len(nrow(.))) %>%
                                  inner_join(Mset$Data %>% 
                                               dplyr::rename(node_id=id) %>%
                                               dplyr::select(node_id, Input_id, log10_inten, medMz, medRt)) %>%
@@ -2162,7 +2161,7 @@ initiate_ilp_edges = function(EdgeSet_all, CplexSet, Exclude = ""){
       )) %>%
       mutate(formula1 = ilp_nodes_formula[ilp_nodes1],
              formula2 = ilp_nodes_formula[ilp_nodes2]) %>%
-      mutate(ilp_edge_id = 1:nrow(.))
+      mutate(ilp_edge_id = seq_len(nrow(.)))
   }
   
   ilp_edges_filter
@@ -2541,7 +2540,7 @@ score_heterodimer_ilp_edges = function(CplexSet, type_score_heterodimer = 1,
   }
   
   heterodimer_ilp_edges = CplexSet$heterodimer_ilp_edges %>%
-    mutate(ilp_edge_id = 1:nrow(.) + nrow(CplexSet$ilp_edges)) %>%
+    mutate(ilp_edge_id = seq_len(nrow(.)) + nrow(CplexSet$ilp_edges)) %>%
     mutate(score_category = case_when(
       category == "Heterodimer" ~ type_score_heterodimer,
       T ~ 0
@@ -2593,7 +2592,7 @@ Initiate_cplexset = function(CplexSet){
   } else {
     heterodimer_ilp_edges = CplexSet$heterodimer_ilp_edges %>%
       arrange(ilp_edge_id) %>%
-      mutate(heterodimer_ilp_edge_id = 1:nrow(.))
+      mutate(heterodimer_ilp_edge_id = seq_len(nrow(.)))
     nrow_heterodimer_ilp_edges = nrow(heterodimer_ilp_edges)
   }
   
@@ -2732,11 +2731,11 @@ Initiate_cplexset = function(CplexSet){
           filter(n1 == 1, n2 == 1)
         
         triplet_isotope_edge_1 = ilp_edges_isotope_1 %>%
-          transmute(i = 1:nrow(.) + max(triplet_extended$i),
+          transmute(i = seq_len(nrow(.)) + max(triplet_extended$i),
                     j = ilp_edge_id + max(triplet_node$j), # locate to the isotope edge in triplet_edge
                     v = 1)
         triplet_isotope_node_1 = ilp_edges_isotope_1 %>%
-          transmute(i = 1:nrow(.) + max(triplet_extended$i),
+          transmute(i = seq_len(nrow(.)) + max(triplet_extended$i),
                     j = ifelse(direction == 1, ilp_nodes2, ilp_nodes1),
                     v = -1)
         }
