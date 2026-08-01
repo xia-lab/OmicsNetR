@@ -287,9 +287,9 @@ PerformAnnotation <- function() {
 }
 
 GetFastPeak <- function(){
-    ImportMSPeaks("../../data/test/ibd_peaks_p.csv");
-    PeakSetDone <<- ov_qs_read("../../data/test/PeakSet_done.qs");
-    PeakSet_data <- ov_qs_read("../../data/test/PeakSet_data.qs");
+    ImportMSPeaks(paste0(.ov_lib_root(), "test/ibd_peaks_p.csv"));
+    PeakSetDone <<- ov_qs_read(paste0(.ov_lib_root(), "test/PeakSet_done.qs"));
+    PeakSet_data <- ov_qs_read(paste0(.ov_lib_root(), "test/PeakSet_data.qs"));
     ov_qs_save(PeakSet_data, "PeakSet_data.qs");
 }
 
@@ -314,11 +314,11 @@ GetFastPeak <- function(){
     ov_qs_read(file_path)
   } else {
     if(DB == "HMDB"){
-      ov_qs_read("../../data/lib/hmdb_lib.qs")
+      ov_qs_read(paste0(.ov_lib_root(), "lib/hmdb_lib.qs"))
     } else if(DB == "KEGG") {
-      ov_qs_read("../../data/lib/kegg_lib.qs")
+      ov_qs_read(paste0(.ov_lib_root(), "lib/kegg_lib.qs"))
     } else if(DB == "Pubchem"){
-      ov_qs_read("../../data/lib/pubchem_lib.qs")
+      ov_qs_read(paste0(.ov_lib_root(), "lib/pubchem_lib.qs"))
     }
   }
 }
@@ -332,7 +332,7 @@ GetFastPeak <- function(){
     file_path <- system.file('db/empirical_rule.qs', package = "OmicsNetR")
     ov_qs_read(file_path)
   } else {
-    ov_qs_read("../../data/lib/empirical_rule.qs")
+    ov_qs_read(paste0(.ov_lib_root(), "lib/empirical_rule.qs"))
   }
 }
 .importPropagationRule <- function() {
@@ -345,7 +345,7 @@ GetFastPeak <- function(){
     file_path <- system.file('db/propagation_rule.qs', package = "OmicsNetR")
     ov_qs_read(file_path)
   } else {
-    ov_qs_read("../../data/lib/propagation_rule.qs")
+    ov_qs_read(paste0(.ov_lib_root(), "lib/propagation_rule.qs"))
   }
 }
 .importMS2Lib <- function() {
@@ -358,7 +358,7 @@ GetFastPeak <- function(){
     file_path <- system.file('db/ms2_lib.qs', package = "OmicsNetR")
     ov_qs_read(file_path)
   } else {
-    ov_qs_read("../../data/lib/ms2_lib.qs")
+    ov_qs_read(paste0(.ov_lib_root(), "lib/ms2_lib.qs"))
   }
 }
 
@@ -472,7 +472,7 @@ GetFastPeak <- function(){
     file_path <- system.file('db/currency.qs', package = "OmicsNetR")
     curVec <- ov_qs_read(file_path)
   } else {
-    curVec <- ov_qs_read("../../data/lib/currency.qs");
+    curVec <- ov_qs_read(paste0(.ov_lib_root(), "lib/currency.qs"));
   }
 
   res <-
@@ -708,7 +708,7 @@ enhanceKBAnnot <- function(table.nm) {
   } else {
     return(0)
   }
-  cmpdDB <- ov_qs_read("../../data/lib/hmdb_lib.qs")
+  cmpdDB <- ov_qs_read(paste0(.ov_lib_root(), "lib/hmdb_lib.qs"))
 
   enh.idx <- apply(edgeu.res, 1, FUN = function(x) {
     grepl(pattern = "(C|G)[0-9][0-9][0-9][0-9][0-9]", x = x[1]) &

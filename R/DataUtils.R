@@ -1,3 +1,11 @@
+
+# Reference libraries live in one shared directory when running inside the host
+# app (which sets on.ov = TRUE); standalone use keeps the package-local layout.
+.ov_lib_root <- function() {
+  if (isTRUE(tryCatch(get("on.ov", envir = globalenv()), error = function(e) FALSE)))
+    "../../../../resources/data/" else "../../data/"
+}
+
 ##################################################
 ## R scripts for OmicsNet
 ## Description: Data I/O functions
@@ -66,7 +74,7 @@ Init.Data<-function(){
   max.row <<- 2000; # maximal rows to display interaction table in web page
   current.msg <<- "";
   partialToBeSaved <<- c("Rload.RData", "Rhistory.R")
-  lib.path <<- "../../data/";
+  lib.path <<- .ov_lib_root();
   if(nzchar(Sys.getenv("OMICS_LIB_DIR", "")) && dir.exists(Sys.getenv("OMICS_LIB_DIR", "")) && any(file.info(list.files(Sys.getenv("OMICS_LIB_DIR", ""), pattern = "\\.sqlite$", full.names = TRUE))$size > 0, na.rm = TRUE)){
     sqlite.path <<- paste0(sub("/+$", "", Sys.getenv("OMICS_LIB_DIR", "")), "/");  # shared sqlite library directory
   }else if(file.exists("/home/glassfish/sqlite/")){
