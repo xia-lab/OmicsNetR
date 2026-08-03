@@ -69,6 +69,7 @@ Init.Data<-function(){
   net.info <<- list(gene.ids=vector(),protein.ids=vector());
   initNetwork();
   uploadedGraph <<- FALSE;
+  omics.layers.attempted <<- character(0);
   data.org <<- NULL;
   module.count <<- 0;
   max.row <<- 2000; # maximal rows to display interaction table in web page
@@ -136,6 +137,13 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   dataSet <- .get.nSet(dataSetObj);
   dataSet$name <- type;
   dataSet$orig <- inputList;
+
+  # Record the layer BEFORE any work, so a layer that maps nothing is still known to
+  # have been supplied - it produces no edges and is otherwise absent downstream.
+  attempted.type <- if(type %in% c("protein", "geneonly", "protein1")) "gene" else type;
+  omics.layers.attempted <<- unique(c(
+      if(exists("omics.layers.attempted")) omics.layers.attempted else character(0),
+      attempted.type));
 
   current.msg <<- NULL;
   data.org <<- org;
@@ -278,11 +286,18 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
     lines <- lines[-1];
   }
   if(IDtype == "meta" || IDtype == "name"){
-    gene.lists <- lines;
-    if(!is.list(gene.lists)){
-    gene.lists <- strsplit(lines, "\\s+");
-     gene.lists <- lapply(gene.lists, function(x) paste(x,collapse = " "));
-   }
+    # Compound names contain spaces, so the ID cannot be recovered by splitting on
+    # whitespace. Only a tab separates the ID from an optional value column; without
+    # a tab the whole line is the ID.
+    lines <- lines[nzchar(trimws(lines))];
+    if(any(grepl("\t", lines))){
+      gene.lists <- lapply(strsplit(lines, "\t"), function(x){
+        x <- trimws(x);
+        if(length(x) >= 2) x[1:2] else c(if(length(x)) x[1] else "", "0");
+      });
+    }else{
+      gene.lists <- as.list(trimws(lines));
+    }
   }else{
     gene.lists <- strsplit(lines, "\\s+");
   }

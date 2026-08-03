@@ -611,8 +611,12 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
     if(q.type == "name"){
        # For name type, return KEGG ID and original query name
        # (not the matched database name, to ensure proper matching in DataUtils.R)
+       # Unmatched names come back as index 0, which vector indexing DROPS rather
+       # than returning NA; keep one row per query so the two columns stay aligned.
+       name.inx <- hit.inx;
+       name.inx[!is.na(name.inx) & name.inx == 0] <- NA;
        res_entrez <- data.frame(
-         kegg_id = cmpd.map$kegg[hit.inx],
+         kegg_id = cmpd.map$kegg_id[name.inx],
          query_name = cmpd.vec,
          stringsAsFactors = FALSE
        );

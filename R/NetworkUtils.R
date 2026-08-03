@@ -369,28 +369,39 @@ GetNetsQueryNum <- function(){
   as.numeric(net.stats$Query);
 }
 
+# Rows for layers that mapped nothing are kept in ind.net.stats so the results table
+# accounts for every uploaded layer, but they have no network behind them - exclude
+# them from the getters that drive the browsable / downloadable network list.
+.ind.net.mapped <- function(){
+  st <- dataSet$ind.net.stats;
+  # A table saved before this column existed must pass through untouched, not filter to
+  # zero rows: startsWith() on a NULL column returns logical(0), which selects nothing.
+  if(is.null(st) || nrow(st) == 0 || is.null(st$NetworkValue)) return(st);
+  st[!startsWith(as.character(st$NetworkValue), "unmapped_"), , drop=FALSE];
+}
+
 GetIndInputNames <- function(){
-  as.vector(dataSet$ind.net.stats$Input);
+  as.vector(.ind.net.mapped()$Input);
 }
 
 GetIndInteractionValue <- function(){
-  as.vector(dataSet$ind.net.stats$NetworkValue);
+  as.vector(.ind.net.mapped()$NetworkValue);
 }
 
 GetIndInteractionNames <- function(){
-  as.vector(dataSet$ind.net.stats$Network);
+  as.vector(.ind.net.mapped()$Network);
 }
 
 GetIndNetsEdgeNum <- function(){
-  as.integer(dataSet$ind.net.stats$Edge);
+  as.integer(.ind.net.mapped()$Edge);
 }
 
 GetIndNetsNodeNum <- function(){
-  as.integer(dataSet$ind.net.stats$Node);
+  as.integer(.ind.net.mapped()$Node);
 }
 
 GetIndNetsQueryNum <- function(){
-  as.integer(dataSet$ind.net.stats$Query);
+  as.integer(.ind.net.mapped()$Query);
 }
 
 #' Compute the shortest path between two nodes
@@ -2140,12 +2151,25 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
     node.num <- length(nodes);
     query.num <- sum(seeds %in% nodes);
     netw.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][1];
-    input.type <- strsplit(names(edgeu.res.list[i]), "_")[[1]][2];
-    inputName <- convertInputTypes2Names(input.type);
+    # Name the omics layer this subnetwork was built for. Token 2 is the query seed
+    # space, which is the anchor layer for every secondary query, so it reported the
+    # anchor's name on every row.
+    inputName <- convertInputTypes2Names(netw.type);
     interactionName <- paste0(convertInteraction2Names(netw.type), " (", edgeu.res.list[[i]]$database ,")");
     net.stats[i,] <- c(inputName, interactionName, node.num,edge.num,query.num, names(edgeu.res.list)[i]);
   }
   saveRDS(dataSet$seeds.proteins, "seeds.rds");
+
+  # An uploaded layer that mapped nothing produces no edges, so it is absent from
+  # edgeu.res.list and the table reads as if it was never supplied. List it with a
+  # zero row so every uploaded layer is accounted for.
+  if(exists("omics.layers.attempted")){
+    unmapped <- setdiff(omics.layers.attempted, names(dataSet$exp.mat));
+    for(u in unmapped){
+      net.stats[nrow(net.stats) + 1, ] <-
+        c(convertInputTypes2Names(u), "Not mapped - no IDs matched", 0, 0, 0, paste0("unmapped_", u));
+    }
+  }
 
   dataSet$ind.net.stats <- net.stats;
   return(.set.nSet(dataSet));
