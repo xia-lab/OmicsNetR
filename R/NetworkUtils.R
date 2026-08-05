@@ -57,12 +57,10 @@ CreateGraph <- function(dataSetObj=NA){
   overall.graph <- simplify(graph_from_data_frame(edge.list, directed=FALSE)) #, vertices=node.list));
 
   # add node expression value
-  newIDs <- dataSet$seeds.proteins;
-
-  match.index <- match(V(overall.graph)$name, newIDs);
-  expr.vals <- dataSet$seeds.expr[match.index];
-  names(expr.vals) <- rownames(dataSet$seeds.expr)[match.index];
-  expr.vals <- unlist(expr.vals);
+  # Look each node's value up BY ID. dataSet$seeds.expr cannot be used positionally:
+  # it is built with c() over the exp.mat matrices, which drops their rownames, and
+  # dataSet$seeds.proteins is de-duplicated while that vector is not. With more than
+  # one input list the two stop lining up, and nodes receive another node's value.
   expr.vec <- vector();
   if(length(dataSet$seed) > 0){
     for(i in 1:length(dataSet$seed)){
@@ -71,6 +69,11 @@ CreateGraph <- function(dataSetObj=NA){
       expr.vec <- c(expr.vec, res);
     }
   }
+  expr.vec <- expr.vec[!is.na(names(expr.vec)) & !duplicated(names(expr.vec))];
+  # NA for any node the user supplied no value for. as.numeric keeps the attribute
+  # numeric when no list carried values at all (expr.vec would be logical(0), giving
+  # logical NAs that serialise differently in the network JSON).
+  expr.vals <- as.numeric(unname(expr.vec[V(overall.graph)$name]));
 
   match.index <- names(expr.vec) %in% V(overall.graph)$name;
   expr.vec <- expr.vec[match.index];
