@@ -2,8 +2,23 @@
 # Reference libraries live in one shared directory when running inside the host
 # app (which sets on.ov = TRUE); standalone use keeps the package-local layout.
 .ov_lib_root <- function() {
-  if (isTRUE(tryCatch(get("on.ov", envir = globalenv()), error = function(e) FALSE)))
-    "../../../../resources/data/" else "../../data/"
+  if (isTRUE(tryCatch(get("on.ov", envir = globalenv()), error = function(e) FALSE))) {
+    # Reference data was consolidated into the shared <app>/resources/data. Resolve it
+    # ABSOLUTELY from a loader-set anchor, because run dirs live in a separate storage volume
+    # and R's physical ".." from there never reaches the app (readRDS "cannot open the
+    # connection", Rserve error 127). Prefer this tool's loader .rscripts.dir, then the shared
+    # global .ov.shared.rscripts.dir set by SharedRSession; fall back to the relative literal.
+    shared <- tryCatch({
+      rd <- get0(".rscripts.dir", envir = globalenv(), ifnotfound = NA_character_)
+      if (length(rd) == 1 && !is.na(rd) && nzchar(rd)) {
+        file.path(dirname(dirname(dirname(rd))), "resources", "data")
+      } else {
+        sd <- get0(".ov.shared.rscripts.dir", envir = globalenv(), ifnotfound = NA_character_)
+        if (length(sd) == 1 && !is.na(sd) && nzchar(sd)) file.path(dirname(sd), "data") else NA_character_
+      }
+    }, error = function(e) NA_character_)
+    if (!is.na(shared) && dir.exists(shared)) paste0(shared, "/") else "../../../../resources/data/"
+  } else "../../data/"
 }
 
 ##################################################
