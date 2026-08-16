@@ -295,72 +295,35 @@ GetFastPeak <- function(){
 
 #### Other internal functions
 
+# Resolve a bundled reference .qs (compound libraries + m/z rules) across the three
+# deployment layouts. The old code branched on .on.public.web between (a) system.file()
+# and (b) <app>/resources/data/lib — but inside OmicsVerse the tool package is SOURCED,
+# not installed, so system.file(package="OmicsNetR") returns "" and (a) failed; the
+# consolidated lib/*.qs of (b) are not shipped either, so every MS-peak example broke at
+# the compound-library load. The files DO ship (in the package's inst/db); this probes for
+# them by existence instead of guessing a layout:
+#   1) an installed OmicsNetR package (standalone R use) via system.file;
+#   2) the sourced OmicsVerse layout — inst/db located from .onr.dir (set by
+#      _script_loader.R when it sources the package);
+#   3) the consolidated public-server layout under <app>/resources/data/lib.
+.ov_ref_db_path <- function(fname) {
+  p <- system.file(file.path("db", fname), package = "OmicsNetR")
+  if (nzchar(p) && file.exists(p)) return(p)
+  onr <- get0(".onr.dir", envir = globalenv(), ifnotfound = NA_character_)
+  if (length(onr) == 1 && !is.na(onr) && nzchar(onr)) {
+    p2 <- file.path(onr, "inst", "db", fname)
+    if (file.exists(p2)) return(p2)
+  }
+  paste0(.ov_lib_root(), "lib/", fname)
+}
 .importCmpdLib <- function(DB) {
-
-  if(exists(".on.public.web",envir = .GlobalEnv)) {
-    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
-  } else {
-    .on.public.web <- FALSE;
-  }
-
-  if(!.on.public.web){
-    if(DB == "HMDB"){
-      file_path <- system.file('db/hmdb_lib.qs', package = "OmicsNetR")
-    } else if(DB == "KEGG") {
-      file_path <- system.file('db/kegg_lib.qs', package = "OmicsNetR")
-    } else if(DB == "Pubchem"){
-      file_path <- system.file('db/pubchem_lib.qs', package = "OmicsNetR")
-    }
-    ov_qs_read(file_path)
-  } else {
-    if(DB == "HMDB"){
-      ov_qs_read(paste0(.ov_lib_root(), "lib/hmdb_lib.qs"))
-    } else if(DB == "KEGG") {
-      ov_qs_read(paste0(.ov_lib_root(), "lib/kegg_lib.qs"))
-    } else if(DB == "Pubchem"){
-      ov_qs_read(paste0(.ov_lib_root(), "lib/pubchem_lib.qs"))
-    }
-  }
+  fname <- switch(DB, HMDB = "hmdb_lib.qs", KEGG = "kegg_lib.qs",
+                  Pubchem = "pubchem_lib.qs")
+  ov_qs_read(.ov_ref_db_path(fname))
 }
-.importEmpiricalRule <- function() {
-  if(exists(".on.public.web",envir = .GlobalEnv)) {
-    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
-  } else {
-    .on.public.web <- FALSE;
-  }
-  if(!.on.public.web){
-    file_path <- system.file('db/empirical_rule.qs', package = "OmicsNetR")
-    ov_qs_read(file_path)
-  } else {
-    ov_qs_read(paste0(.ov_lib_root(), "lib/empirical_rule.qs"))
-  }
-}
-.importPropagationRule <- function() {
-  if(exists(".on.public.web",envir = .GlobalEnv)) {
-    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
-  } else {
-    .on.public.web <- FALSE;
-  }
-  if(!.on.public.web){
-    file_path <- system.file('db/propagation_rule.qs', package = "OmicsNetR")
-    ov_qs_read(file_path)
-  } else {
-    ov_qs_read(paste0(.ov_lib_root(), "lib/propagation_rule.qs"))
-  }
-}
-.importMS2Lib <- function() {
-  if(exists(".on.public.web",envir = .GlobalEnv)) {
-    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
-  } else {
-    .on.public.web <- FALSE;
-  }
-  if(!.on.public.web){
-    file_path <- system.file('db/ms2_lib.qs', package = "OmicsNetR")
-    ov_qs_read(file_path)
-  } else {
-    ov_qs_read(paste0(.ov_lib_root(), "lib/ms2_lib.qs"))
-  }
-}
+.importEmpiricalRule <- function() ov_qs_read(.ov_ref_db_path("empirical_rule.qs"))
+.importPropagationRule <- function() ov_qs_read(.ov_ref_db_path("propagation_rule.qs"))
+.importMS2Lib <- function() ov_qs_read(.ov_ref_db_path("ms2_lib.qs"))
 
 .prepareILPSet <- function(PeakSet) {
   
