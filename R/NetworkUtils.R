@@ -1,3 +1,25 @@
+# Open a device that matches the requested format.
+#
+# The filename already honoured `format` (paste0(imgName, ".", format)) while the device was
+# always png(), so asking for a PDF produced a PNG carrying a .pdf name. The export control
+# reads formals() to decide what to offer, so it advertised PDF and delivered a broken file.
+#
+# dpi is deliberately dropped to 72 for vector formats: Cairo treats dpi on a vector device as
+# a scale against 72, so passing 300 there renders an 8x6in page at 1.92x1.44in and the plot
+# dies with "figure margins too large".
+.ov_open_fig_dev <- function(file, width, height, dpi = 150, format = "png") {
+  fmt <- if (is.null(format) || !nzchar(format[1])) "png" else tolower(format[1])
+  if (fmt == "png") {
+    png(file, width = width, height = height, units = "in", res = dpi,
+        type = "cairo", bg = "white")
+    return(invisible(NULL))
+  }
+  vec <- fmt %in% c("pdf", "svg", "ps", "eps", "postscript")
+  Cairo::Cairo(file = file, width = width, height = height, unit = "in",
+               dpi = if (vec) 72 else dpi, type = fmt, bg = "white")
+  invisible(NULL)
+}
+
 ##################################################
 ## R scripts for OmicsNet
 ## Description: network analysis methods
@@ -2526,7 +2548,7 @@ PlotNetworkPNG <- function(imgName, format="png", dpi=150, width=NA) {
 
     imgPath <- paste0(imgName, "dpi", dpi, ".", format)
     w.val <- if (is.na(width)) 8 else width / dpi
-    png(imgPath, width = w.val, height = w.val * 0.75, units = "in", res = dpi, type = "cairo", bg = "white")
+    .ov_open_fig_dev(imgPath, width = w.val, height = w.val * 0.75, dpi = dpi, format = format)
     par(mar = c(1, 1, 2, 1))
     plot(g, layout = l,
          main = paste0("PPI Network (", vcount(g), " nodes, ", ecount(g), " edges)"))
