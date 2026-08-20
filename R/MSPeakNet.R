@@ -426,17 +426,11 @@ GetFastPeak <- function(){
   if(is.null(nodesVec)) stop("No nodes procvided!")
   if(all(is.na(nodesVec$KEGGID))) return(nodesVec)
 
-  if(exists(".on.public.web",envir = .GlobalEnv)) {
-    .on.public.web <- get(".on.public.web", envir = .GlobalEnv)
-  } else {
-    .on.public.web <- FALSE;
-  }
-  if(!.on.public.web){
-    file_path <- system.file('db/currency.qs', package = "OmicsNetR")
-    curVec <- ov_qs_read(file_path)
-  } else {
-    curVec <- ov_qs_read(paste0(.ov_lib_root(), "lib/currency.qs"));
-  }
+  # currency.qs ships in OmicsNetR/inst/db; resolve it via the shared probe so the
+  # sourced-in-OmicsVerse layout (.on.public.web = TRUE here) finds it there instead
+  # of reading a never-shipped resources/data/lib/currency.qs and dying in peak
+  # annotation ("neither .qs2 nor .qs found for .../lib/currency.qs").
+  curVec <- ov_qs_read(.ov_ref_db_path("currency.qs"));
 
   res <-
     vapply(nodesVec$KEGGID, FUN = function(x){x %in% curVec$V1},
@@ -671,7 +665,7 @@ enhanceKBAnnot <- function(table.nm) {
   } else {
     return(0)
   }
-  cmpdDB <- ov_qs_read(paste0(.ov_lib_root(), "lib/hmdb_lib.qs"))
+  cmpdDB <- ov_qs_read(.ov_ref_db_path("hmdb_lib.qs"))  # ships in inst/db; resolve via shared probe
 
   enh.idx <- apply(edgeu.res, 1, FUN = function(x) {
     grepl(pattern = "(C|G)[0-9][0-9][0-9][0-9][0-9]", x = x[1]) &
