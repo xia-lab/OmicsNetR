@@ -1793,45 +1793,83 @@ Query.snpDB <- function(db.path, q.vec, table.nm, col.nm){
 
 QueryVEP <- function(q.vec,vepDis,queryType,snpRegion,content_type="application/json" ){
 
+  # SNP-gene mapping via Ensembl's public VEP REST service. The old version fired
+  # one GET per SNP with no throttle/retry and stop_for_status() — so any single
+  # 429 (Ensembl rate-limits at ~15 req/s), transient 5xx, or timeout aborted the
+  # WHOLE query and the network came back empty. That is why it "worked sometimes,
+  # returned nothing other times". This version:
+  #   - rsID input -> ONE POST per 200 ids (the /vep/human/id batch endpoint),
+  #     so a normal list is 1-2 requests instead of N and never trips the limit;
+  #   - region input -> keeps per-item GET (its input is already in region-GET
+  #     format), but resilient;
+  #   - httr::RETRY with exponential backoff (honors 429 Retry-After);
+  #   - a failed chunk/variant is SKIPPED, never aborts the whole query.
   require("httr")
-  #library(jsonlite)
-  #library(xml2)
+  require("jsonlite")
   server <- "http://rest.ensembl.org"
-  if(snpRegion==T){
+  vepDis <- as.numeric(vepDis) * 1000
+  q.vec  <- gsub("^chr", "", q.vec)
+
+  # empty result that still carries the columns callers subset on (rsid/gene_symbol/...)
+  empty.vep <- function() data.frame(gene_symbol=character(0), gene_id=character(0),
+      hgnc_id=character(0), transcript_id=character(0), consequence_terms=character(0),
+      distance=character(0), rsid=character(0), stringsAsFactors=FALSE)
+
+  # one Ensembl result object ($input + $transcript_consequences) -> 0+ rows,
+  # preserving the exact columns/behaviour (gene_symbol == "NA" string when absent)
+  .vep_rows <- function(res){
+    rsid <- if(!is.null(res[["input"]])) res[["input"]] else if(!is.null(res[["id"]])) res[["id"]] else NA
+    tcs <- res[["transcript_consequences"]]
+    if(is.null(tcs) || length(tcs) == 0) return(NULL)
+    do.call(rbind, lapply(tcs, function(x){
+      data.frame(
+        gene_symbol       = ifelse(length(x[["gene_symbol"]])!=0, x[["gene_symbol"]], "NA"),
+        gene_id           = ifelse(length(x[["gene_id"]])!=0, x[["gene_id"]], "NA"),
+        hgnc_id           = ifelse(length(x[["hgnc_id"]])!=0, x[["hgnc_id"]], "NA"),
+        transcript_id     = ifelse(length(x[["transcript_id"]])!=0, x[["transcript_id"]], "NA"),
+        consequence_terms = ifelse(length(x[["consequence_terms"]])!=0, paste(unlist(x[["consequence_terms"]]), collapse=";"), "NA"),
+        distance          = ifelse(length(x[["distance"]])!=0, x[["distance"]], "NA"),
+        rsid              = rsid,
+        stringsAsFactors  = FALSE)
+    }))
+  }
+
+  rows <- list()
+
+  if(isTRUE(snpRegion)){
     ext <- "/vep/human/region/"
-  }else{
-    ext <- "/vep/human/id/"
+    for(i in seq_along(q.vec)){
+      resp <- tryCatch(
+        httr::RETRY("GET", paste0(server, ext, q.vec[i], "?distance=", vepDis),
+                    httr::accept(content_type), times = 4, pause_base = 1, pause_cap = 20, quiet = TRUE),
+        error = function(e) NULL)
+      if(is.null(resp) || httr::http_error(resp)) next
+      parsed <- tryCatch(httr::content(resp, as="parsed", type="application/json"), error=function(e) NULL)
+      if(!is.null(parsed) && length(parsed) >= 1){
+        r0 <- parsed[[1]]; if(is.null(r0[["input"]])) r0[["input"]] <- q.vec[i]
+        rr <- .vep_rows(r0); if(!is.null(rr)) rows[[length(rows)+1]] <- rr
+      }
+    }
+  } else {
+    ext <- "/vep/human/id"
+    chunks <- split(q.vec, ceiling(seq_along(q.vec) / 200))
+    for(ci in seq_along(chunks)){
+      ids <- as.character(chunks[[ci]])
+      resp <- tryCatch(
+        httr::RETRY("POST", paste0(server, ext, "?distance=", vepDis),
+                    httr::content_type_json(), httr::accept_json(),
+                    body = jsonlite::toJSON(list(ids = ids), auto_unbox = FALSE),
+                    times = 4, pause_base = 1, pause_cap = 20, terminate_on = c(400, 404), quiet = TRUE),
+        error = function(e) NULL)
+      if(is.null(resp) || httr::http_error(resp)) next
+      parsed <- tryCatch(httr::content(resp, as="parsed", type="application/json"), error=function(e) NULL)
+      if(!is.null(parsed)) for(res in parsed){ rr <- .vep_rows(res); if(!is.null(rr)) rows[[length(rows)+1]] <- rr }
+    }
   }
-  r=list()
-  resvep = list()
-  vepDis = as.numeric(vepDis)*1000
 
-  for(i in 1:length(q.vec)){
-    qr <- gsub("^chr","",q.vec[i])
-    r[[i]] <- GET(paste(server, ext, qr,"?distance=",vepDis,sep = ""),  accept(content_type))
-    stop_for_status(r[[i]])
-    resvep[[i]] = content(r[[i]])[[1]][["transcript_consequences"]]
-  }
-  names(resvep)=q.vec
-
-  resvep2 = lapply(resvep,function(s) {lapply(s, function(x) {
-    list(
-      gene_symbol=ifelse(length(x[["gene_symbol"]])!=0,x[["gene_symbol"]],"NA"),
-      gene_id=ifelse(length(x[["gene_id"]]) !=0, x[["gene_id"]],'NA'),
-      hgnc_id=ifelse(length(x[["hgnc_id"]]) !=0, x[["hgnc_id"]],'NA'),
-      transcript_id=ifelse(length(x[["transcript_id"]]) !=0, x[["transcript_id"]],'NA'),
-      consequence_terms=ifelse(length(x[["consequence_terms"]]) !=0, paste(unlist(x[["consequence_terms"]]),collapse = ";"),'NA'),
-      distance=ifelse(length(x[["distance"]])!=0, x[["distance"]],'NA'))
-  })
-  }
-  )
-  resvep3 = do.call(rbind,lapply(resvep2,function(s) {
-    do.call(rbind.data.frame,s)
-  } )
-  )
-  resvep3$rsid = gsub("\\.[0-9]*","",rownames(resvep3))
-
-  row.names(resvep3)=NULL
+  if(length(rows) == 0) return(empty.vep())
+  resvep3 <- do.call(rbind, rows)
+  row.names(resvep3) <- NULL
   return(resvep3)
 }
 
