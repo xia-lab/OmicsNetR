@@ -1189,6 +1189,8 @@ BuildPCSFNet <- function(dataSetObj=NA){
 
   comps <- comps[ord.inx];
   names(comps) <- rownames(net.stats) <- paste("subnetwork", 1:length(comps), sep="");
+  # keep dataSet$net.stats in the same order as type.nums/query.nums: readers pair them by row
+  dataSet$net.stats <- net.stats;
 
   hit.inx <- net.stats$Node >= minNodeNum;
 
