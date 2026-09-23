@@ -2173,7 +2173,10 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
     seed.type <- strsplit(names(edgeu.res.list)[i], "_")[[1]][2];
     seeds <- unique(rownames(dataSet$exp.mat[[seed.type]]));
     edge.df <- edgeu.res.list[[i]]$table;
-    edge.num <- dim(edge.df)[1];
+    # Edges as the network counts them (CreateGraph: undirected, simplified). The PPI table
+    # stores each pair twice (A-B and B-A) so a search finds it once from either protein;
+    # its row count is twice the edges.
+    edge.num <- ecount(simplify(graph_from_data_frame(edge.df[, 1:2], directed=FALSE)));
     nodes <- unique(unname(unlist(edge.df)));
     node.num <- length(nodes);
     query.num <- sum(seeds %in% nodes);
