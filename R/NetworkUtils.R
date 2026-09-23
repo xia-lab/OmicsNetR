@@ -2175,8 +2175,9 @@ ComputeIndSubnetStats <- function(dataSetObj=NA){
     edge.df <- edgeu.res.list[[i]]$table;
     # Edges as the network counts them (CreateGraph: undirected, simplified). The PPI table
     # stores each pair twice (A-B and B-A) so a search finds it once from either protein;
-    # its row count is twice the edges.
-    edge.num <- ecount(simplify(graph_from_data_frame(edge.df[, 1:2], directed=FALSE)));
+    # its row count is twice the edges. Namespaced: QueryNet reaches this before CreateGraph
+    # attaches igraph, so a bare ecount() fails in a fresh R session.
+    edge.num <- igraph::ecount(igraph::simplify(igraph::graph_from_data_frame(edge.df[, 1:2], directed=FALSE)));
     nodes <- unique(unname(unlist(edge.df)));
     node.num <- length(nodes);
     query.num <- sum(seeds %in% nodes);
