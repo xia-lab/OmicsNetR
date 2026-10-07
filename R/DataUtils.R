@@ -420,6 +420,7 @@ convertInteraction2Names <- function(types){
 doEmblGene2EntrezMapping <- function(emblgene.vec){
   require('RSQLite');
   db.path <- paste0(sqlite.path, data.org, "_genes.sqlite");
+  if (exists("ov_require_ref_sqlite", mode = "function")) ov_require_ref_sqlite(db.path);
 
   if(!PrepareSqliteDB(db.path, .on.public.web)){
     AddErrMsg("Sqlite database is missing, please check your internet connection!"); return(0);
