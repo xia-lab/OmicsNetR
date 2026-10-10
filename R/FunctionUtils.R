@@ -588,14 +588,21 @@ doProteinIDMapping <- function(q.vec, type, dbType = "NA"){
          # Load synonym database
          syn.db <- ov_qs_read(syn.db.path);
 
-         # Perform fuzzy matching using synonyms
-         match.results <- MatchCompoundNames(cmpd.vec, cmpd.map, syn.db);
-         hit.inx <- match.results$hit.inx;
+         # Fast exact name + synonym match first (cached, vectorized); send only the names
+         # with no exact hit through the slower fuzzy agrep matcher. Exact-first is both
+         # faster (one match() vs a per-query ~19k-compound agrep loop) and more precise
+         # (an exact name is never overridden by a fuzzy near-match).
+         hit.inx <- MatchCompoundNamesExact(cmpd.vec, cmpd.map, syn.db);
+         todo <- which(hit.inx == 0);
+         if(length(todo) > 0){
+           fuzzy <- MatchCompoundNames(cmpd.vec[todo], cmpd.map, syn.db);
+           hit.inx[todo] <- fuzzy$hit.inx;
+         }
 
          # Print matching statistics
-         matched.count <- sum(match.results$match.state == 1);
+         matched.count <- sum(hit.inx != 0);
          total.count <- length(cmpd.vec);
-         cat(sprintf("Compound name mapping (fuzzy): %d/%d matched (%.1f%%)\n",
+         cat(sprintf("Compound name mapping (exact+fuzzy): %d/%d matched (%.1f%%)\n",
                      matched.count, total.count, 100*matched.count/total.count));
        }else{
          # Fallback to exact matching if synonym database not found
