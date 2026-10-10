@@ -168,3 +168,37 @@ MatchCompoundNames <- function(query.vec, cmpd.db, syn.db) {
     match.state = match.state
   ));
 }
+
+#' Fast exact compound-name + synonym match (cached)
+#' @description Exact match of query names against the compound DB's common names, then
+#' against synonyms. The synonym list is flattened ONCE per session to a lowercased
+#' synonym -> compound-index lookup (first occurrence wins, matching compound order), so
+#' matching is a single vectorized match() instead of a per-query loop over ~19k compounds
+#' (which agrep-based fuzzy matching does). Intended as a fast, exact pre-filter before the
+#' fuzzy MatchCompoundNames fallback.
+#' @param query.vec Vector of query compound names
+#' @param cmpd.db Compound database (from compound_db.rds)
+#' @param syn.db Synonym database (from syn_nms.qs)
+#' @return Integer vector of hit indices into cmpd.db (0 = no exact match), one per query
+#' @export
+.omicsnet.cmpd.cache <- new.env(parent = emptyenv())
+MatchCompoundNamesExact <- function(query.vec, cmpd.db, syn.db) {
+  key <- paste(nrow(cmpd.db), length(syn.db$syns.list), sep = "_")
+  if (is.null(.omicsnet.cmpd.cache$key) || !identical(.omicsnet.cmpd.cache$key, key)) {
+    sl <- syn.db$syns.list
+    m <- min(length(sl), nrow(cmpd.db))          # guard a DB/synonym size mismatch
+    sl <- sl[seq_len(m)]
+    idx <- rep(seq_len(m), lengths(sl))
+    syn.lc <- tolower(unlist(sl, use.names = FALSE))
+    keep <- !duplicated(syn.lc)                  # first (lowest-index) compound wins
+    .omicsnet.cmpd.cache$name.lc <- tolower(cmpd.db$name)
+    .omicsnet.cmpd.cache$syn.map <- stats::setNames(idx[keep], syn.lc[keep])
+    .omicsnet.cmpd.cache$key <- key
+  }
+  q <- tolower(query.vec)
+  hit <- match(q, .omicsnet.cmpd.cache$name.lc)           # exact common-name match first
+  todo <- is.na(hit)
+  if (any(todo)) hit[todo] <- unname(.omicsnet.cmpd.cache$syn.map[q[todo]])  # then synonyms
+  hit[is.na(hit)] <- 0L
+  hit
+}
