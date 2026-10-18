@@ -9,7 +9,7 @@ Authors@R: c(
            )
            )
 Description: Underlying R functions for OmicsNet web server.
-License: GPL-3 + file LICENSE
+License: MIT + file LICENSE
 Depends: R (>= 4.0)
 Imports: Rcpp, Cairo, igraph, RJSONIO, ggplot2
 Suggests: data.table, metap, RSQLite, RandomWalkRestartMH, fitdistrplus, slam,
