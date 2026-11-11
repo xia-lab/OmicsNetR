@@ -1728,7 +1728,7 @@ QueryNet <- function(dataSetObj=NA, type="gene", dbType="default", inputType="ge
     if(.matchInputToPrimaryNet(orig.inputType, type)){
       query.vec <- unique(dataSet$seeds.proteins);
     }else{
-      query.vec <- unique(nodes.query);
+      query.vec <- setdiff(unique(nodes.query), "");   # no query from an earlier layer is no query: the KO layer of a KO-only start falls to its own IDs below
     }
 
     if(length(query.vec) == 0 && length(dataSet$exp.mat[["gene"]])>0){
