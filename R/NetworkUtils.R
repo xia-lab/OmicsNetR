@@ -268,7 +268,7 @@ BuildLargeOmicsNetwork <- function(dataSet, network.type = "ppi") {
       res <- rsclient_isolated_exec(
         func_body = isolated_func,
         input_data = list(data_obj = dataSet, params = params),
-        packages = c("igraph", "qs"),
+        packages = c("igraph", "qs2"),
         timeout = 300,
         output_type = "qs"
       );
@@ -348,7 +348,7 @@ PerformLargeNetworkClustering <- function(dataSet, method = "louvain") {
     res <- rsclient_isolated_exec(
       func_body = isolated_func,
       input_data = list(data_obj = dataSet, params = params),
-      packages = c("igraph", "qs"),
+      packages = c("igraph", "qs2"),
       timeout = 300,
       output_type = "qs"
     );
@@ -1988,7 +1988,7 @@ DoGba <- function(fileNm="NA", method="rwr", queryType="seed", nodeids, sourceVi
         data_obj = list(nodes = nodes, g = g),
         params = list()
       ),
-      packages = c("RandomWalkRestartMH", "igraph", "qs"),
+      packages = c("RandomWalkRestartMH", "igraph", "qs2"),
       timeout = 300,
       output_type = "qs"
     );

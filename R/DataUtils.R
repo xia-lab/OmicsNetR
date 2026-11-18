@@ -725,7 +725,7 @@ PerformFuzzyIDMatch <- function(query_ids, target_ids, method = "jw", max_dist =
           data_obj = list(query_ids = query_ids, target_ids = target_ids),
           params = list(method = method, max_dist = max_dist)
         ),
-        packages = c("stringdist", "qs"),
+        packages = c("stringdist", "qs2"),
         timeout = 300,
         output_type = "qs"
       );
