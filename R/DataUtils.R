@@ -300,7 +300,8 @@ PrepareInputList <- function(dataSetObj="NA", inputList, org, type, queryType){
   if(substring(lines[1],1,1)=="#"){
     lines <- lines[-1];
   }
-  if(IDtype == "meta" || IDtype == "name"){
+  # a taxon name has spaces too ("Bacteroides fragilis"): split at white space it was read as the genus with the value "fragilis"
+  if(IDtype == "meta" || IDtype == "name" || IDtype %in% c("class", "family", "order", "genus", "species", "strain", "phylum")){
     # Compound names contain spaces, so the ID cannot be recovered by splitting on
     # whitespace. Only a tab separates the ID from an optional value column; without
     # a tab the whole line is the ID.

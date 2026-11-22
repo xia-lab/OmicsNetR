@@ -1684,14 +1684,18 @@ QueryMicSQLite <- function(q.vec, table.nm, sql.nm, min.score, currExclude=T, un
 
   query <- paste (shQuote(q.vec),collapse=",");
 
+  # the names were matched in taxaInfo with their square brackets removed (doProteinIDMapping), and the GEM tables keep them ("[Ruminococcus] gnavus"):
+  # compared the same way, and the taxon returned under the name it was matched by
+  nm.col <- paste0("replace(replace(", table.nm, ", '[', ''), ']', '')");
   if(uniExclude == "TRUE"){
-    statement <- paste("SELECT * FROM ", table.nm, " WHERE ", table.nm, " IN (",query,")"," AND potential >=", min.score, " AND ExcluUni == 0", sep="");
+    statement <- paste("SELECT * FROM ", table.nm, " WHERE ", nm.col, " IN (",query,")"," AND potential >=", min.score, " AND ExcluUni == 0", sep="");
   }else{
-    statement <- paste("SELECT * FROM ", table.nm, " WHERE ", table.nm, " IN (",query,")"," AND potential >=", min.score, sep="");
+    statement <- paste("SELECT * FROM ", table.nm, " WHERE ", nm.col, " IN (",query,")"," AND potential >=", min.score, sep="");
   }
 
   mir.dic <- .query.sqlite(mir.db, statement);
   mir.dic <- mir.dic[complete.cases(mir.dic),]; # get all records
+  mir.dic[, table.nm] <- gsub("\\[|\\]", "", mir.dic[, table.nm]);
 
   met.ids <- mir.dic$metID
 
