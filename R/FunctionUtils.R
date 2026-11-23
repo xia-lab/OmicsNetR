@@ -178,9 +178,14 @@ LoadEnrLib <- function(type, subtype){
   current.geneset <- set[[setsInx]];
 
   set.ids<- names(current.geneset);
-  names(set.ids) <-  set$term;
+  # a set is looked up by its name from here on (its hits, its id in the result table): the KEGG library repeats names whose
+  # subtitles are cut off ("Longevity regulating pathway" is hsa04211 and hsa04213), so a repeated name is followed by its id
+  set.nms <- as.character(set[[termInx]]);
+  dup <- duplicated(set.nms) | duplicated(set.nms, fromLast = TRUE);
+  set.nms[dup] <- paste0(set.nms[dup], " (", set.ids[dup], ")");
+  names(set.ids) <- set.nms;
 
-  names(current.geneset) <- set[[termInx]];
+  names(current.geneset) <- set.nms;
   current.geneset <<- current.geneset
 
   current.setlink <<- set[[linkInx]];
